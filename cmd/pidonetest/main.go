@@ -5,6 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -13,9 +15,20 @@ import (
 	"syscall"
 )
 
+var debugLog *log.Logger
+
+func init() {
+	debugLog = log.New(io.Discard, "DEBUG: ", log.LstdFlags)
+}
 
 func parseFlags(args []string, qemuCmd *QEMUCommand, testBinaryPath *string) bool {
 	fs := flag.NewFlagSet(fmt.Sprintf("%s [flags...] [testbinary] [testflags...]", args[0]), flag.ContinueOnError)
+
+	debug := fs.Bool(
+		"debug",
+		false,
+		"enable debug output",
+	)
 
 	fs.StringVar(
 		&qemuCmd.Binary,
@@ -74,6 +87,10 @@ func parseFlags(args []string, qemuCmd *QEMUCommand, testBinaryPath *string) boo
 		return false
 	}
 
+	if *debug {
+		debugLog.SetOutput(os.Stderr)
+	}
+
 	posArgs := fs.Args()
 	if len(posArgs) < 1 {
 		fmt.Fprintln(fs.Output(), "no testbinary given")
@@ -115,11 +132,18 @@ func run(qemuCmd *QEMUCommand, testBinaryPath string) (int, error) {
 
 	cmd := qemuCmd.Cmd()
 
+	debugLog.Printf("qemu cmd: %s", cmd.String())
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return 1, fmt.Errorf("get stdout: %v", err)
 	}
 	defer stdout.Close()
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return 1, fmt.Errorf("get stderr: %v", err)
+	}
+	defer stderr.Close()
 
 	if err := cmd.Start(); err != nil {
 		return 1, fmt.Errorf("run qemu: %v", err)
@@ -156,6 +180,16 @@ func run(qemuCmd *QEMUCommand, testBinaryPath string) (int, error) {
 		}
 	}()
 
+	readGroup.Add(1)
+	go func() {
+		defer readGroup.Done()
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			line := scanner.Text()
+			fmt.Println(line)
+		}
+	}()
+
 	signalStream := make(chan os.Signal, 1)
 	signal.Notify(signalStream, syscall.SIGABRT, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGHUP)
 
@@ -163,16 +197,12 @@ func run(qemuCmd *QEMUCommand, testBinaryPath string) (int, error) {
 
 	select {
 	case sig := <-signalStream:
-		_ = stdout.Close()
-		_ = cmd.Process.Kill()
-		close(done)
 		return rc, fmt.Errorf("signal received: %d, %s", sig, sig)
 	case <-done:
 		break
 	}
 
 	_ = os.Remove(initrdFilePath)
-	_ = stdout.Close()
 	readGroup.Wait()
 	if len(rcStream) == 1 {
 		rc = <-rcStream

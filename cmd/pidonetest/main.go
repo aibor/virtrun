@@ -2,20 +2,17 @@ package main
 
 import (
 	"bufio"
-	"debug/elf"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 )
 
-var LibSearchPaths string = "/usr/lib:/usr/lib64"
 
 func parseFlags(args []string, qemuCmd *QEMUCommand, testBinaryPath *string) bool {
 	fs := flag.NewFlagSet(fmt.Sprintf("%s [flags...] [testbinary] [testflags...]", args[0]), flag.ContinueOnError)
@@ -84,44 +81,6 @@ func parseFlags(args []string, qemuCmd *QEMUCommand, testBinaryPath *string) boo
 	}
 
 	return true
-}
-
-func resolveLinkedLibs(fileName string) ([]string, error) {
-	elfFile, err := elf.Open(fileName)
-	if err != nil {
-		return nil, err
-	}
-
-	libs, err := elfFile.ImportedLibraries()
-	if err != nil {
-		return nil, fmt.Errorf("read libs: %v", err)
-	}
-
-	searchPaths := strings.Split(LibSearchPaths, ":")
-	libPaths := make(map[string]bool, 0)
-	for _, lib := range libs {
-		for _, searchPath := range searchPaths {
-			path := filepath.Join(searchPath, lib)
-			lp, err := resolveLinkedLibs(path)
-			if err != nil {
-				if errors.Is(err, os.ErrNotExist) {
-					continue
-				}
-				return nil, err
-			}
-			libPaths[path] = true
-			for _, p := range lp {
-				libPaths[p] = true
-			}
-			break
-		}
-	}
-
-	l := make([]string, 0)
-	for p := range libPaths {
-		l = append(l, p)
-	}
-	return l, nil
 }
 
 func run(qemuCmd *QEMUCommand, testBinaryPath string) (int, error) {

@@ -42,4 +42,18 @@
 // Or build and run on the fly with "go run":
 //
 //	$ CGO_ENABLED=0 go test -v -exec 'go run github.com/aibor/go-pidonetest/cmd/pidonetest' .
+//
+// Other architectures work as well. You need a kernel for the target
+// architecture and adjust some flags for the platform. Disable KVM if your
+// host architecture differs:
+//
+//	$ GOARCH=arm64 CGO_ENABLED=0 go test -v \
+//	  -exec "pidonetest \
+//	    -kernel $(realpath kernel/vmlinuz.arm64) \
+//	    -qemu-bin qemu-system-aarch64 \
+//	    -machine virt \
+//	    -memory 128 \
+//	    -cpu neoverse-n1" \
+//	    -nokvm \
+//	  .
 package pidonetest

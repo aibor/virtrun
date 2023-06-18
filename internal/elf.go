@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"debug/elf"
@@ -11,7 +11,7 @@ import (
 
 var LibSearchPaths string = "/usr/lib:/usr/lib64"
 
-func resolveLinkedLibs(fileName string) ([]string, error) {
+func ResolveLinkedLibs(fileName string) ([]string, error) {
 	elfFile, err := elf.Open(fileName)
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func resolveLinkedLibs(fileName string) ([]string, error) {
 	for _, lib := range libs {
 		for _, searchPath := range searchPaths {
 			path := filepath.Join(searchPath, lib)
-			lp, err := resolveLinkedLibs(path)
+			lp, err := ResolveLinkedLibs(path)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
 					continue

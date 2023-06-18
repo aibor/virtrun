@@ -1,9 +1,10 @@
-package main
+package internal
 
 import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cavaliergopher/cpio"
@@ -76,8 +77,8 @@ func (a *Archive) Remove() error {
 	return os.Remove(a.name)
 }
 
-func createInitrd(initFilePath string, additionalFiles ...string) (string, error) {
-	initrdFile, err := os.CreateTemp("", "go_pidonetest_initrd")
+func CreateInitrd(initFilePath string, additionalFiles ...string) (string, error) {
+	initrdFile, err := os.CreateTemp(filepath.Dir(initFilePath), "go_pidonetest_initrd")
 	if err != nil {
 		return "", fmt.Errorf("create file")
 	}
@@ -103,4 +104,23 @@ func createInitrd(initFilePath string, additionalFiles ...string) (string, error
 	}
 
 	return initrdFile.Name(), nil
+}
+
+func TestBinaryToInitrd(testBinaryPath string) (string, error) {
+	libs, err := ResolveLinkedLibs(testBinaryPath)
+	if err != nil {
+		return "", err
+	}
+	if len(libs) > 0 {
+		return "", fmt.Errorf("Test binary must not be linked, but is linked to: % s. Try with CGO_ENABLED=0", libs)
+	}
+
+	additional := strings.Split(LibSearchPaths, ":")
+	additional = append(additional, libs...)
+	initrdFilePath, err := CreateInitrd(testBinaryPath, additional...)
+	if err != nil {
+		return "", fmt.Errorf("create initrd: %v", err)
+	}
+
+	return initrdFilePath, nil
 }

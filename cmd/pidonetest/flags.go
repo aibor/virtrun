@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func parseFlags(args []string, qemuCmd *QEMUCommand, testBinaryPath *string) bool {
+func parseFlags(args []string, cfg *config) bool {
 	fs := flag.NewFlagSet(fmt.Sprintf("%s [flags...] [testbinary] [testflags...]", args[0]), flag.ContinueOnError)
 
 	debug := fs.Bool(
@@ -17,43 +17,43 @@ func parseFlags(args []string, qemuCmd *QEMUCommand, testBinaryPath *string) boo
 	)
 
 	fs.StringVar(
-		&qemuCmd.Binary,
+		&cfg.qemuCmd.Binary,
 		"qemu-bin",
-		qemuCmd.Binary,
+		cfg.qemuCmd.Binary,
 		"QEMU binary to use",
 	)
 
 	fs.StringVar(
-		&qemuCmd.Kernel,
+		&cfg.qemuCmd.Kernel,
 		"kernel",
-		qemuCmd.Kernel,
+		cfg.qemuCmd.Kernel,
 		"path to kernel to use",
 	)
 
 	fs.StringVar(
-		&qemuCmd.Machine,
+		&cfg.qemuCmd.Machine,
 		"machine",
-		qemuCmd.Machine,
+		cfg.qemuCmd.Machine,
 		"QEMU machine type to use",
 	)
 
 	fs.StringVar(
-		&qemuCmd.CPU,
+		&cfg.qemuCmd.CPU,
 		"cpu",
-		qemuCmd.CPU,
+		cfg.qemuCmd.CPU,
 		"QEMU cpu type to use",
 	)
 
 	fs.BoolVar(
-		&qemuCmd.NoKVM,
+		&cfg.qemuCmd.NoKVM,
 		"nokvm",
-		qemuCmd.NoKVM,
+		cfg.qemuCmd.NoKVM,
 		"disable hardware support",
 	)
 
 	fs.Func(
 		"memory",
-		fmt.Sprintf("memory (in MB) for the QEMU VM (default %dMB)", qemuCmd.Memory),
+		fmt.Sprintf("memory (in MB) for the QEMU VM (default %dMB)", cfg.qemuCmd.Memory),
 		func(s string) error {
 			mem, err := strconv.ParseUint(s, 10, 16)
 			if err != nil {
@@ -63,7 +63,7 @@ func parseFlags(args []string, qemuCmd *QEMUCommand, testBinaryPath *string) boo
 				return fmt.Errorf("less than 128 MB is not sufficient")
 			}
 
-			qemuCmd.Memory = uint16(mem)
+			cfg.qemuCmd.Memory = uint16(mem)
 
 			return nil
 		},
@@ -84,10 +84,10 @@ func parseFlags(args []string, qemuCmd *QEMUCommand, testBinaryPath *string) boo
 		return false
 	}
 
-	*testBinaryPath = posArgs[0]
+	cfg.testBinaryPath = posArgs[0]
 
 	if len(posArgs) > 1 {
-		qemuCmd.TestArgs = append(qemuCmd.TestArgs, posArgs[1:]...)
+		cfg.qemuCmd.TestArgs = append(cfg.qemuCmd.TestArgs, posArgs[1:]...)
 	}
 
 	return true

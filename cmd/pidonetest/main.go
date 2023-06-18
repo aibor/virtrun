@@ -6,10 +6,12 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
+
+	"github.com/aibor/go-pidonetest/internal"
 )
 
 var debugLog *log.Logger
@@ -18,31 +20,14 @@ func init() {
 	debugLog = log.New(io.Discard, "DEBUG: ", log.LstdFlags)
 }
 
-func run(qemuCmd *QEMUCommand, testBinaryPath string) (int, error) {
-	libs, err := resolveLinkedLibs(testBinaryPath)
-	if err != nil {
-		return 1, err
-	}
-	if len(libs) > 0 {
-		return 1, fmt.Errorf("Test binary must not be linked, but is linked to: % s. Try with CGO_ENABLED=0", libs)
-	}
+type config struct {
+	out            io.Writer
+	err            io.Writer
+	qemuCmd        internal.QEMUCommand
+	testBinaryPath string
+}
 
-	additional := strings.Split(LibSearchPaths, ":")
-	additional = append(additional, libs...)
-	initrdFilePath, err := createInitrd(testBinaryPath, additional...)
-	if err != nil {
-		return 1, fmt.Errorf("create initrd: %v", err)
-	}
-	defer func() {
-		if err := os.RemoveAll(initrdFilePath); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to remove initrd file: %s: %v\n", initrdFilePath, err)
-		}
-	}()
-
-	qemuCmd.Initrd = initrdFilePath
-
-	cmd := qemuCmd.Cmd()
-
+func run(cmd *exec.Cmd) (int, error) {
 	debugLog.Printf("qemu cmd: %s", cmd.String())
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -113,7 +98,6 @@ func run(qemuCmd *QEMUCommand, testBinaryPath string) (int, error) {
 		break
 	}
 
-	_ = os.Remove(initrdFilePath)
 	readGroup.Wait()
 	if len(rcStream) == 1 {
 		rc = <-rcStream
@@ -122,24 +106,33 @@ func run(qemuCmd *QEMUCommand, testBinaryPath string) (int, error) {
 }
 
 func main() {
-	var testBinaryPath string
-	var qemuCmd = QEMUCommand{
-		Binary:  "qemu-system-x86_64",
-		Kernel:  "/boot/vmlinuz-linux",
-		Machine: "q35",
-		CPU:     "host",
-		Memory:  128,
-		NoKVM:   false,
+	cfg := config{
+		out: os.Stdout,
+		err: os.Stderr,
+		qemuCmd: internal.QEMUCommand{
+			Binary:  "qemu-system-x86_64",
+			Kernel:  "/boot/vmlinuz-linux",
+			Machine: "q35",
+			CPU:     "host",
+			Memory:  128,
+			NoKVM:   false,
+		},
 	}
 
-	if !parseFlags(os.Args, &qemuCmd, &testBinaryPath) {
+	if !parseFlags(os.Args, &cfg) {
 		// Flag already prints errors, so we just exit.
 		os.Exit(1)
 	}
 
-	rc, err := run(&qemuCmd, testBinaryPath)
+	var err error
+	if cfg.qemuCmd.Initrd, err = internal.TestBinaryToInitrd(cfg.testBinaryPath); err != nil {
+		fmt.Fprintln(os.Stderr, "Error creating initrd:", err)
+		os.Exit(1)
+	}
+
+	rc, err := run(cfg.qemuCmd.Cmd())
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
+		fmt.Fprintln(os.Stderr, "Error running cmd:", err)
 	}
 
 	os.Exit(rc)

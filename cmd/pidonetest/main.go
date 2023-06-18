@@ -2,14 +2,11 @@ package main
 
 import (
 	"bufio"
-	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -19,92 +16,6 @@ var debugLog *log.Logger
 
 func init() {
 	debugLog = log.New(io.Discard, "DEBUG: ", log.LstdFlags)
-}
-
-func parseFlags(args []string, qemuCmd *QEMUCommand, testBinaryPath *string) bool {
-	fs := flag.NewFlagSet(fmt.Sprintf("%s [flags...] [testbinary] [testflags...]", args[0]), flag.ContinueOnError)
-
-	debug := fs.Bool(
-		"debug",
-		false,
-		"enable debug output",
-	)
-
-	fs.StringVar(
-		&qemuCmd.Binary,
-		"qemu-bin",
-		"qemu-system-x86_64",
-		"QEMU binary to use",
-	)
-
-	fs.StringVar(
-		&qemuCmd.Kernel,
-		"kernel",
-		"/boot/vmlinuz-linux",
-		"path to kernel to use",
-	)
-
-	fs.StringVar(
-		&qemuCmd.Machine,
-		"machine",
-		"q35",
-		"QEMU machine type to use",
-	)
-
-	fs.StringVar(
-		&qemuCmd.CPU,
-		"cpu",
-		"host",
-		"QEMU cpu type to use",
-	)
-
-	fs.BoolVar(
-		&qemuCmd.NoKVM,
-		"nokvm",
-		false,
-		"disable hardware support",
-	)
-
-	fs.Func(
-		"memory",
-		"memory (in MB) for the QEMU VM (default 128MB)",
-		func(s string) error {
-			mem, err := strconv.ParseUint(s, 10, 16)
-			if err != nil {
-				return err
-			}
-			if mem < 128 {
-				return fmt.Errorf("less than 128 MB is not sufficient")
-			}
-
-			qemuCmd.Memory = uint16(mem)
-
-			return nil
-		},
-	)
-
-	if err := fs.Parse(args[1:]); err != nil {
-		return false
-	}
-
-	if *debug {
-		debugLog.SetOutput(os.Stderr)
-	}
-
-	posArgs := fs.Args()
-	if len(posArgs) < 1 {
-		fmt.Fprintln(fs.Output(), "no testbinary given")
-		fs.Usage()
-		return false
-	}
-
-	*testBinaryPath = posArgs[0]
-
-	if len(posArgs) > 1 {
-		qemuCmd.TestArgs = append(qemuCmd.TestArgs, posArgs[1:]...)
-	}
-
-	return true
 }
 
 func run(qemuCmd *QEMUCommand, testBinaryPath string) (int, error) {
@@ -211,8 +122,15 @@ func run(qemuCmd *QEMUCommand, testBinaryPath string) (int, error) {
 }
 
 func main() {
-	var qemuCmd QEMUCommand
 	var testBinaryPath string
+	var qemuCmd = QEMUCommand{
+		Binary:  "qemu-system-x86_64",
+		Kernel:  "/boot/vmlinuz-linux",
+		Machine: "q35",
+		CPU:     "host",
+		Memory:  128,
+		NoKVM:   false,
+	}
 
 	if !parseFlags(os.Args, &qemuCmd, &testBinaryPath) {
 		// Flag already prints errors, so we just exit.
@@ -220,7 +138,7 @@ func main() {
 	}
 
 	rc, err := run(&qemuCmd, testBinaryPath)
-	if err != nil && !errors.Is(err, flag.ErrHelp) {
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
 	}
 

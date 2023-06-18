@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"strings"
 
 	"github.com/cavaliergopher/cpio"
 )
@@ -20,29 +22,40 @@ func NewArchive(file *os.File) *Archive {
 }
 
 func (a *Archive) AddFile(fileName string, altName string) error {
-	info, err := os.Stat(fileName)
+	file, err := os.Open(fileName)
+	if err != nil {
+		return fmt.Errorf("open file: %v", err)
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
 	if err != nil {
 		return fmt.Errorf("read info: %v", err)
 	}
-	file, err := os.ReadFile(fileName)
+
+	cpioHdr, err := cpio.FileInfoHeader(info, "")
 	if err != nil {
-		return fmt.Errorf("read file: %v", err)
+		return fmt.Errorf("create cpio header: %v", err)
 	}
 
-	cpioHdr := &cpio.Header{
-		Name: fileName,
-		Mode: cpio.FileMode(info.Mode()),
-		Size: info.Size(),
+	if info.IsDir() {
+		cpioHdr.Links = 2
 	}
+
 	if altName != "" {
 		cpioHdr.Name = altName
+	} else if fileName != cpioHdr.Name {
+		cpioHdr.Name, _ = strings.CutPrefix(fileName, "/usr/")
 	}
 
 	if err := a.writer.WriteHeader(cpioHdr); err != nil {
 		return fmt.Errorf("write cpio header: %v", err)
 	}
-	if _, err := a.writer.Write(file); err != nil {
-		return fmt.Errorf("write cpio body: %v", err)
+
+	if !info.IsDir() {
+		if _, err := io.Copy(a.writer, file); err != nil {
+			return fmt.Errorf("write cpio body: %v", err)
+		}
 	}
 
 	return nil
@@ -73,6 +86,10 @@ func createInitrd(initFilePath string, additionalFiles ...string) (string, error
 	initrd := NewArchive(initrdFile)
 	defer initrd.Close()
 
+	if err := initrd.AddFile(".", ""); err != nil {
+		_ = initrd.Remove()
+		return "", err
+	}
 	if err := initrd.AddFile(initFilePath, "init"); err != nil {
 		_ = initrd.Remove()
 		return "", err

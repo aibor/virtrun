@@ -38,6 +38,13 @@ func parseFlags(args []string, qemuCmd *QEMUCommand, testBinaryPath *string) boo
 		"QEMU machine type to use",
 	)
 
+	fs.StringVar(
+		&qemuCmd.CPU,
+		"cpu",
+		"host",
+		"QEMU cpu type to use",
+	)
+
 	fs.BoolVar(
 		&qemuCmd.NoKVM,
 		"nokvm",

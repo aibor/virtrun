@@ -11,6 +11,7 @@ type QEMUCommand struct {
 	Kernel   string
 	Initrd   string
 	Machine  string
+	CPU      string
 	Memory   uint16
 	NoKVM    bool
 	TestArgs []string
@@ -26,6 +27,7 @@ func (q *QEMUCommand) Args() []string {
 		"-kernel", q.Kernel,
 		"-initrd", q.Initrd,
 		"-machine", q.Machine,
+		"-cpu", q.CPU,
 		"-m", fmt.Sprintf("%d", q.Memory),
 		"-serial", "stdio",
 		"-display", "none",

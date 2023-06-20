@@ -33,21 +33,24 @@
 //	}
 //
 // Then run the test and specify the pidonetest binary in one of the following
-// ways. For now only statically compiled test work, so no cgo.
+// ways. Dynamically linked libraries are resolved. However, if you run into
+// errors try again with `CGO_ENABLED=0`, if you don't need cgo.
+// In any case, make sure the qemu binary used has the same architecture as the
+// test binary.
 //
 // If you have it installed with go install in your PATH:
 //
-//	$ CGO_ENABLED=0 go test -v -exec pidonetest .
+//	$ go test -v -exec pidonetest .
 //
 // Or build and run on the fly with "go run":
 //
-//	$ CGO_ENABLED=0 go test -v -exec 'go run github.com/aibor/go-pidonetest/cmd/pidonetest' .
+//	$ go test -v -exec 'go run github.com/aibor/go-pidonetest/cmd/pidonetest' .
 //
 // Other architectures work as well. You need a kernel for the target
 // architecture and adjust some flags for the platform. Disable KVM if your
 // host architecture differs:
 //
-//	$ GOARCH=arm64 CGO_ENABLED=0 go test -v \
+//	$ GOARCH=arm64 go test -v \
 //	  -exec "pidonetest \
 //	    -kernel $(realpath kernel/vmlinuz.arm64) \
 //	    -qemu-bin qemu-system-aarch64 \

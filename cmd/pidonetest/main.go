@@ -124,15 +124,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	var err error
-	if cfg.qemuCmd.Initrd, err = internal.TestBinaryToInitrd(cfg.testBinaryPath); err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating initrd:", err)
+	libs, err := internal.ResolveLinkedLibs(cfg.testBinaryPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error resolving libs (Try again with CGO_ENABLED=0):\n%v", err)
+		os.Exit(1)
+	}
+
+	cfg.qemuCmd.Initrd, err = internal.CreateInitrd(cfg.testBinaryPath, libs...)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating intird (Try again with CGO_ENABLED=0):\n%v", err)
 		os.Exit(1)
 	}
 
 	rc, err := run(cfg.qemuCmd.Cmd())
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error running cmd:", err)
+		fmt.Fprintln(os.Stderr, "Error running QEMU command:\n", err)
 	}
 
 	os.Exit(rc)

@@ -8,7 +8,7 @@ BINARY := bin/pidonetest
 
 build: $(BINARY)
 
-$(BINARY): $(wildcard ./cmd/pidonetest/*)
+$(BINARY): $(wildcard ./cmd/pidonetest/*) $(wildcard ./internal/*)
 	go build -o $@ ./cmd/pidonetest/
 
 .PHONY: clean

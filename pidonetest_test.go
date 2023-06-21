@@ -39,15 +39,12 @@ func TestNotPidOne(t *testing.T) {
 	require.NoError(t, cmd.Start(), "command must start")
 	checkExitCode := func() bool {
 		err := cmd.Wait()
-		return err != nil && cmd.ProcessState.ExitCode() == 255
+		return err != nil && cmd.ProcessState.ExitCode() == 1
 	}
 	assert.Eventually(t, checkExitCode, 100*time.Millisecond, 10*time.Millisecond)
 }
 
 func TestMain(m *testing.M) {
-	rc, err := pidonetest.Run(m)
-	if err != nil {
-		fmt.Printf("Error: %v", err)
-	}
-	os.Exit(rc)
+	pidonetest.Run(m)
+	os.Exit(1)
 }

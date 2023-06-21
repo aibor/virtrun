@@ -11,6 +11,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/aibor/go-pidonetest"
 	"github.com/aibor/go-pidonetest/internal"
 )
 
@@ -29,20 +30,23 @@ type config struct {
 
 func run(cmd *exec.Cmd) (int, error) {
 	debugLog.Printf("qemu cmd: %s", cmd.String())
+
+	rc := 1
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return 1, fmt.Errorf("get stdout: %v", err)
+		return rc, fmt.Errorf("get stdout: %v", err)
 	}
 	defer stdout.Close()
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return 1, fmt.Errorf("get stderr: %v", err)
+		return rc, fmt.Errorf("get stderr: %v", err)
 	}
 	defer stderr.Close()
 
 	if err := cmd.Start(); err != nil {
-		return 1, fmt.Errorf("run qemu: %v", err)
+		return rc, fmt.Errorf("run qemu: %v", err)
 	}
 	p := cmd.Process
 	if p != nil {
@@ -66,11 +70,12 @@ func run(cmd *exec.Cmd) (int, error) {
 		for scanner.Scan() {
 			line := scanner.Text()
 			var rc int
-			if _, err := fmt.Sscanf(line, "GO_PIDONETEST_RC: %d", &rc); err != nil {
+			if _, err := fmt.Sscanf(line, pidonetest.RCFmt, &rc); err != nil {
 				fmt.Println(line)
 				continue
 			}
 			if len(rcStream) == 0 {
+				debugLog.Printf("found pidone rc line with rc: %d", rc)
 				rcStream <- rc
 			}
 		}
@@ -87,9 +92,14 @@ func run(cmd *exec.Cmd) (int, error) {
 	}()
 
 	signalStream := make(chan os.Signal, 1)
-	signal.Notify(signalStream, syscall.SIGABRT, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGHUP)
-
-	rc := 1
+	signal.Notify(
+		signalStream,
+		syscall.SIGABRT,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+		syscall.SIGHUP,
+	)
 
 	select {
 	case sig := <-signalStream:

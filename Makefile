@@ -2,19 +2,22 @@ MAKEFLAGS := --no-builtin-rules
 SHELL := bash
 .ONESHELL:
 
-export CGO_ENABLED := 0
+GOBIN := $(shell realpath ./gobin)
+PIDONETEST := $(GOBIN)/pidonetest
 
-BINARY := bin/pidonetest
+export GOBIN
 
-build: $(BINARY)
+.PHONY: test
+test: $(PIDONETEST)
+	go test -v -exec "$(PIDONETEST) -debug" .
 
-$(BINARY): $(wildcard ./cmd/pidonetest/*) $(wildcard ./internal/*)
-	go build -o $@ ./cmd/pidonetest/
+$(PIDONETEST):
+	go install github.com/aibor/go-pidonetest/cmd/pidonetest@latest
+
+.PHONY: testlocal
+testlocal:
+	go test -v -exec "go run ./cmd/pidonetest -debug" .
 
 .PHONY: clean
 clean:
-	rm -rfv bin
-
-.PHONY: test
-test: build
-	go test -exec $(BINARY) . -v
+	rm -rfv "$GOBIN"

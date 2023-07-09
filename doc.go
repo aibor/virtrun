@@ -25,12 +25,12 @@
 //	)
 //
 //	func TestMain(m *testing.M) {
-//	    rc, err := pidonetest.Run(m)
-//	    if err != nil {
-//	        fmt.Printf("Error: %v", err)
-//	    }
-//	    os.Exit(rc)
+//	    pidonetest.Run(m)
+//	    os.Exit(1)
 //	}
+//
+// Instead of using [Run] you can use call the various parts individually, of
+// course, and just mount the file systems you need or additional ones.
 //
 // Then run the test and specify the pidonetest binary in one of the following
 // ways. Dynamically linked libraries are resolved. However, if you run into

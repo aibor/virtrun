@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func parseFlags(args []string, cfg *config) bool {
@@ -86,8 +87,19 @@ func parseFlags(args []string, cfg *config) bool {
 
 	cfg.testBinaryPath = posArgs[0]
 
-	if len(posArgs) > 1 {
-		cfg.qemuCmd.TestArgs = append(cfg.qemuCmd.TestArgs, posArgs[1:]...)
+	for i := 1; i < len(posArgs); i++ {
+		arg := posArgs[i]
+		splits := strings.Split(arg, "=")
+		switch splits[0] {
+		case "-test.coverprofile":
+			cfg.qemuCmd.SerialFiles = append(cfg.qemuCmd.SerialFiles, splits[1])
+			splits[1] = "/dev/ttyS1"
+			arg = strings.Join(splits, "=")
+		case "-test.gocoverdir":
+			splits[1] = "/tmp"
+			arg = strings.Join(splits, "=")
+		}
+		cfg.qemuCmd.InitArgs = append(cfg.qemuCmd.InitArgs, arg)
 	}
 
 	return true

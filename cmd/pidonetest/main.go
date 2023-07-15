@@ -149,6 +149,8 @@ func main() {
 	rc, err := run(cfg.qemuCmd.Cmd())
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error running QEMU command:\n", err)
+	} else if err := cfg.qemuCmd.FixSerialFiles(); err != nil {
+		fmt.Fprintln(os.Stderr, "Error fixing serial file:\n", err)
 	}
 
 	os.Exit(rc)

@@ -161,7 +161,10 @@ func (q *QEMUCommand) Run(ctx context.Context) (int, error) {
 	select {
 	case <-ctx.Done():
 		return rc, ctx.Err()
-	case rc = <-rcStream:
+	case r := <-rcStream:
+		if r.found || r.rc != 0 {
+			return r.rc, nil
+		}
 		return rc, nil
 	case <-done:
 		return rc, nil
@@ -175,18 +178,23 @@ type Output struct {
 	ErrWriter io.Writer
 }
 
+type retValue struct {
+	found bool
+	rc    int
+}
+
 // StartReaders starts a goroutine each for the given readers.
 //
 // They terminate if the readers are closed, a kernel panic message is read or
 // the [RCFmt] is found. The returned read only channel of size one is used to
 // communicate the read return code of the go test.
-func Consume(output *Output) (*sync.WaitGroup, <-chan int, error) {
+func Consume(output *Output) (*sync.WaitGroup, <-chan retValue, error) {
 	panicRE, err := regexp.Compile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
 	if err != nil {
 		return nil, nil, fmt.Errorf("compile panic regex: %v", err)
 	}
 
-	rcStream := make(chan int, 1)
+	rcStream := make(chan retValue, 1)
 	readGroup := sync.WaitGroup{}
 
 	readGroup.Add(1)
@@ -197,12 +205,12 @@ func Consume(output *Output) (*sync.WaitGroup, <-chan int, error) {
 		for scanner.Scan() {
 			line := scanner.Text()
 			if panicRE.MatchString(line) {
-				rcStream <- 255
+				rcStream <- retValue{found: false, rc: 126}
 				return
 			}
 			var rc int
 			if _, err := fmt.Sscanf(line, RCFmt, &rc); err == nil {
-				rcStream <- rc
+				rcStream <- retValue{found: true, rc: rc}
 				return
 			}
 			fmt.Fprintln(output.OutWriter, line)

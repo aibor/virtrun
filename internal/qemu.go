@@ -64,9 +64,11 @@ func (q *QEMUCommand) Args() []string {
 		"-machine", q.Machine,
 		"-cpu", q.CPU,
 		"-m", fmt.Sprintf("%d", q.Memory),
+		"-no-reboot",
 		"-serial", "stdio",
 		"-display", "none",
-		"-no-reboot",
+		"-nodefaults",
+		"-no-user-config",
 	}
 
 	if !q.NoKVM {
@@ -78,8 +80,6 @@ func (q *QEMUCommand) Args() []string {
 	}
 
 	cmdline := []string{
-		"root=/dev/ram0",
-		"console=ttyAMA0",
 		"console=ttyS0",
 		"panic=-1",
 		"quiet",

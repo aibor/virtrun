@@ -17,7 +17,7 @@ func run() int {
 	qemuCmd := internal.QEMUCommand{
 		Binary:  "qemu-system-x86_64",
 		Kernel:  "/boot/vmlinuz-linux",
-		Machine: "q35",
+		Machine: "microvm",
 		CPU:     "host",
 		Memory:  128,
 		NoKVM:   false,

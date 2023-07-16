@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aibor/go-pidonetest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,9 +41,4 @@ func TestNotPidOne(t *testing.T) {
 		return err != nil && cmd.ProcessState.ExitCode() == 1
 	}
 	assert.Eventually(t, checkExitCode, 100*time.Millisecond, 10*time.Millisecond)
-}
-
-func TestMain(m *testing.M) {
-	pidonetest.Run(m)
-	os.Exit(1)
 }

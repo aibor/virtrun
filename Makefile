@@ -9,14 +9,14 @@ export GOBIN
 
 .PHONY: test
 test: $(PIDONETEST)
-	go test -v -exec "$(PIDONETEST) -debug" .
+	go test -tags pidonetest -v -exec "$(PIDONETEST) -debug" .
 
 $(PIDONETEST):
 	go install github.com/aibor/go-pidonetest/cmd/pidonetest@latest
 
 .PHONY: testlocal
 testlocal:
-	go test -v -exec "go run ./cmd/pidonetest -debug" .
+	go test -tags pidonetest -v -exec "go run ./cmd/pidonetest -debug" .
 
 .PHONY: clean
 clean:

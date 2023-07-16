@@ -6,21 +6,17 @@ import (
 	"os"
 	"syscall"
 	"testing"
+
+	"github.com/aibor/go-pidonetest/internal"
 )
 
 // NotPidOneError is returned if the process does not have PID 1.
 var NotPidOneError = errors.New("process has not PID 1")
 
-// RCFmt is the format string for communicating the test results
-//
-// It is parsed in the qemu wrapper. Not present in the output if the test
-// binary panicked.
-const RCFmt = "GO_PIDONETEST_RC: %d\n"
-
 // PrintPidOneTestRC prints the magic string communicating the return code of
 // the tests.
 func PrintPidOneTestRC(ret int) {
-	fmt.Printf(RCFmt, ret)
+	fmt.Printf(internal.RCFmt, ret)
 }
 
 // IsPidOne returns true if the running process has PID 1.

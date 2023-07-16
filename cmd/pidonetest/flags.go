@@ -3,58 +3,54 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
+
+	"github.com/aibor/go-pidonetest/internal"
 )
 
-func parseFlags(args []string, cfg *config) bool {
-	fs := flag.NewFlagSet(fmt.Sprintf("%s [flags...] [testbinary] [testflags...]", args[0]), flag.ContinueOnError)
-
-	debug := fs.Bool(
-		"debug",
-		false,
-		"enable debug output",
-	)
+func parseArgs(args []string, testBinaryPath *string, qemuCmd *internal.QEMUCommand) error {
+	fsName := fmt.Sprintf("%s [flags...] [testbinary] [testflags...]", args[0])
+	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 
 	fs.StringVar(
-		&cfg.qemuCmd.Binary,
+		&qemuCmd.Binary,
 		"qemu-bin",
-		cfg.qemuCmd.Binary,
+		qemuCmd.Binary,
 		"QEMU binary to use",
 	)
 
 	fs.StringVar(
-		&cfg.qemuCmd.Kernel,
+		&qemuCmd.Kernel,
 		"kernel",
-		cfg.qemuCmd.Kernel,
+		qemuCmd.Kernel,
 		"path to kernel to use",
 	)
 
 	fs.StringVar(
-		&cfg.qemuCmd.Machine,
+		&qemuCmd.Machine,
 		"machine",
-		cfg.qemuCmd.Machine,
+		qemuCmd.Machine,
 		"QEMU machine type to use",
 	)
 
 	fs.StringVar(
-		&cfg.qemuCmd.CPU,
+		&qemuCmd.CPU,
 		"cpu",
-		cfg.qemuCmd.CPU,
+		qemuCmd.CPU,
 		"QEMU cpu type to use",
 	)
 
 	fs.BoolVar(
-		&cfg.qemuCmd.NoKVM,
+		&qemuCmd.NoKVM,
 		"nokvm",
-		cfg.qemuCmd.NoKVM,
+		qemuCmd.NoKVM,
 		"disable hardware support",
 	)
 
 	fs.Func(
 		"memory",
-		fmt.Sprintf("memory (in MB) for the QEMU VM (default %dMB)", cfg.qemuCmd.Memory),
+		fmt.Sprintf("memory (in MB) for the QEMU VM (default %dMB)", qemuCmd.Memory),
 		func(s string) error {
 			mem, err := strconv.ParseUint(s, 10, 16)
 			if err != nil {
@@ -64,43 +60,40 @@ func parseFlags(args []string, cfg *config) bool {
 				return fmt.Errorf("less than 128 MB is not sufficient")
 			}
 
-			cfg.qemuCmd.Memory = uint16(mem)
+			qemuCmd.Memory = uint16(mem)
 
 			return nil
 		},
 	)
 
 	if err := fs.Parse(args[1:]); err != nil {
-		return false
-	}
-
-	if *debug {
-		debugLog.SetOutput(os.Stderr)
+		return err
 	}
 
 	posArgs := fs.Args()
 	if len(posArgs) < 1 {
 		fmt.Fprintln(fs.Output(), "no testbinary given")
 		fs.Usage()
-		return false
+		return fmt.Errorf("no testbinary given")
 	}
 
-	cfg.testBinaryPath = posArgs[0]
+	*testBinaryPath = posArgs[0]
 
+	// Catch coverage related paths and adjust them.
 	for i := 1; i < len(posArgs); i++ {
 		arg := posArgs[i]
 		splits := strings.Split(arg, "=")
 		switch splits[0] {
 		case "-test.coverprofile":
-			cfg.qemuCmd.SerialFiles = append(cfg.qemuCmd.SerialFiles, splits[1])
+			qemuCmd.SerialFiles = append(qemuCmd.SerialFiles, splits[1])
 			splits[1] = "/dev/ttyS1"
 			arg = strings.Join(splits, "=")
 		case "-test.gocoverdir":
 			splits[1] = "/tmp"
 			arg = strings.Join(splits, "=")
 		}
-		cfg.qemuCmd.InitArgs = append(cfg.qemuCmd.InitArgs, arg)
+		qemuCmd.InitArgs = append(qemuCmd.InitArgs, arg)
 	}
 
-	return true
+	return nil
 }

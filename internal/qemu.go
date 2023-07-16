@@ -3,6 +3,7 @@ package internal
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -18,6 +19,7 @@ import (
 // binary panicked.
 const RCFmt = "GO_PIDONETEST_RC: %d\n"
 
+// QEMUCommand is a single QEMU command that can be run.
 type QEMUCommand struct {
 	Binary      string
 	Kernel      string
@@ -28,13 +30,33 @@ type QEMUCommand struct {
 	NoKVM       bool
 	SerialFiles []string
 	InitArgs    []string
+	OutWriter   io.Writer
+	ErrWriter   io.Writer
 }
 
+// Output returns [QEMUCommand.OutWriter] if set or [os.Stdout] otherwise.
+func (q *QEMUCommand) Output() io.Writer {
+	if q.OutWriter == nil {
+		return os.Stdout
+	}
+	return q.OutWriter
+}
+
+// Output returns [QEMUCommand.ErrWriter] if set or [os.Stderr] otherwise.
+func (q *QEMUCommand) ErrOutput() io.Writer {
+	if q.ErrWriter == nil {
+		return os.Stderr
+	}
+	return q.ErrWriter
+}
+
+// Cmd compiles the complete QEMU command.
 func (q *QEMUCommand) Cmd() *exec.Cmd {
 	cmd := exec.Command(q.Binary, q.Args()...)
 	return cmd
 }
 
+// Args compiles the argument string for the QEMU command.
 func (q *QEMUCommand) Args() []string {
 	args := []string{
 		"-kernel", q.Kernel,
@@ -73,6 +95,9 @@ func (q *QEMUCommand) Args() []string {
 }
 
 // FixSerialFiles remove carriage returns from the [QEMUCommand.SerialFiles].
+//
+// The serial console ends files with "\r\n" but "go test" does not like the
+// carriage returns. It reads the whole file and writes it back.
 func (q *QEMUCommand) FixSerialFiles() error {
 	for _, serialFile := range q.SerialFiles {
 		content, err := os.ReadFile(serialFile)
@@ -87,6 +112,60 @@ func (q *QEMUCommand) FixSerialFiles() error {
 	}
 
 	return nil
+}
+
+// Run the QEMU command with the given context.
+func (q *QEMUCommand) Run(ctx context.Context) (int, error) {
+	rc := 1
+	cmd := q.Cmd()
+
+	cmdOut, err := cmd.StdoutPipe()
+	if err != nil {
+		return rc, fmt.Errorf("get command stdout: %v", err)
+	}
+	defer cmdOut.Close()
+
+	cmdErr, err := cmd.StderrPipe()
+	if err != nil {
+		return rc, fmt.Errorf("get command stderr: %v", err)
+	}
+	defer cmdErr.Close()
+
+	if err := cmd.Start(); err != nil {
+		return rc, fmt.Errorf("run qemu: %v", err)
+	}
+	p := cmd.Process
+	if p != nil {
+		defer func() {
+			_ = p.Kill()
+		}()
+	}
+
+	readGroup, rcStream, err := Consume(&Output{
+		OutReader: cmdOut,
+		ErrReader: cmdErr,
+		OutWriter: q.Output(),
+		ErrWriter: q.ErrOutput(),
+	})
+	if err != nil {
+		return rc, fmt.Errorf("start readers: %v", err)
+	}
+
+	done := make(chan bool)
+	go func() {
+		_ = cmd.Wait()
+		readGroup.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return rc, ctx.Err()
+	case rc = <-rcStream:
+		return rc, nil
+	case <-done:
+		return rc, nil
+	}
 }
 
 type Output struct {

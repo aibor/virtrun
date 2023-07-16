@@ -1,24 +1,23 @@
-// Package pidonetest provides a simple way for running test binaries in an
-// isolated system. It requires QEMU to be present on the system.
+// Package pidonetest provides a simple way for running go tests in an isolated
+// system. It requires QEMU to be present on the system.
 //
 // It consists of two parts. One part is the library that is intended to be used
 // in your go test package. The other part is the binary that is intended to be
-// used with `go test -exec`.
+// used with "go test -exec".
 //
 // The library part is a wrapper for [testing.M.Run]. Before running the tests
 // some special system file systems are mounted, like /dev, /sys, /proc, /tmp,
 // /run, /sys/fs/bpf/, /sys/kernel/tracing/.
 //
-// In verbose mode, the kernel's tracing log will be output, which will show
-// messages written with `bpf_printk`, for example.
+// In a test package, define your custom TestMain function and call this
+// package's [Run] function. You may keep this in a separate test file and use
+// build constraints in order to have an easy way of separating such test from
+// normal go tests that can run on the same system:
 //
-// In a test package, define your custom `TestMain` function and call this
-// package's Run function:
-//
+//	//go:build pidonetest
 //	package some_test
 //
 //	import (
-//	    "os"
 //	    "testing"
 //
 //	    "github.com/aibor/go-pidonetest"
@@ -26,25 +25,29 @@
 //
 //	func TestMain(m *testing.M) {
 //	    pidonetest.Run(m)
-//	    os.Exit(1)
 //	}
 //
 // Instead of using [Run] you can use call the various parts individually, of
-// course, and just mount the file systems you need or additional ones.
+// course, and just mount the file systems you need or additional ones. See
+// [Run] for the steps it does.
 //
-// Then run the test and specify the pidonetest binary in one of the following
-// ways. Dynamically linked libraries are resolved. However, if you run into
-// errors try again with `CGO_ENABLED=0`, if you don't need cgo.
-// In any case, make sure the qemu binary used has the same architecture as the
-// test binary.
+// With the TestMain function in place, run the test and specify the pidonetest
+// binary in one of the following ways. If the test binary is dynamically linked
+// libraries are resolved. However, if you run into errors try again with
+// "CGO_ENABLED=0", if you don't need cgo. In any case, make sure the QEMU
+// binary used has the same architecture as the test binary.
 //
 // If you have it installed with go install in your PATH:
 //
-//	$ go test -v -exec pidonetest .
+//	$ go test -tags pidonetest -exec pidonetest .
 //
 // Or build and run on the fly with "go run":
 //
-//	$ go test -v -exec 'go run github.com/aibor/go-pidonetest/cmd/pidonetest' .
+//	$ go test -tags pidonetest -exec 'go run github.com/aibor/go-pidonetest/cmd/pidonetest' .
+//
+// There is also support for coverage profiles. Just specify it as usual:
+//
+//	$ go test -tags pidonetest -exec pidonetest -cover -coverprofile cover.out .
 //
 // Other architectures work as well. You need a kernel for the target
 // architecture and adjust some flags for the platform. Disable KVM if your
@@ -59,4 +62,6 @@
 //	    -cpu neoverse-n1" \
 //	    -nokvm \
 //	  .
+//
+// See "pidonetest -help" for all flags.
 package pidonetest

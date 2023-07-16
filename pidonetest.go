@@ -57,7 +57,7 @@ func Poweroff() {
 func Run(m *testing.M) {
 	if !IsPidOne() {
 		fmt.Printf("Error: %v", NotPidOneError)
-		return
+		os.Exit(127)
 	}
 	defer Poweroff()
 

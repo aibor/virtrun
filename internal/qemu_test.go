@@ -15,13 +15,13 @@ import (
 func TestOutputConsume(t *testing.T) {
 	tests := []struct {
 		name   string
-		rc     int
+		rc     *internal.RCValue
 		input  []string
 		output []string
 	}{
 		{
 			name: "panic",
-			rc:   255,
+			rc:   &internal.RCValue{Found: false, RC: 126},
 			input: []string{
 				"[    0.578502] Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000100",
 				"[    0.579013] CPU: 0 PID: 76 Comm: init Not tainted 6.4.3-arch1-1 #1 13c144d261447e0acbf2632534d4009bddc4c3ab",
@@ -31,7 +31,7 @@ func TestOutputConsume(t *testing.T) {
 		},
 		{
 			name: "rc",
-			rc:   4,
+			rc:   &internal.RCValue{Found: true, RC: 4},
 			input: []string{
 				"something out",
 				"more out",
@@ -83,9 +83,9 @@ func TestOutputConsume(t *testing.T) {
 				assert.Equal(t, tt.output, strings.Split(stdOut.String(), "\n"), "stdout")
 			}
 
-			if tt.rc != 0 {
+			if tt.rc != nil {
 				if assert.Len(t, rcStream, 1, "channel has value") {
-					assert.Equal(t, tt.rc, <-rcStream, "panic return code")
+					assert.Equal(t, *tt.rc, <-rcStream, "panic return code")
 				}
 			}
 		})

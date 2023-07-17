@@ -20,6 +20,9 @@ func (a *Initrd) writeHeader(hdr *cpio.Header) error {
 	return nil
 }
 
+// InitLibStructure adds a directory and various symlinks to it.
+//
+// The directory is intended to have all dynamic libraries.
 func (i *Initrd) InitLibStructure() error {
 	dirs := []string{"usr/", "usr/lib/"}
 	for _, dir := range dirs {
@@ -44,6 +47,7 @@ func (i *Initrd) InitLibStructure() error {
 		if err := i.writeHeader(&link); err != nil {
 			return err
 		}
+		// Body of a link is the path of the target file.
 		if _, err := i.Write([]byte(link.Linkname)); err != nil {
 			return fmt.Errorf("write link for %s: %v", link.Name, err)
 		}
@@ -52,6 +56,9 @@ func (i *Initrd) InitLibStructure() error {
 	return nil
 }
 
+// AddRegularFile adds a single regular file to the archive.
+//
+// If altName is not empty, it is used as file name in the archive.
 func (i *Initrd) AddRegularFile(fileName string, altName string) error {
 	file, err := os.Open(fileName)
 	if err != nil {
@@ -86,6 +93,15 @@ func (i *Initrd) AddRegularFile(fileName string, altName string) error {
 	return nil
 }
 
+// CreateInitrd creates a new initrd cpio archive.
+//
+// The file at initFilePath is added as "/init" to the archive and will be
+// executed by the kernel. All additional files are expected to be dynamic
+// libraries and put int "/usr/lib". Usual symlinks "/lib", "/lib64" and
+// "/usr/lib64" are created to that directory.
+//
+// The initrd is created in a temporary directory and will be removed once the
+// process exits. The function returns the absolute path to the initrd file.
 func CreateInitrd(initFilePath string, libs ...string) (string, error) {
 	initrdFile, err := os.CreateTemp(filepath.Dir(initFilePath), "go_pidonetest_initrd")
 	if err != nil {

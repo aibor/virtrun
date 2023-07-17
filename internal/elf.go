@@ -11,6 +11,9 @@ import (
 
 var LibSearchPaths string = "/usr/lib:/usr/lib64:/lib:/lib64"
 
+// ResolveLinkedLibs resolves dynamic libraries recursively.
+//
+// It returns a list of absolute paths to the linked libraries.
 func ResolveLinkedLibs(fileName string) ([]string, error) {
 	elfFile, err := elf.Open(fileName)
 	if err != nil {

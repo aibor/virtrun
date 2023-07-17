@@ -15,6 +15,7 @@
 // normal go tests that can run on the same system:
 //
 //	//go:build pidonetest
+//
 //	package some_test
 //
 //	import (

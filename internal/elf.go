@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var LibSearchPaths string = "/usr/lib:/usr/lib64"
+var LibSearchPaths string = "/usr/lib:/usr/lib64:/lib:/lib64"
 
 func ResolveLinkedLibs(fileName string) ([]string, error) {
 	elfFile, err := elf.Open(fileName)

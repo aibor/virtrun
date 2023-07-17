@@ -12,6 +12,74 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestArgs(t *testing.T) {
+	next := func(s *[]string) string {
+		e := (*s)[0]
+		*s = (*s)[1:]
+		return e
+	}
+
+	t.Run("yes-kvm", func(t *testing.T) {
+		q := internal.QEMUCommand{}
+
+		assert.Contains(t, q.Args(), "-enable-kvm")
+	})
+
+	t.Run("no-kvm", func(t *testing.T) {
+		q := internal.QEMUCommand{
+			NoKVM: true,
+		}
+
+		assert.NotContains(t, q.Args(), "-enable-kvm")
+	})
+
+	t.Run("serial files", func(t *testing.T) {
+		q := internal.QEMUCommand{
+			SerialFiles: []string{
+				"/output/file1",
+				"/output/file2",
+			},
+		}
+		args := q.Args()
+		expected := []string{"stdio", "file:/output/file1", "file:/output/file2"}
+
+		for len(args) > 1 {
+			arg := next(&args)
+			if arg != "-serial" {
+				continue
+			}
+			if assert.Greater(t, len(expected), 0, "expected serial files already consumed") {
+				assert.Equal(t, next(&expected), next(&args))
+			}
+		}
+
+		assert.Len(t, expected, 0, "no expected serial files should be left over")
+	})
+
+	t.Run("init args", func(t *testing.T) {
+		q := internal.QEMUCommand{
+			InitArgs: []string{
+				"first",
+				"second",
+				"third",
+			},
+		}
+		args := q.Args()
+		expected := " -- first second third"
+
+		var appendValue string
+		for len(args) > 1 {
+			arg := next(&args)
+			if arg == "-append" {
+				appendValue = next(&args)
+			}
+		}
+
+		require.NotEmpty(t, appendValue, "append value must be found")
+		assert.Contains(t, appendValue, expected, "append value should contain init args")
+	})
+}
+
 func TestOutputConsume(t *testing.T) {
 	tests := []struct {
 		name   string

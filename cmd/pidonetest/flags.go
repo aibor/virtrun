@@ -48,6 +48,13 @@ func parseArgs(args []string, testBinaryPath *string, qemuCmd *internal.QEMUComm
 		"disable hardware support",
 	)
 
+	fs.BoolVar(
+		&qemuCmd.Verbose,
+		"verbose",
+		qemuCmd.Verbose,
+		"enable verbose guest system output",
+	)
+
 	fs.Func(
 		"memory",
 		fmt.Sprintf("memory (in MB) for the QEMU VM (default %dMB)", qemuCmd.Memory),

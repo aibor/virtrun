@@ -28,6 +28,7 @@ type QEMUCommand struct {
 	CPU         string
 	Memory      uint16
 	NoKVM       bool
+	Verbose     bool
 	SerialFiles []string
 	InitArgs    []string
 	OutWriter   io.Writer
@@ -82,13 +83,15 @@ func (q *QEMUCommand) Args() []string {
 	cmdline := []string{
 		"console=ttyS0",
 		"panic=-1",
-		"quiet",
+	}
+
+	if !q.Verbose {
+		cmdline = append(cmdline, "quiet")
 	}
 
 	if len(q.InitArgs) > 0 {
 		cmdline = append(cmdline, "--")
 		cmdline = append(cmdline, q.InitArgs...)
-
 	}
 
 	return append(args, "-append", strings.Join(cmdline, " "))
@@ -146,6 +149,7 @@ func (q *QEMUCommand) Run(ctx context.Context) (int, error) {
 		ErrReader: cmdErr,
 		OutWriter: q.Output(),
 		ErrWriter: q.ErrOutput(),
+		Verbose:   q.Verbose,
 	})
 	if err != nil {
 		return rc, fmt.Errorf("start readers: %v", err)
@@ -176,11 +180,14 @@ type Output struct {
 	ErrReader io.Reader
 	OutWriter io.Writer
 	ErrWriter io.Writer
+	Verbose   bool
 }
 
 type RCValue struct {
 	Found bool
 	RC    int
+
+	sent bool
 }
 
 // StartReaders starts a goroutine each for the given readers.
@@ -202,16 +209,24 @@ func Consume(output *Output) (*sync.WaitGroup, <-chan RCValue, error) {
 		defer readGroup.Done()
 		defer close(rcStream)
 		scanner := bufio.NewScanner(output.OutReader)
+		var rc RCValue
 		for scanner.Scan() {
 			line := scanner.Text()
 			if panicRE.MatchString(line) {
-				rcStream <- RCValue{Found: false, RC: 126}
-				return
+				if !rc.sent {
+					rc.RC = 126
+				}
+			} else if _, err := fmt.Sscanf(line, RCFmt, &rc.RC); err == nil {
+				if !rc.sent {
+					rc.Found = true
+				}
 			}
-			var rc int
-			if _, err := fmt.Sscanf(line, RCFmt, &rc); err == nil {
-				rcStream <- RCValue{Found: true, RC: rc}
-				return
+			if !rc.sent && rc != (RCValue{}) {
+				rcStream <- rc
+				rc.sent = true
+				if !output.Verbose {
+					return
+				}
 			}
 			fmt.Fprintln(output.OutWriter, line)
 		}

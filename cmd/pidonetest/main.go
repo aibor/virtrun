@@ -41,8 +41,7 @@ func run() int {
 		fmt.Fprintf(os.Stderr, "Error resolving libs (Try again with CGO_ENABLED=0):\n%v\n", err)
 		return 1
 	}
-
-	qemuCmd.Initrd, err = internal.CreateInitrd(testBinaryPath, libs...)
+	qemuCmd.Initrd, err = internal.CreateInitrd(testBinaryPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating intird (Try again with CGO_ENABLED=0):\n%v\n", err)
 		return 1

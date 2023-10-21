@@ -43,7 +43,8 @@ func run() (int, error) {
 	}
 
 	if wrap {
-		self, err := os.Executable()
+		var self string
+		self, err = os.Executable()
 		if err != nil {
 			return 1, fmt.Errorf("get own path: %v", err)
 		}
@@ -100,11 +101,10 @@ func runInit() (int, error) {
 		cmd.Stderr = os.Stderr
 		err := cmd.Run()
 		if err != nil {
-			var eerr *exec.ExitError
-			if errors.As(err, &eerr) {
-				rc = eerr.ExitCode()
+			if !errors.Is(err, &exec.ExitError{}) {
+				return 125, fmt.Errorf("running %s: %v", path, err)
 			}
-			return 125, fmt.Errorf("running %s: %v", path, err)
+			rc = 1
 		}
 	}
 	pidonetest.PrintPidOneTestRC(rc)

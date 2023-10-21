@@ -34,7 +34,7 @@ func TestMountPoints(t *testing.T) {
 }
 
 func TestNotPidOne(t *testing.T) {
-	cmd := exec.Command("./init")
+	cmd := exec.Command("/init")
 	require.NoError(t, cmd.Start(), "command must start")
 	checkExitCode := func() bool {
 		err := cmd.Wait()

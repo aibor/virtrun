@@ -9,7 +9,7 @@ import (
 	"github.com/aibor/go-pidonetest/internal"
 )
 
-func parseArgs(args []string, testBinaryPath *string, qemuCmd *internal.QEMUCommand) error {
+func parseArgs(args []string, testBinaryPath *string, qemuCmd *internal.QEMUCommand, wrap *bool) error {
 	fsName := fmt.Sprintf("%s [flags...] [testbinary] [testflags...]", args[0])
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 
@@ -71,6 +71,13 @@ func parseArgs(args []string, testBinaryPath *string, qemuCmd *internal.QEMUComm
 
 			return nil
 		},
+	)
+
+	fs.BoolVar(
+		wrap,
+		"wrap",
+		*wrap,
+		"do not run test binary as init itself. Use this if the tests do not have pidonetest support built in.",
 	)
 
 	if err := fs.Parse(args[1:]); err != nil {

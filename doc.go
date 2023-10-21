@@ -1,6 +1,27 @@
 // Package pidonetest provides a simple way for running go tests in an isolated
 // system. It requires QEMU to be present on the system.
 //
+// # Quick Start
+//
+// The easiest way to use this package is to use the "wrapper mode". This does
+// not need any special support by your test package. The downside is, that it
+// can only be used if the target architecture matches the pidonetest binary
+// architecture. See "Library" if you want to test for different architectures.
+//
+// If you have it installed with go install in your PATH:
+//
+//	$ go test -exec "pidonetest -wrap" .
+//
+// Or build and run on the fly with "go run":
+//
+//	$ go test -exec 'go run github.com/aibor/go-pidonetest/cmd/pidonetest -wrap' .
+//
+// There is also support for coverage profiles. Just specify it as usual:
+//
+//	$ go test -exec "pidonetest -wrap" -cover -coverprofile cover.out .
+//
+// # Library
+//
 // It consists of two parts. One part is the library that is intended to be used
 // in your go test package. The other part is the binary that is intended to be
 // used with "go test -exec".

@@ -31,7 +31,7 @@ func CreateInitrd(initFilePath string, additionalFiles ...string) (string, error
 		return "", fmt.Errorf("resolve: %v", err)
 	}
 
-	writer := initrd.NewWriter(initrdFile)
+	writer := initrd.NewCPIOWriter(initrdFile)
 	defer writer.Close()
 
 	if err := i.WriteTo(writer); err != nil {

@@ -20,4 +20,4 @@ testlocal:
 
 .PHONY: clean
 clean:
-	rm -rfv "$GOBIN"
+	rm -rfv "$(GOBIN)"

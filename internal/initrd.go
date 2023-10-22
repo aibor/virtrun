@@ -23,18 +23,18 @@ func CreateInitrd(initFilePath string, additionalFiles ...string) (string, error
 	}
 	defer initrdFile.Close()
 
-	i := initrd.New(initFilePath, additionalFiles...)
+	initRD := initrd.New(initFilePath)
 	if err != nil {
 		return "", fmt.Errorf("mkinitrd: %v", err)
 	}
-	if err := i.ResolveLinkedLibs(initrd.NewELFLibResolver()); err != nil {
+	if err := initRD.AddFiles(additionalFiles...); err != nil {
+		return "", fmt.Errorf("add files: %v", err)
+	}
+	if err := initRD.ResolveLinkedLibs(""); err != nil {
 		return "", fmt.Errorf("resolve: %v", err)
 	}
 
-	writer := initrd.NewCPIOWriter(initrdFile)
-	defer writer.Close()
-
-	if err := i.WriteTo(writer); err != nil {
+	if err := initRD.WriteCPIO(initrdFile); err != nil {
 		return "", fmt.Errorf("write: %v", err)
 	}
 

@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/aibor/go-pidonetest/internal"
+	"github.com/aibor/pidonetest/internal"
 )
 
 // NotPidOneError is returned if the process does not have PID 1.

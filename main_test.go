@@ -5,7 +5,7 @@ package pidonetest_test
 import (
 	"testing"
 
-	"github.com/aibor/go-pidonetest"
+	"github.com/aibor/pidonetest"
 )
 
 func TestMain(m *testing.M) {

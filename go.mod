@@ -1,4 +1,4 @@
-module github.com/aibor/go-pidonetest
+module github.com/aibor/pidonetest
 
 go 1.21.3
 

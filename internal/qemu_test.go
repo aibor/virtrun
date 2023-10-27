@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aibor/go-pidonetest/internal"
+	"github.com/aibor/pidonetest/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

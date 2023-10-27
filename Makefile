@@ -8,7 +8,7 @@ PIDONETEST := $(GOBIN)/pidonetest
 export GOBIN
 
 $(PIDONETEST):
-	go install github.com/aibor/go-pidonetest/cmd/pidonetest@main
+	go install github.com/aibor/pidonetest/cmd/pidonetest@main
 
 .PHONY: test-installed-wrapped
 test-installed-wrapped: $(PIDONETEST)

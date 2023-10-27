@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/aibor/go-pidonetest"
-	"github.com/aibor/go-pidonetest/internal"
+	"github.com/aibor/pidonetest"
+	"github.com/aibor/pidonetest/internal"
 )
 
 func run() (int, error) {

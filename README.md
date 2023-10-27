@@ -1,11 +1,11 @@
-# go-pidonetest
+# pidonetest
 
-[![PkgGoDev](https://pkg.go.dev/badge/github.com/aibor/go-pideonetest)](https://pkg.go.dev/github.com/aibor/go-pidonetest)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/aibor/go-pideonetest)](https://pkg.go.dev/github.com/aibor/pidonetest)
 
-go-pidonetest is a library and binary QEMU wrapper for running go tests in an 
+pidonetest is a library and binary QEMU wrapper for running go tests in an 
 isolated system as PID 1.
 
-See [Go package reference](https://pkg.go.dev/github.com/aibor/go-pidonetest) 
+See [Go package reference](https://pkg.go.dev/github.com/aibor/pidonetest) 
 for full package documentation. 
 
 The package uses itself for testing, so see 

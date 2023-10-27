@@ -14,7 +14,7 @@
 //
 // Or build and run on the fly with "go run":
 //
-//	$ go test -exec 'go run github.com/aibor/go-pidonetest/cmd/pidonetest -wrap' .
+//	$ go test -exec 'go run github.com/aibor/pidonetest/cmd/pidonetest -wrap' .
 //
 // There is also support for coverage profiles. Just specify it as usual:
 //
@@ -42,7 +42,7 @@
 //	import (
 //	    "testing"
 //
-//	    "github.com/aibor/go-pidonetest"
+//	    "github.com/aibor/pidonetest"
 //	)
 //
 //	func TestMain(m *testing.M) {
@@ -65,7 +65,7 @@
 //
 // Or build and run on the fly with "go run":
 //
-//	$ go test -tags pidonetest -exec 'go run github.com/aibor/go-pidonetest/cmd/pidonetest' .
+//	$ go test -tags pidonetest -exec 'go run github.com/aibor/pidonetest/cmd/pidonetest' .
 //
 // There is also support for coverage profiles. Just specify it as usual:
 //

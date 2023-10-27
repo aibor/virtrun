@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aibor/go-pidonetest/internal"
+	"github.com/aibor/pidonetest/internal"
 )
 
 func parseArgs(args []string, testBinaryPath *string, qemuCmd *internal.QEMUCommand, wrap *bool) error {

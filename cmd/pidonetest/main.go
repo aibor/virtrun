@@ -48,9 +48,9 @@ func run() (int, error) {
 		if err != nil {
 			return 1, fmt.Errorf("get own path: %v", err)
 		}
-		qemuCmd.Initrd, err = internal.CreateInitrd(self, testBinaryPath)
+		qemuCmd.Initrd, err = internal.CreateInitramfs(self, testBinaryPath)
 	} else {
-		qemuCmd.Initrd, err = internal.CreateInitrd(testBinaryPath)
+		qemuCmd.Initrd, err = internal.CreateInitramfs(testBinaryPath)
 	}
 	if err != nil {
 		return 1, fmt.Errorf("creating intird (Try again with CGO_ENABLED=0): %v", err)

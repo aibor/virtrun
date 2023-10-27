@@ -3,7 +3,7 @@ module github.com/aibor/pidonetest
 go 1.21.3
 
 require (
-	github.com/aibor/go-initrd v0.0.0-20231023213706-346d29405727
+	github.com/aibor/initramfs v0.0.0-20231027104917-0fd456e83dd9
 	github.com/stretchr/testify v1.8.4
 )
 

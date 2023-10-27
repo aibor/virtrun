@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/aibor/initramfs v0.0.0-20231027104917-0fd456e83dd9
+	github.com/magefile/mage v1.15.0
 	github.com/stretchr/testify v1.8.4
 )
 

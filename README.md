@@ -9,5 +9,5 @@ See [Go package reference](https://pkg.go.dev/github.com/aibor/pidonetest)
 for full package documentation. 
 
 The package uses itself for testing, so see 
-[main_test.go](main_test.go) and [Makefile](Makefile) for a real life 
+[main_test.go](main_test.go) and [Magefile](magefiles/main.go) for a real life 
 example.

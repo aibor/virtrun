@@ -1,6 +1,6 @@
 module github.com/aibor/pidonetest
 
-go 1.21.3
+go 1.21
 
 require (
 	github.com/aibor/initramfs v0.0.0-20231027104917-0fd456e83dd9

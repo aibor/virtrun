@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"syscall"
 
 	"github.com/aibor/pidonetest/internal"
@@ -19,19 +20,18 @@ func run() (int, error) {
 	var (
 		testBinaryPath string
 		err            error
-		qemuCmd        = internal.QEMUCommand{
-			Binary:  "qemu-system-x86_64",
-			Kernel:  "/boot/vmlinuz-linux",
-			Machine: "microvm",
-			CPU:     "host",
-			Memory:  256,
-			NoKVM:   false,
-		}
-		standalone bool
+		standalone     bool
 	)
 
+	qemuCmd, err := internal.NewQEMUCommand(runtime.GOARCH)
+	if err != nil {
+		return 1, err
+	}
+
+	qemuCmd.Kernel = "/boot/vmlinuz-linux"
+
 	// ParseArgs already prints errors, so we just exit.
-	if err := parseArgs(os.Args, &testBinaryPath, &qemuCmd, &standalone); err != nil {
+	if err := parseArgs(os.Args, &testBinaryPath, qemuCmd, &standalone); err != nil {
 		if err == flag.ErrHelp {
 			return 0, nil
 		}

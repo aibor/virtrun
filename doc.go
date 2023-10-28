@@ -80,8 +80,6 @@
 //	    -kernel $(realpath kernel/vmlinuz.arm64) \
 //	    -qemu-bin qemu-system-aarch64 \
 //	    -machine virt \
-//	    -memory 128 \
-//	    -cpu neoverse-n1" \
 //	    -nokvm \
 //	  .
 //

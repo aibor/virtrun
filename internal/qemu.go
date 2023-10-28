@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -33,6 +34,39 @@ type QEMUCommand struct {
 	InitArgs    []string
 	OutWriter   io.Writer
 	ErrWriter   io.Writer
+}
+
+// NewQEMUCommand creates a new QEMUCommand with defaults set to the
+// given architecture. If it does not match the host architecture, the
+// [QEMUCommand.NoKVM] flag ist set. Supported architectures so far:
+// amd64, arm64.
+func NewQEMUCommand(arch string) (*QEMUCommand, error) {
+	qemuCmd := QEMUCommand{
+		CPU:    "max",
+		Memory: 256,
+		NoKVM:  true,
+	}
+
+	switch arch {
+	case "amd64":
+		qemuCmd.Binary = "qemu-system-x86_64"
+		qemuCmd.Machine = "microvm"
+	case "arm64":
+		qemuCmd.Binary = "qemu-system-aarch64"
+		qemuCmd.Machine = "virt"
+	default:
+		return nil, fmt.Errorf("arch not supported: %s", arch)
+	}
+
+	if runtime.GOARCH == arch {
+		f, err := os.OpenFile("/dev/kvm", os.O_WRONLY, 0)
+		_ = f.Close()
+		if err == nil {
+			qemuCmd.NoKVM = false
+		}
+	}
+
+	return &qemuCmd, nil
 }
 
 // Output returns [QEMUCommand.OutWriter] if set or [os.Stdout] otherwise.

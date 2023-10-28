@@ -1,6 +1,7 @@
 package pidonetest_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -34,11 +35,12 @@ func TestMountPoints(t *testing.T) {
 }
 
 func TestNotPidOne(t *testing.T) {
-	cmd := exec.Command("/init")
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	t.Cleanup(cancel)
+	cmd := exec.CommandContext(ctx, "/init")
 	require.NoError(t, cmd.Start(), "command must start")
-	checkExitCode := func() bool {
-		err := cmd.Wait()
-		return err != nil && cmd.ProcessState.ExitCode() == 127
+	assert.Error(t, cmd.Wait(), "command should been killed by deadline")
+	if assert.NotNil(t, cmd.ProcessState, "process state should be present") {
+		assert.Equal(t, 127, cmd.ProcessState.ExitCode(), "exit code should be as expected")
 	}
-	assert.Eventually(t, checkExitCode, 100*time.Millisecond, 10*time.Millisecond)
 }

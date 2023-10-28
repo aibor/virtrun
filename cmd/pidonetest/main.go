@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/aibor/pidonetest"
 	"github.com/aibor/pidonetest/internal"
+	"github.com/aibor/pidonetest/sysinit"
 )
 
 func run() (int, error) {
@@ -53,8 +53,11 @@ func run() (int, error) {
 		qemuCmd.Initrd, err = internal.CreateInitramfs(testBinaryPath)
 	}
 	if err != nil {
-		return 1, fmt.Errorf("creating intird (Try again with CGO_ENABLED=0): %v", err)
+		return 1, fmt.Errorf("creating initramfs: %v", err)
 	}
+	defer func() {
+		_ = os.Remove(qemuCmd.Initrd)
+	}()
 
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),
@@ -79,12 +82,12 @@ func run() (int, error) {
 }
 
 func runInit() (int, error) {
-	if !pidonetest.IsPidOne() {
-		return 127, pidonetest.NotPidOneError
+	if !sysinit.IsPidOne() {
+		return 127, sysinit.NotPidOneError
 	}
-	defer pidonetest.Poweroff()
+	defer sysinit.Poweroff()
 
-	if err := pidonetest.MountAll(); err != nil {
+	if err := sysinit.MountAll(); err != nil {
 		return 126, fmt.Errorf("mounting file systems: %v", err)
 	}
 
@@ -107,7 +110,7 @@ func runInit() (int, error) {
 			rc = 1
 		}
 	}
-	pidonetest.PrintPidOneTestRC(rc)
+	sysinit.PrintRC(rc)
 
 	return 0, nil
 }

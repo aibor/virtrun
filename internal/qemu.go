@@ -17,7 +17,7 @@ import (
 //
 // It is parsed in the qemu wrapper. Not present in the output if the test
 // binary panicked.
-const RCFmt = "GO_PIDONETEST_RC: %d\n"
+const RCFmt = "INIT_RC: %d\n"
 
 // QEMUCommand is a single QEMU command that can be run.
 type QEMUCommand struct {

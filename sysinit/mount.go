@@ -1,4 +1,4 @@
-package pidonetest
+package sysinit
 
 import (
 	"fmt"

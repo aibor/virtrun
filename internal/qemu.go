@@ -81,6 +81,7 @@ func (q *QEMUCommand) Args() []string {
 	}
 
 	cmdline := []string{
+		"console=ttyAMA0",
 		"console=ttyS0",
 		"panic=-1",
 	}

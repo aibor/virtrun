@@ -1,30 +1,30 @@
 // Package pidonetest provides a simple way for running go tests in an isolated
 // system. It requires QEMU to be present on the system.
 //
-// # Quick Start
+// # Default mode
 //
-// The easiest way to use this package is to use the "wrapper mode". This does
+// The easiest way to use this package is to use the default mode. This does
 // not need any special support by your test package. The downside is, that it
 // can only be used if the target architecture matches the pidonetest binary
 // architecture. See "Library" if you want to test for different architectures.
 //
 // If you have it installed with go install in your PATH:
 //
-//	$ go test -exec "pidonetest -wrap" .
+//	$ go test -exec "pidonetest" .
 //
 // Or build and run on the fly with "go run":
 //
-//	$ go test -exec 'go run github.com/aibor/pidonetest/cmd/pidonetest -wrap' .
+//	$ go test -exec 'go run github.com/aibor/pidonetest/cmd/pidonetest' .
 //
 // There is also support for coverage profiles. Just specify it as usual:
 //
-//	$ go test -exec "pidonetest -wrap" -cover -coverprofile cover.out .
+//	$ go test -exec "pidonetest" -cover -coverprofile cover.out .
 //
-// # Library
+// # Standalone mode
 //
-// It consists of two parts. One part is the library that is intended to be used
-// in your go test package. The other part is the binary that is intended to be
-// used with "go test -exec".
+// In Standalone mode, the test binary can be used as init binary directly.
+// For this to work, the init steps need to be compiled in. this is done by
+// defining your own TestMain function using the provided package as library.
 //
 // The library part is a wrapper for [testing.M.Run]. Before running the tests
 // some special system file systems are mounted, like /dev, /sys, /proc, /tmp,
@@ -61,15 +61,15 @@
 //
 // If you have it installed with go install in your PATH:
 //
-//	$ go test -tags pidonetest -exec pidonetest .
+//	$ go test -tags pidonetest -exec 'pidonetest -standalone' .
 //
 // Or build and run on the fly with "go run":
 //
-//	$ go test -tags pidonetest -exec 'go run github.com/aibor/pidonetest/cmd/pidonetest' .
+//	$ go test -tags pidonetest -exec 'go run github.com/aibor/pidonetest/cmd/pidonetest -standalone' .
 //
 // There is also support for coverage profiles. Just specify it as usual:
 //
-//	$ go test -tags pidonetest -exec pidonetest -cover -coverprofile cover.out .
+//	$ go test -tags pidonetest -exec 'pidonetest -standalone' -cover -coverprofile cover.out .
 //
 // Other architectures work as well. You need a kernel for the target
 // architecture and adjust some flags for the platform. Disable KVM if your

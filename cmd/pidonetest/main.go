@@ -27,11 +27,11 @@ func run() (int, error) {
 			Memory:  256,
 			NoKVM:   false,
 		}
-		wrap bool
+		standalone bool
 	)
 
 	// ParseArgs already prints errors, so we just exit.
-	if err := parseArgs(os.Args, &testBinaryPath, &qemuCmd, &wrap); err != nil {
+	if err := parseArgs(os.Args, &testBinaryPath, &qemuCmd, &standalone); err != nil {
 		if err == flag.ErrHelp {
 			return 0, nil
 		}
@@ -42,7 +42,7 @@ func run() (int, error) {
 		return 1, fmt.Errorf("testbinary file %s doesn't exist.", testBinaryPath)
 	}
 
-	if wrap {
+	if !standalone {
 		var self string
 		self, err = os.Executable()
 		if err != nil {

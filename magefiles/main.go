@@ -46,7 +46,7 @@ func InstallPidonetest() error {
 }
 
 // Run tests using the package itself.
-func Selftest(useInstalled, useWrappedMode bool) error {
+func Selftest(useInstalled, standalone bool) error {
 	execCmd := []string{
 		"go",
 		"run",
@@ -56,8 +56,8 @@ func Selftest(useInstalled, useWrappedMode bool) error {
 		mg.Deps(InstallPidonetest)
 		execCmd = []string{filepath.Join("$GOBIN", "pidonetest")}
 	}
-	if useWrappedMode {
-		execCmd = append(execCmd, "-wrap")
+	if standalone {
+		execCmd = append(execCmd, "-standalone")
 	}
 
 	args := []string{
@@ -65,7 +65,7 @@ func Selftest(useInstalled, useWrappedMode bool) error {
 		"-v",
 		"-exec", strings.Join(execCmd, " "),
 	}
-	if !useWrappedMode {
+	if standalone {
 		args = append(args, "-tags", "pidonetest")
 	}
 	args = append(args, ".")

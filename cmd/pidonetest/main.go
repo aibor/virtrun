@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"syscall"
 
 	"github.com/aibor/initramfs"
@@ -19,9 +20,9 @@ import (
 
 func run() (int, error) {
 	var (
-		testBinaryPath string
-		err            error
-		standalone     bool
+		binaries   []string
+		err        error
+		standalone bool
 	)
 
 	qemuCmd, err := internal.NewQEMUCommand(runtime.GOARCH)
@@ -32,15 +33,17 @@ func run() (int, error) {
 	qemuCmd.Kernel = os.Getenv("PIDONETEST_KERNEL")
 
 	// ParseArgs already prints errors, so we just exit.
-	if err := parseArgs(os.Args, &testBinaryPath, qemuCmd, &standalone); err != nil {
+	if err := parseArgs(os.Args, &binaries, qemuCmd, &standalone); err != nil {
 		if err == flag.ErrHelp {
 			return 0, nil
 		}
 		return 1, nil
 	}
 
-	if _, err := os.Stat(testBinaryPath); errors.Is(err, os.ErrNotExist) {
-		return 1, fmt.Errorf("testbinary file %s doesn't exist.", testBinaryPath)
+	for _, file := range binaries {
+		if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
+			return 1, fmt.Errorf("file %s doesn't exist.", file)
+		}
 	}
 
 	if qemuCmd.Kernel == "" {
@@ -52,7 +55,8 @@ func run() (int, error) {
 
 	var archive *internal.Initramfs
 	if standalone {
-		archive = internal.NewInitramfs(testBinaryPath)
+		archive = internal.NewInitramfs(binaries[0])
+		binaries = slices.Delete(binaries, 0, 1)
 	} else {
 		var self string
 		self, err = os.Executable()
@@ -60,10 +64,12 @@ func run() (int, error) {
 			return 1, fmt.Errorf("get own path: %v", err)
 		}
 		archive = internal.NewInitramfs(self)
-		if err := archive.AddFile("test", testBinaryPath); err != nil {
-			return 1, fmt.Errorf("add test binary: %v", err)
-		}
 	}
+
+	if err := archive.AddFiles(binaries...); err != nil {
+		return 1, fmt.Errorf("add binares: %v", err)
+	}
+
 	qemuCmd.Initrd, err = archive.Write()
 	if err != nil {
 		return 1, fmt.Errorf("write initramfs: %v", err)
@@ -107,13 +113,23 @@ func runInit() (int, error) {
 		return 126, err
 	}
 
+	files, err := os.ReadDir(initramfs.FilesDir)
+	if err != nil {
+		return 125, err
+	}
+
+	paths := make([]string, len(files))
+	for idx, f := range files {
+		paths[idx] = filepath.Join(initramfs.FilesDir, f.Name())
+	}
+
 	rc := 0
-	path := filepath.Join(initramfs.FilesDir, "test")
-	err = sysinit.Exec(path, os.Args[1:], os.Stdout, os.Stderr)
+	err = sysinit.ExecParallel(paths, os.Args[1:], os.Stdout, os.Stderr)
 	if err != nil {
 		if !errors.Is(err, &exec.ExitError{}) {
-			return 125, err
+			return 124, err
 		}
+		err = nil
 		rc = 1
 	}
 	sysinit.PrintRC(rc)

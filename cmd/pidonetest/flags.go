@@ -8,8 +8,8 @@ import (
 	"github.com/aibor/pidonetest/internal"
 )
 
-func parseArgs(args []string, testBinaryPath *string, qemuCmd *internal.QEMUCommand, standalone *bool) error {
-	fsName := fmt.Sprintf("%s [flags...] [testbinary] [testflags...]", args[0])
+func parseArgs(args []string, binaries *[]string, qemuCmd *internal.QEMUCommand, standalone *bool) error {
+	fsName := fmt.Sprintf("%s [flags...] [testbinaries...] [testflags...]", args[0])
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 
 	internal.AddQEMUCommandFlags(fs, qemuCmd)
@@ -25,29 +25,30 @@ func parseArgs(args []string, testBinaryPath *string, qemuCmd *internal.QEMUComm
 		return err
 	}
 
-	posArgs := fs.Args()
-	if len(posArgs) < 1 {
-		fmt.Fprintln(fs.Output(), "no testbinary given")
-		fs.Usage()
-		return fmt.Errorf("no testbinary given")
-	}
-
-	*testBinaryPath = posArgs[0]
-
 	// Catch coverage related paths and adjust them.
-	for i := 1; i < len(posArgs); i++ {
-		arg := posArgs[i]
-		splits := strings.Split(arg, "=")
+	for _, posArg := range fs.Args() {
+		splits := strings.Split(posArg, "=")
 		switch splits[0] {
 		case "-test.coverprofile":
 			qemuCmd.SerialFiles = append(qemuCmd.SerialFiles, splits[1])
 			splits[1] = "/dev/ttyS1"
-			arg = strings.Join(splits, "=")
+			posArg = strings.Join(splits, "=")
 		case "-test.gocoverdir":
 			splits[1] = "/tmp"
-			arg = strings.Join(splits, "=")
+			posArg = strings.Join(splits, "=")
 		}
-		qemuCmd.InitArgs = append(qemuCmd.InitArgs, arg)
+
+		if strings.HasPrefix(posArg, "-") {
+			qemuCmd.InitArgs = append(qemuCmd.InitArgs, posArg)
+		} else {
+			*binaries = append(*binaries, posArg)
+		}
+	}
+
+	if len(*binaries) < 1 {
+		fmt.Fprintln(fs.Output(), "no binary given")
+		fs.Usage()
+		return fmt.Errorf("no binary given")
 	}
 
 	return nil

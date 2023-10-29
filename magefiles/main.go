@@ -46,7 +46,7 @@ func InstallPidonetest() error {
 }
 
 // Run tests using the package itself.
-func Selftest(useInstalled, standalone bool) error {
+func Selftest(useInstalled, standalone, verbose bool) error {
 	execCmd := []string{
 		"go",
 		"run",
@@ -58,6 +58,9 @@ func Selftest(useInstalled, standalone bool) error {
 	}
 	if standalone {
 		execCmd = append(execCmd, "-standalone")
+	}
+	if verbose {
+		execCmd = append(execCmd, "-verbose")
 	}
 
 	args := []string{

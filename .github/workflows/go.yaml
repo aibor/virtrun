@@ -8,14 +8,35 @@ on:
 
 jobs:
   go:
-    name: GolangCI Lint
+    name: Go lint and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v3
         with:
           go-version: '1.21'
+
       - uses: actions/checkout@v3
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
           version: latest
+
+      - name: Run go tests
+        run: go test -race ./internal/... ./cmd/...
+
+      - name: Install packages for selftest
+        run: |
+          sudo apt-get update
+          sudo apt-get install qemu-system-x86-microvm linux-image-generic
+          sudo chmod go+r /boot/vmlinuz-*
+
+      - name: Run selftest wrapped
+        env:
+          PIDONETEST_KERNEL: /boot/vmlinuz
+        run: go run github.com/magefile/mage selftest 0 0 1
+
+      - name: Run selftest standalone
+        env:
+          PIDONETEST_KERNEL: /boot/vmlinuz
+        run: go run github.com/magefile/mage selftest 0 1 1

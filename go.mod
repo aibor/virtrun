@@ -3,7 +3,7 @@ module github.com/aibor/pidonetest
 go 1.21
 
 require (
-	github.com/aibor/initramfs v0.0.0-20231027104917-0fd456e83dd9
+	github.com/aibor/initramfs v0.0.0-20231029202917-6cc891ba2c0b
 	github.com/magefile/mage v1.15.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/sync v0.4.0

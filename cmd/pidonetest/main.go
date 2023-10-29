@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/aibor/initramfs"
 	"github.com/aibor/pidonetest/internal"
 	"github.com/aibor/pidonetest/sysinit"
 )
@@ -49,18 +50,23 @@ func run() (int, error) {
 		return 1, fmt.Errorf("kernel file %s doesn't exist.", qemuCmd.Kernel)
 	}
 
-	if !standalone {
+	var archive *internal.Initramfs
+	if standalone {
+		archive = internal.NewInitramfs(testBinaryPath)
+	} else {
 		var self string
 		self, err = os.Executable()
 		if err != nil {
 			return 1, fmt.Errorf("get own path: %v", err)
 		}
-		qemuCmd.Initrd, err = internal.CreateInitramfs(self, testBinaryPath)
-	} else {
-		qemuCmd.Initrd, err = internal.CreateInitramfs(testBinaryPath)
+		archive = internal.NewInitramfs(self)
+		if err := archive.AddFile("test", testBinaryPath); err != nil {
+			return 1, fmt.Errorf("add test binary: %v", err)
+		}
 	}
+	qemuCmd.Initrd, err = archive.Write()
 	if err != nil {
-		return 1, fmt.Errorf("creating initramfs: %v", err)
+		return 1, fmt.Errorf("write initramfs: %v", err)
 	}
 	defer func() {
 		_ = os.Remove(qemuCmd.Initrd)
@@ -92,30 +98,23 @@ func runInit() (int, error) {
 	if !sysinit.IsPidOne() {
 		return 127, sysinit.NotPidOneError
 	}
-	defer sysinit.Poweroff()
 
-	if err := sysinit.MountAll(); err != nil {
-		return 126, fmt.Errorf("mounting file systems: %v", err)
-	}
+	var err error
+	defer sysinit.Poweroff(&err)
 
-	files, err := os.ReadDir("files")
+	err = sysinit.MountAll()
 	if err != nil {
-		return 126, fmt.Errorf("read test files: %v", err)
+		return 126, err
 	}
 
 	rc := 0
-	for _, f := range files {
-		path := filepath.Join("files", f.Name())
-		cmd := exec.Command(path, os.Args[1:]...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err := cmd.Run()
-		if err != nil {
-			if !errors.Is(err, &exec.ExitError{}) {
-				return 125, fmt.Errorf("running %s: %v", path, err)
-			}
-			rc = 1
+	path := filepath.Join(initramfs.FilesDir, "test")
+	err = sysinit.Exec(path, os.Args[1:], os.Stdout, os.Stderr)
+	if err != nil {
+		if !errors.Is(err, &exec.ExitError{}) {
+			return 125, err
 		}
+		rc = 1
 	}
 	sysinit.PrintRC(rc)
 
@@ -132,5 +131,4 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
 	os.Exit(rc)
-
 }

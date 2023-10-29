@@ -7,21 +7,28 @@ import (
 	"github.com/aibor/initramfs"
 )
 
-// CreateInitramfs creates a new initramfs archive.
+// Initramfs represents an [Initramfs.Archive] with added function to write
+// to a tempfile.
+type Initramfs struct {
+	*initramfs.Archive
+}
+
+// NewInitramfs creates a new initramfs archive.
 //
 // The file at initFilePath is added as "/init" to the archive and will be
-// executed by the kernel. All additional files are put into the directory
-// "/files" in the archive.
-//
-// The initramfs is created in [os.TempDir].  The function returns the absolute
-// path to the initramfs. It is the caller's responsibility to the remove the
-// file when it is no longer needed.
-func CreateInitramfs(initFilePath string, additionalFiles ...string) (string, error) {
-	archive := initramfs.New(initFilePath)
-	if err := archive.AddFiles(additionalFiles...); err != nil {
-		return "", fmt.Errorf("add files: %v", err)
+// executed by the kernel.
+func NewInitramfs(initFilePath string) *Initramfs {
+	return &Initramfs{
+		Archive: initramfs.New(initFilePath),
 	}
-	if err := archive.ResolveLinkedLibs(""); err != nil {
+}
+
+// Write resolves ELF dynamically linked libraries of all currently added files
+// and writes the initramfs to a file in [os.TempDir]. It is the caller's
+// responsibility to remove the file when it is no longer needed.
+func (i *Initramfs) Write() (string, error) {
+	var err error
+	if err := i.ResolveLinkedLibs(""); err != nil {
 		return "", fmt.Errorf("resolve: %v", err)
 	}
 
@@ -31,8 +38,8 @@ func CreateInitramfs(initFilePath string, additionalFiles ...string) (string, er
 	}
 	defer archiveFile.Close()
 
-	if err := archive.WriteCPIO(archiveFile); err != nil {
-		os.Remove(archiveFile.Name())
+	if err := i.WriteCPIO(archiveFile); err != nil {
+		_ = os.Remove(archiveFile.Name())
 		return "", fmt.Errorf("write: %v", err)
 	}
 

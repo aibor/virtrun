@@ -1,12 +1,17 @@
 package sysinit
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
+	"sync"
 	"syscall"
 
 	"github.com/aibor/pidonetest/internal"
+	"golang.org/x/sync/errgroup"
 )
 
 // NotPidOneError is returned if the process does not have PID 1.
@@ -40,4 +45,59 @@ func Poweroff() {
 	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
 		fmt.Printf("error calling power off: %v\n", err)
 	}
+}
+
+// Exec executes the given file wit the given arguments. Output and errors are
+// written to the given writers immediately. Might return [exec.ExitError].
+func Exec(path string, args []string, outWriter, errWriter io.Writer) error {
+	cmd := exec.Command(path, args...)
+	cmd.Stdout = outWriter
+	cmd.Stderr = errWriter
+	return cmd.Run()
+}
+
+// ExecParallel executes the given files in parallel. Each is called with the
+// given args. Output of the commands is written to the given out and err
+// writers once the command exited. Might return [exec.ExitError].
+func ExecParallel(paths []string, args []string, outW, errW io.Writer) error {
+	if !IsPidOne() {
+		return NotPidOneError
+	}
+
+	var (
+		writers   sync.WaitGroup
+		outStream = make(chan []byte)
+		errStream = make(chan []byte)
+		addWriter = func(writer io.Writer, byteStream <-chan []byte) {
+			writers.Add(1)
+			go func(w io.Writer, r <-chan []byte) {
+				defer writers.Done()
+				for b := range r {
+					fmt.Fprint(w, string(b))
+				}
+			}(writer, byteStream)
+		}
+	)
+
+	addWriter(outW, outStream)
+	addWriter(errW, errStream)
+
+	eg := errgroup.Group{}
+	for _, path := range paths {
+		path := path
+		eg.Go(func() error {
+			var outBuf, errBuf bytes.Buffer
+			err := Exec(path, args, &outBuf, &errBuf)
+			outStream <- outBuf.Bytes()
+			errStream <- errBuf.Bytes()
+			return err
+		})
+	}
+
+	err := eg.Wait()
+	close(outStream)
+	close(errStream)
+	writers.Wait()
+
+	return err
 }

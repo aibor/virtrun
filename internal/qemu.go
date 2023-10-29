@@ -121,7 +121,7 @@ func (q *QEMUCommand) Args() []string {
 	}
 
 	if !q.Verbose {
-		cmdline = append(cmdline, "quiet")
+		cmdline = append(cmdline, "loglevel=0")
 	}
 
 	if len(q.InitArgs) > 0 {

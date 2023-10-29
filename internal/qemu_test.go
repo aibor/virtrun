@@ -38,13 +38,13 @@ func TestArgs(t *testing.T) {
 			Verbose: true,
 		}
 
-		assert.NotContains(t, q.Args()[len(q.Args())-1], "quiet")
+		assert.NotContains(t, q.Args()[len(q.Args())-1], "loglevel=0")
 	})
 
 	t.Run("no-verbose", func(t *testing.T) {
 		q := internal.QEMUCommand{}
 
-		assert.Contains(t, q.Args()[len(q.Args())-1], "quiet")
+		assert.Contains(t, q.Args()[len(q.Args())-1], "loglevel=0")
 	})
 
 	t.Run("serial files", func(t *testing.T) {

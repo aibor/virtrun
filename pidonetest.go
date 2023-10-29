@@ -24,10 +24,13 @@ func Run(m *testing.M) {
 		fmt.Printf("Error: %v", sysinit.NotPidOneError)
 		os.Exit(127)
 	}
-	defer sysinit.Poweroff()
 
-	if err := sysinit.MountAll(); err != nil {
-		fmt.Printf("Error mounting file systems: %v", err)
+	var err error
+	defer sysinit.Poweroff(&err)
+
+	err = sysinit.MountAll()
+	if err != nil {
+		err = fmt.Errorf("mounting file systems: %v", err)
 		return
 	}
 

@@ -37,8 +37,13 @@ func IsPidOneChild() bool {
 // Poweroff shuts down the system.
 //
 // Call when done, or deferred right at the beginning of your `TestMain`
-// function.
-func Poweroff() {
+// function. If the given error pointer and error are not nil, print it before
+// shutting down.
+func Poweroff(err *error) {
+	if err != nil && *err != nil {
+		fmt.Printf("Error: %v", *err)
+	}
+
 	// Silence the kernel so it does not show up in our test output.
 	_ = os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0755)
 

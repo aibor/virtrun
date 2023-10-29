@@ -86,8 +86,8 @@ func (q *QEMUCommand) ErrOutput() io.Writer {
 }
 
 // Cmd compiles the complete QEMU command.
-func (q *QEMUCommand) Cmd() *exec.Cmd {
-	cmd := exec.Command(q.Binary, q.Args()...)
+func (q *QEMUCommand) Cmd(ctx context.Context) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, q.Binary, q.Args()...)
 	return cmd
 }
 
@@ -155,7 +155,11 @@ func (q *QEMUCommand) FixSerialFiles() error {
 // Run the QEMU command with the given context.
 func (q *QEMUCommand) Run(ctx context.Context) (int, error) {
 	rc := 1
-	cmd := q.Cmd()
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	cmd := q.Cmd(ctx)
 
 	cmdOut, err := cmd.StdoutPipe()
 	if err != nil {
@@ -171,12 +175,6 @@ func (q *QEMUCommand) Run(ctx context.Context) (int, error) {
 
 	if err := cmd.Start(); err != nil {
 		return rc, fmt.Errorf("run qemu: %v", err)
-	}
-	p := cmd.Process
-	if p != nil {
-		defer func() {
-			_ = p.Kill()
-		}()
 	}
 
 	readGroup, rcStream, err := Consume(&Output{

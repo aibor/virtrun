@@ -28,7 +28,7 @@ func run() (int, error) {
 		return 1, err
 	}
 
-	qemuCmd.Kernel = "/boot/vmlinuz-linux"
+	qemuCmd.Kernel = os.Getenv("PIDONETEST_KERNEL")
 
 	// ParseArgs already prints errors, so we just exit.
 	if err := parseArgs(os.Args, &testBinaryPath, qemuCmd, &standalone); err != nil {
@@ -40,6 +40,13 @@ func run() (int, error) {
 
 	if _, err := os.Stat(testBinaryPath); errors.Is(err, os.ErrNotExist) {
 		return 1, fmt.Errorf("testbinary file %s doesn't exist.", testBinaryPath)
+	}
+
+	if qemuCmd.Kernel == "" {
+		return 1, fmt.Errorf("no kernel specified (use env var PIDONETEST_KERNEL or flag -kernel)")
+	}
+	if _, err := os.Stat(qemuCmd.Kernel); errors.Is(err, os.ErrNotExist) {
+		return 1, fmt.Errorf("kernel file %s doesn't exist.", qemuCmd.Kernel)
 	}
 
 	if !standalone {

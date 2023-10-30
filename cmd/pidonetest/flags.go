@@ -31,7 +31,7 @@ func parseArgs(args []string, binaries *[]string, qemuCmd *internal.QEMUCommand,
 		switch splits[0] {
 		case "-test.coverprofile":
 			qemuCmd.SerialFiles = append(qemuCmd.SerialFiles, splits[1])
-			splits[1] = "/dev/ttyS1"
+			splits[1] = "/dev/hvc1"
 			posArg = strings.Join(splits, "=")
 		case "-test.gocoverdir":
 			splits[1] = "/tmp"

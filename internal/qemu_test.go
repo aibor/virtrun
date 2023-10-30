@@ -56,11 +56,15 @@ func TestArgs(t *testing.T) {
 			},
 		}
 		args := q.Args()
-		expected := []string{"stdio", "file:/output/file1", "file:/output/file2"}
+		expected := []string{
+			"stdio,id=virtiocon0",
+			"file,id=virtiocon1,path=/output/file1",
+			"file,id=virtiocon2,path=/output/file2",
+		}
 
 		for len(args) > 1 {
 			arg := next(&args)
-			if arg != "-serial" {
+			if arg != "-chardev" {
 				continue
 			}
 			if assert.Greater(t, len(expected), 0, "expected serial files already consumed") {

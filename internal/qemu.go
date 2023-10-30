@@ -53,7 +53,7 @@ func NewQEMUCommand(arch string) (*QEMUCommand, error) {
 	switch arch {
 	case "amd64":
 		qemuCmd.Binary = "qemu-system-x86_64"
-		qemuCmd.Machine = "microvm"
+		qemuCmd.Machine = "microvm,pit=off,pic=off,isa-serial=off,rtc=off"
 	case "arm64":
 		qemuCmd.Binary = "qemu-system-aarch64"
 		qemuCmd.Machine = "virt"
@@ -104,24 +104,28 @@ func (q *QEMUCommand) Args() []string {
 		"-smp", fmt.Sprintf("%d", q.SMP),
 		"-m", fmt.Sprintf("%d", q.Memory),
 		"-no-reboot",
-		"-serial", "stdio",
 		"-display", "none",
-		"-nodefaults",
 		"-monitor", "none",
+		"-nographic",
+		"-nodefaults",
 		"-no-user-config",
+		"-device", "virtio-serial-device",
+		"-chardev", "stdio,id=virtiocon0",
+		"-device", "virtconsole,chardev=virtiocon0",
 	}
 
 	if !q.NoKVM {
 		args = append(args, "-enable-kvm")
 	}
 
-	for _, serialFile := range q.SerialFiles {
-		args = append(args, "-serial", fmt.Sprintf("file:%s", serialFile))
+	for idx, serialFile := range q.SerialFiles {
+		args = append(args, "-chardev", fmt.Sprintf("file,id=virtiocon%d,path=%s", 1+idx, serialFile))
+		args = append(args, "-device", fmt.Sprintf("virtconsole,chardev=virtiocon%d", 1+idx))
 	}
 
 	cmdline := []string{
 		"console=ttyAMA0",
-		"console=ttyS0",
+		"console=hvc0",
 		"panic=-1",
 	}
 

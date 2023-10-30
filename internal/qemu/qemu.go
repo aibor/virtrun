@@ -43,7 +43,7 @@ func NewCommand(arch string) (*Command, error) {
 	switch arch {
 	case "amd64":
 		cmd.Binary = "qemu-system-x86_64"
-		cmd.Machine = "microvm,pit=off,pic=off,isa-serial=off,rtc=off"
+		cmd.Machine = "microvm"
 	case "arm64":
 		cmd.Binary = "qemu-system-aarch64"
 		cmd.Machine = "virt"

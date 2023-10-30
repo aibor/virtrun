@@ -28,6 +28,7 @@ type QEMUCommand struct {
 	Initrd      string
 	Machine     string
 	CPU         string
+	SMP         uint8
 	Memory      uint16
 	NoKVM       bool
 	Verbose     bool
@@ -45,6 +46,7 @@ func NewQEMUCommand(arch string) (*QEMUCommand, error) {
 	qemuCmd := QEMUCommand{
 		CPU:    "max",
 		Memory: 256,
+		SMP:    2,
 		NoKVM:  true,
 	}
 
@@ -99,6 +101,7 @@ func (q *QEMUCommand) Args() []string {
 		"-initrd", q.Initrd,
 		"-machine", q.Machine,
 		"-cpu", q.CPU,
+		"-smp", fmt.Sprintf("%d", q.SMP),
 		"-m", fmt.Sprintf("%d", q.Memory),
 		"-no-reboot",
 		"-serial", "stdio",

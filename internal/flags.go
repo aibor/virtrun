@@ -68,4 +68,22 @@ func AddQEMUCommandFlags(fs *flag.FlagSet, qemuCmd *QEMUCommand) {
 			return nil
 		},
 	)
+
+	fs.Func(
+		"smp",
+		fmt.Sprintf("number of CPUs for the QEMU VM (default %d)", qemuCmd.SMP),
+		func(s string) error {
+			mem, err := strconv.ParseUint(s, 10, 4)
+			if err != nil {
+				return err
+			}
+			if mem < 1 {
+				return fmt.Errorf("must not be less than 1")
+			}
+
+			qemuCmd.SMP = uint8(mem)
+
+			return nil
+		},
+	)
 }

@@ -1,4 +1,4 @@
-package internal
+package initramfs
 
 import (
 	"fmt"
@@ -7,17 +7,20 @@ import (
 	"github.com/aibor/initramfs"
 )
 
+// FilesDir is the directory additional files are added to.
+const FilesDir = initramfs.FilesDir
+
 // Initramfs represents an [Initramfs.Archive] with added function to write
 // to a tempfile.
 type Initramfs struct {
 	*initramfs.Archive
 }
 
-// NewInitramfs creates a new initramfs archive.
+// New creates a new initramfs archive.
 //
 // The file at initFilePath is added as "/init" to the archive and will be
 // executed by the kernel.
-func NewInitramfs(initFilePath string) *Initramfs {
+func New(initFilePath string) *Initramfs {
 	return &Initramfs{
 		Archive: initramfs.New(initFilePath),
 	}

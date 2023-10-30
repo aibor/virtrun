@@ -13,8 +13,7 @@ import (
 	"slices"
 	"syscall"
 
-	"github.com/aibor/initramfs"
-	"github.com/aibor/pidonetest/internal"
+	"github.com/aibor/pidonetest/internal/initramfs"
 	"github.com/aibor/pidonetest/internal/qemu"
 	"github.com/aibor/pidonetest/sysinit"
 )
@@ -55,9 +54,9 @@ func run() (int, error) {
 		return 1, fmt.Errorf("kernel file %s doesn't exist.", qemuCmd.Kernel)
 	}
 
-	var archive *internal.Initramfs
+	var archive *initramfs.Initramfs
 	if standalone {
-		archive = internal.NewInitramfs(binaries[0])
+		archive = initramfs.New(binaries[0])
 		binaries = slices.Delete(binaries, 0, 1)
 	} else {
 		var self string
@@ -65,7 +64,7 @@ func run() (int, error) {
 		if err != nil {
 			return 1, fmt.Errorf("get own path: %v", err)
 		}
-		archive = internal.NewInitramfs(self)
+		archive = initramfs.New(self)
 	}
 
 	if err := archive.AddFiles(binaries...); err != nil {

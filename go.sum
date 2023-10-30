@@ -1,5 +1,5 @@
-github.com/aibor/initramfs v0.0.0-20231029202917-6cc891ba2c0b h1:bG9z1UXU8N/lXPYo/Oc0GxDeVA4vp/72dhGrNF7TcC0=
-github.com/aibor/initramfs v0.0.0-20231029202917-6cc891ba2c0b/go.mod h1:dZxrRAzYoiC9i1qMP6ikPmdDuAlWTSQqrC5q+iVmaP0=
+github.com/aibor/initramfs v0.1.0 h1:O9v6Bu0q3chR7n7OkqRntOPnJoPJGm30z9Z/clSXuNE=
+github.com/aibor/initramfs v0.1.0/go.mod h1:dZxrRAzYoiC9i1qMP6ikPmdDuAlWTSQqrC5q+iVmaP0=
 github.com/cavaliergopher/cpio v1.0.1 h1:KQFSeKmZhv0cr+kawA3a0xTQCU4QxXF1vhU7P7av2KM=
 github.com/cavaliergopher/cpio v1.0.1/go.mod h1:pBdaqQjnvXxdS/6CvNDwIANIFSP0xRKI16PX4xejRQc=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

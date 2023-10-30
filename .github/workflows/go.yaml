@@ -33,10 +33,10 @@ jobs:
 
       - name: Run selftest wrapped
         env:
-          PIDONETEST_KERNEL: /boot/vmlinuz
+          QEMU_KERNEL: /boot/vmlinuz
         run: go run github.com/magefile/mage selftest 0 0 1
 
       - name: Run selftest standalone
         env:
-          PIDONETEST_KERNEL: /boot/vmlinuz
+          QEMU_KERNEL: /boot/vmlinuz
         run: go run github.com/magefile/mage selftest 0 1 1

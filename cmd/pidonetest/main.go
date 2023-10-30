@@ -94,7 +94,7 @@ func run() (int, error) {
 	}
 
 	if err := qemuCmd.FixSerialFiles(); err != nil {
-		return rc, fmt.Errorf("fixing serial files: %v", err)
+		return rc, err
 	}
 
 	return rc, nil

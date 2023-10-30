@@ -144,21 +144,50 @@ func (q *QEMUCommand) Args() []string {
 // FixSerialFiles remove carriage returns from the [QEMUCommand.SerialFiles].
 //
 // The serial console ends files with "\r\n" but "go test" does not like the
-// carriage returns. It reads the whole file and writes it back.
+// carriage returns. It reads the file and writes it back in place.
 func (q *QEMUCommand) FixSerialFiles() error {
 	for _, serialFile := range q.SerialFiles {
-		content, err := os.ReadFile(serialFile)
-		if err != nil {
-			return fmt.Errorf("read serial file %s: %v", serialFile, err)
-		}
-
-		replaced := bytes.ReplaceAll(content, []byte("\r"), nil)
-		if err := os.WriteFile(serialFile, replaced, 0644); err != nil {
-			return fmt.Errorf("write serial file %s: %v", serialFile, err)
+		if err := fixSerialFile(serialFile); err != nil {
+			return fmt.Errorf("fix serial file %s: %v", serialFile, err)
 		}
 	}
-
 	return nil
+}
+
+func fixSerialFile(path string) error {
+	readF, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("reader: %v", err)
+	}
+	defer readF.Close()
+
+	// Remove the reader file. Data will be useable until the FD we have is
+	// closed.
+	if err := os.Remove(path); err != nil {
+		return err
+	}
+
+	// Create file with same name again.
+	writeF, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("writer: %v", err)
+	}
+	defer writeF.Close()
+
+	buf := make([]byte, 4096)
+	for {
+		n, err := readF.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+			}
+			return err
+		}
+		_, err = writeF.Write(bytes.ReplaceAll(buf[0:n], []byte("\r"), nil))
+		if err != nil {
+			return err
+		}
+	}
 }
 
 // Run the QEMU command with the given context.

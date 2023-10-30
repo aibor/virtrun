@@ -58,8 +58,8 @@ func TestArgs(t *testing.T) {
 		args := q.Args()
 		expected := []string{
 			"stdio,id=virtiocon0",
-			"file,id=virtiocon1,path=/output/file1",
-			"file,id=virtiocon2,path=/output/file2",
+			"file,id=virtiocon1,path=/dev/fd/3",
+			"file,id=virtiocon2,path=/dev/fd/4",
 		}
 
 		for len(args) > 1 {
@@ -170,7 +170,11 @@ func TestOutputConsume(t *testing.T) {
 			stdOut := bytes.NewBuffer(make([]byte, 0, 512))
 
 			rcParser := internal.NewRCParser(stdOut, tt.verbose)
-			done := rcParser.Start()
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				require.NoError(t, rcParser.Run())
+			}()
 			_, err := io.Copy(rcParser, cmdOut)
 			require.NoError(t, err)
 			require.NoError(t, rcParser.Close())

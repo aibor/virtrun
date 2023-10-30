@@ -1,25 +1,16 @@
 package internal
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"regexp"
 	"runtime"
 	"strings"
+
+	"golang.org/x/sync/errgroup"
 )
-
-// RCFmt is the format string for communicating the test results
-//
-// It is parsed in the qemu wrapper. Not present in the output if the test
-// binary panicked.
-const RCFmt = "INIT_RC: %d\n"
-
-var panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
 
 // QEMUCommand is a single QEMU command that can be run.
 type QEMUCommand struct {
@@ -118,9 +109,19 @@ func (q *QEMUCommand) Args() []string {
 		args = append(args, "-enable-kvm")
 	}
 
-	for idx, serialFile := range q.SerialFiles {
-		args = append(args, "-chardev", fmt.Sprintf("file,id=virtiocon%d,path=%s", 1+idx, serialFile))
-		args = append(args, "-device", fmt.Sprintf("virtconsole,chardev=virtiocon%d", 1+idx))
+	// Write serial console output to file descriptors. Those are provided by
+	// the [exec.Cmd.ExtraFiles].
+	for idx := range q.SerialFiles {
+		// virtiocon0 is stdio so start at 1.
+		vcon := fmt.Sprintf("virtiocon%d", 1+idx)
+		// FDs 0, 1, 2 are standard in, out, err, so start at 3.
+		path := fmt.Sprintf("/dev/fd/%d", 3+idx)
+
+		args = append(
+			args,
+			"-chardev", fmt.Sprintf("file,id=%s,path=%s", vcon, path),
+			"-device", fmt.Sprintf("virtconsole,chardev=%s", vcon),
+		)
 	}
 
 	cmdline := []string{
@@ -141,55 +142,6 @@ func (q *QEMUCommand) Args() []string {
 	return append(args, "-append", strings.Join(cmdline, " "))
 }
 
-// FixSerialFiles remove carriage returns from the [QEMUCommand.SerialFiles].
-//
-// The serial console ends files with "\r\n" but "go test" does not like the
-// carriage returns. It reads the file and writes it back in place.
-func (q *QEMUCommand) FixSerialFiles() error {
-	for _, serialFile := range q.SerialFiles {
-		if err := fixSerialFile(serialFile); err != nil {
-			return fmt.Errorf("fix serial file %s: %v", serialFile, err)
-		}
-	}
-	return nil
-}
-
-func fixSerialFile(path string) error {
-	readF, err := os.Open(path)
-	if err != nil {
-		return fmt.Errorf("reader: %v", err)
-	}
-	defer readF.Close()
-
-	// Remove the reader file. Data will be useable until the FD we have is
-	// closed.
-	if err := os.Remove(path); err != nil {
-		return err
-	}
-
-	// Create file with same name again.
-	writeF, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("writer: %v", err)
-	}
-	defer writeF.Close()
-
-	buf := make([]byte, 4096)
-	for {
-		n, err := readF.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				err = nil
-			}
-			return err
-		}
-		_, err = writeF.Write(bytes.ReplaceAll(buf[0:n], []byte("\r"), nil))
-		if err != nil {
-			return err
-		}
-	}
-}
-
 // Run the QEMU command with the given context.
 func (q *QEMUCommand) Run(ctx context.Context) (int, error) {
 	rc := 1
@@ -200,6 +152,7 @@ func (q *QEMUCommand) Run(ctx context.Context) (int, error) {
 	rcParser := NewRCParser(q.Output(), q.Verbose)
 	defer rcParser.Close()
 
+	processorGroup, ctx := errgroup.WithContext(ctx)
 	cmd := q.Cmd(ctx)
 	cmd.Stdout = rcParser
 	cmd.Stderr = q.ErrOutput()
@@ -207,65 +160,29 @@ func (q *QEMUCommand) Run(ctx context.Context) (int, error) {
 		fmt.Println(cmd.String())
 	}
 
-	outDone := rcParser.Start()
+	for _, serialFile := range q.SerialFiles {
+		p, err := NewSerialProcessor(serialFile)
+		if err != nil {
+			return rc, fmt.Errorf("serial processor %s: %v", serialFile, err)
+		}
+		defer p.Close()
+		cmd.ExtraFiles = append(cmd.ExtraFiles, p.writePipe)
+		processorGroup.Go(p.Run)
+	}
 
+	processorGroup.Go(rcParser.Run)
 	if err := cmd.Run(); err != nil {
 		return rc, fmt.Errorf("run qemu: %v", err)
 	}
 
-	rcParser.Close()
-	<-outDone
+	_ = rcParser.Close()
+	for _, f := range cmd.ExtraFiles {
+		_ = f.Close()
+	}
+	err := processorGroup.Wait()
 
 	if rcParser.FoundRC {
 		rc = rcParser.RC
 	}
-	return rc, nil
-}
-
-// RCParser wraps [io.PipeWriter] and is used to find our well-known RC
-// string for communication the return code from the guest. Call [RCParser.Close]
-// in order to terminate the reader.
-type RCParser struct {
-	*io.PipeWriter
-	scanner *bufio.Scanner
-	output  io.Writer
-	verbose bool
-	RC      int
-	FoundRC bool
-}
-
-// NewRCParser sets up a new RCParser.
-func NewRCParser(output io.Writer, verbose bool) *RCParser {
-	r, w := io.Pipe()
-	return &RCParser{
-		PipeWriter: w,
-		scanner:    bufio.NewScanner(r),
-		output:     output,
-		verbose:    verbose,
-	}
-}
-
-// Start the reader that writes into the given output writer.
-//
-// It starts a go routine that terminates when the RCParser is closed. The
-// returned channel is closed when the reader processed all input.
-func (p *RCParser) Start() <-chan struct{} {
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		for p.scanner.Scan() {
-			line := p.scanner.Text()
-			if panicRE.MatchString(line) {
-				if !p.FoundRC {
-					p.RC = 126
-				}
-			} else if _, err := fmt.Sscanf(line, RCFmt, &p.RC); err == nil {
-				p.FoundRC = true
-			}
-			if !p.FoundRC || p.verbose {
-				fmt.Fprintln(p.output, line)
-			}
-		}
-	}()
-	return done
+	return rc, err
 }

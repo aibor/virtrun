@@ -93,10 +93,6 @@ func run() (int, error) {
 		return rc, fmt.Errorf("running QEMU command: %v", err)
 	}
 
-	if err := qemuCmd.FixSerialFiles(); err != nil {
-		return rc, err
-	}
-
 	return rc, nil
 }
 

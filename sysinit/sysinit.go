@@ -41,7 +41,7 @@ func IsPidOneChild() bool {
 // shutting down.
 func Poweroff(err *error) {
 	if err != nil && *err != nil {
-		fmt.Printf("Error: %v", *err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", *err)
 	}
 
 	// Silence the kernel so it does not show up in our test output.

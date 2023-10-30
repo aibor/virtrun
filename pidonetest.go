@@ -21,7 +21,7 @@ import (
 // "pidonetest" CLI tool.
 func Run(m *testing.M) {
 	if !sysinit.IsPidOne() {
-		fmt.Printf("Error: %v", sysinit.NotPidOneError)
+		fmt.Printf("Error: %v\n", sysinit.NotPidOneError)
 		os.Exit(127)
 	}
 

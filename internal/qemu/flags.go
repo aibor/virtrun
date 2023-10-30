@@ -1,4 +1,4 @@
-package internal
+package qemu
 
 import (
 	"flag"
@@ -6,54 +6,54 @@ import (
 	"strconv"
 )
 
-// AddQEMUCommandFlags adds flags for configuring the QEMUCommand to the given
+// AddCommandFlags adds flags for configuring the [Command] to the given
 // FlagSet.
-func AddQEMUCommandFlags(fs *flag.FlagSet, qemuCmd *QEMUCommand) {
+func AddCommandFlags(fs *flag.FlagSet, cmd *Command) {
 	fs.StringVar(
-		&qemuCmd.Binary,
+		&cmd.Binary,
 		"qemu-bin",
-		qemuCmd.Binary,
+		cmd.Binary,
 		"QEMU binary to use",
 	)
 
 	fs.StringVar(
-		&qemuCmd.Kernel,
+		&cmd.Kernel,
 		"kernel",
-		qemuCmd.Kernel,
+		cmd.Kernel,
 		"path to kernel to use",
 	)
 
 	fs.StringVar(
-		&qemuCmd.Machine,
+		&cmd.Machine,
 		"machine",
-		qemuCmd.Machine,
+		cmd.Machine,
 		"QEMU machine type to use",
 	)
 
 	fs.StringVar(
-		&qemuCmd.CPU,
+		&cmd.CPU,
 		"cpu",
-		qemuCmd.CPU,
+		cmd.CPU,
 		"QEMU cpu type to use",
 	)
 
 	fs.BoolVar(
-		&qemuCmd.NoKVM,
+		&cmd.NoKVM,
 		"nokvm",
-		qemuCmd.NoKVM,
+		cmd.NoKVM,
 		"disable hardware support",
 	)
 
 	fs.BoolVar(
-		&qemuCmd.Verbose,
+		&cmd.Verbose,
 		"verbose",
-		qemuCmd.Verbose,
+		cmd.Verbose,
 		"enable verbose guest system output",
 	)
 
 	fs.Func(
 		"memory",
-		fmt.Sprintf("memory (in MB) for the QEMU VM (default %dMB)", qemuCmd.Memory),
+		fmt.Sprintf("memory (in MB) for the QEMU VM (default %dMB)", cmd.Memory),
 		func(s string) error {
 			mem, err := strconv.ParseUint(s, 10, 16)
 			if err != nil {
@@ -63,7 +63,7 @@ func AddQEMUCommandFlags(fs *flag.FlagSet, qemuCmd *QEMUCommand) {
 				return fmt.Errorf("less than 128 MB is not sufficient")
 			}
 
-			qemuCmd.Memory = uint16(mem)
+			cmd.Memory = uint16(mem)
 
 			return nil
 		},
@@ -71,7 +71,7 @@ func AddQEMUCommandFlags(fs *flag.FlagSet, qemuCmd *QEMUCommand) {
 
 	fs.Func(
 		"smp",
-		fmt.Sprintf("number of CPUs for the QEMU VM (default %d)", qemuCmd.SMP),
+		fmt.Sprintf("number of CPUs for the QEMU VM (default %d)", cmd.SMP),
 		func(s string) error {
 			mem, err := strconv.ParseUint(s, 10, 4)
 			if err != nil {
@@ -81,7 +81,7 @@ func AddQEMUCommandFlags(fs *flag.FlagSet, qemuCmd *QEMUCommand) {
 				return fmt.Errorf("must not be less than 1")
 			}
 
-			qemuCmd.SMP = uint8(mem)
+			cmd.SMP = uint8(mem)
 
 			return nil
 		},

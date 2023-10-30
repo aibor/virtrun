@@ -10,7 +10,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/aibor/pidonetest/internal"
+	"github.com/aibor/pidonetest/internal/qemu"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -20,7 +20,7 @@ var NotPidOneError = errors.New("process has not PID 1")
 // PrintRC prints the magic string communicating the return code of
 // the tests.
 func PrintRC(ret int) {
-	fmt.Printf(internal.RCFmt, ret)
+	fmt.Printf(qemu.RCFmt, ret)
 }
 
 // IsPidOne returns true if the running process has PID 1.

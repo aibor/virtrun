@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aibor/pidonetest/internal"
+	"github.com/aibor/pidonetest/internal/qemu"
 )
 
-func parseArgs(args []string, binaries *[]string, qemuCmd *internal.QEMUCommand, standalone *bool) error {
+func parseArgs(args []string, binaries *[]string, qemuCmd *qemu.Command, standalone *bool) error {
 	fsName := fmt.Sprintf("%s [flags...] [testbinaries...] [testflags...]", args[0])
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 
-	internal.AddQEMUCommandFlags(fs, qemuCmd)
+	qemu.AddCommandFlags(fs, qemuCmd)
 
 	fs.BoolVar(
 		standalone,

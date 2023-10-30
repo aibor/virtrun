@@ -15,6 +15,7 @@ import (
 
 	"github.com/aibor/initramfs"
 	"github.com/aibor/pidonetest/internal"
+	"github.com/aibor/pidonetest/internal/qemu"
 	"github.com/aibor/pidonetest/sysinit"
 )
 
@@ -25,7 +26,7 @@ func run() (int, error) {
 		standalone bool
 	)
 
-	qemuCmd, err := internal.NewQEMUCommand(runtime.GOARCH)
+	qemuCmd, err := qemu.NewCommand(runtime.GOARCH)
 	if err != nil {
 		return 1, err
 	}

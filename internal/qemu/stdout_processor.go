@@ -1,4 +1,4 @@
-package internal
+package qemu
 
 import (
 	"bufio"
@@ -15,10 +15,11 @@ const RCFmt = "INIT_RC: %d\n"
 
 var panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
 
-// RCParser wraps [io.PipeWriter] and is used to find our well-known RC
+// StdoutProcessor wraps [io.PipeWriter] and is used to determine the return
+// code based on the standard output of the VM. It finds the well-known RC
 // string for communication the return code from the guest. Call
-// [RCParser.Close] in order to terminate the reader.
-type RCParser struct {
+// [StdoutProcessor.Close] in order to terminate the reader.
+type StdoutProcessor struct {
 	io.WriteCloser
 	scanner *bufio.Scanner
 	output  io.Writer
@@ -27,10 +28,10 @@ type RCParser struct {
 	FoundRC bool
 }
 
-// NewRCParser sets up a new RCParser.
-func NewRCParser(output io.Writer, verbose bool) *RCParser {
+// NewStdoutProcessor sets up a new StdoutProcessor.
+func NewStdoutProcessor(output io.Writer, verbose bool) *StdoutProcessor {
 	r, w := io.Pipe()
-	return &RCParser{
+	return &StdoutProcessor{
 		WriteCloser: w,
 		scanner:     bufio.NewScanner(r),
 		output:      output,
@@ -39,7 +40,7 @@ func NewRCParser(output io.Writer, verbose bool) *RCParser {
 }
 
 // Run processes the input until the underlying writer is closed.
-func (p *RCParser) Run() error {
+func (p *StdoutProcessor) Run() error {
 	for p.scanner.Scan() {
 		line := p.scanner.Text()
 		if panicRE.MatchString(line) {

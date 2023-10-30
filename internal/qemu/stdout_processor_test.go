@@ -1,4 +1,4 @@
-package internal_test
+package qemu_test
 
 import (
 	"bytes"
@@ -8,98 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aibor/pidonetest/internal"
+	"github.com/aibor/pidonetest/internal/qemu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestArgs(t *testing.T) {
-	next := func(s *[]string) string {
-		e := (*s)[0]
-		*s = (*s)[1:]
-		return e
-	}
-
-	t.Run("yes-kvm", func(t *testing.T) {
-		q := internal.QEMUCommand{}
-
-		assert.Contains(t, q.Args(), "-enable-kvm")
-	})
-
-	t.Run("no-kvm", func(t *testing.T) {
-		q := internal.QEMUCommand{
-			NoKVM: true,
-		}
-
-		assert.NotContains(t, q.Args(), "-enable-kvm")
-	})
-
-	t.Run("yes-verbose", func(t *testing.T) {
-		q := internal.QEMUCommand{
-			Verbose: true,
-		}
-
-		assert.NotContains(t, q.Args()[len(q.Args())-1], "loglevel=0")
-	})
-
-	t.Run("no-verbose", func(t *testing.T) {
-		q := internal.QEMUCommand{}
-
-		assert.Contains(t, q.Args()[len(q.Args())-1], "loglevel=0")
-	})
-
-	t.Run("serial files", func(t *testing.T) {
-		q := internal.QEMUCommand{
-			SerialFiles: []string{
-				"/output/file1",
-				"/output/file2",
-			},
-		}
-		args := q.Args()
-		expected := []string{
-			"stdio,id=virtiocon0",
-			"file,id=virtiocon1,path=/dev/fd/3",
-			"file,id=virtiocon2,path=/dev/fd/4",
-		}
-
-		for len(args) > 1 {
-			arg := next(&args)
-			if arg != "-chardev" {
-				continue
-			}
-			if assert.Greater(t, len(expected), 0, "expected serial files already consumed") {
-				assert.Equal(t, next(&expected), next(&args))
-			}
-		}
-
-		assert.Len(t, expected, 0, "no expected serial files should be left over")
-	})
-
-	t.Run("init args", func(t *testing.T) {
-		q := internal.QEMUCommand{
-			InitArgs: []string{
-				"first",
-				"second",
-				"third",
-			},
-		}
-		args := q.Args()
-		expected := " -- first second third"
-
-		var appendValue string
-		for len(args) > 1 {
-			arg := next(&args)
-			if arg == "-append" {
-				appendValue = next(&args)
-			}
-		}
-
-		require.NotEmpty(t, appendValue, "append value must be found")
-		assert.Contains(t, appendValue, expected, "append value should contain init args")
-	})
-}
-
-func TestOutputConsume(t *testing.T) {
+func TestStdoutProcessor(t *testing.T) {
 	tests := []struct {
 		name    string
 		verbose bool
@@ -141,7 +55,7 @@ func TestOutputConsume(t *testing.T) {
 			input: []string{
 				"something out",
 				"more out",
-				fmt.Sprintf(internal.RCFmt, 4),
+				fmt.Sprintf(qemu.RCFmt, 4),
 			},
 			output: []string{
 				"something out",
@@ -169,7 +83,7 @@ func TestOutputConsume(t *testing.T) {
 			cmdOut := bytes.NewBuffer([]byte(strings.Join(tt.input, "\n")))
 			stdOut := bytes.NewBuffer(make([]byte, 0, 512))
 
-			rcParser := internal.NewRCParser(stdOut, tt.verbose)
+			rcParser := qemu.NewStdoutProcessor(stdOut, tt.verbose)
 			done := make(chan struct{})
 			go func() {
 				defer close(done)

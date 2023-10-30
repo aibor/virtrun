@@ -1,4 +1,4 @@
-package internal
+package qemu
 
 import (
 	"bytes"
@@ -7,18 +7,22 @@ import (
 	"os"
 )
 
-// SerialProcessor is used to process input from a serial console and write
-// it into a file.
-type SerialProcessor struct {
+// SerialConsoleProcessor is used to process input from a serial console and
+// write it into a file.
+type SerialConsoleProcessor struct {
 	name      string
 	writePipe *os.File
 	readPipe  io.ReadCloser
 	output    io.WriteCloser
 }
 
-// NewSerialProcessor creates a new SerialProcessor that writes into a file
-// with the given path. The file is created or truncated, if it exists.
-func NewSerialProcessor(serialFile string) (*SerialProcessor, error) {
+// NewSerialConsoleProcessor creates a new SerialConsoleProcessor that writes
+// into a file with the given path. The file is created or truncated, if it
+// exists.
+func NewSerialConsoleProcessor(serialFile string) (
+	*SerialConsoleProcessor,
+	error,
+) {
 	r, w, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -27,7 +31,7 @@ func NewSerialProcessor(serialFile string) (*SerialProcessor, error) {
 	if err != nil {
 		return nil, err
 	}
-	p := &SerialProcessor{
+	p := &SerialConsoleProcessor{
 		name:      serialFile,
 		writePipe: w,
 		readPipe:  r,
@@ -37,20 +41,20 @@ func NewSerialProcessor(serialFile string) (*SerialProcessor, error) {
 }
 
 // Writer returns the writer end of the [os.Pipe].
-func (p *SerialProcessor) Writer() *os.File {
+func (p *SerialConsoleProcessor) Writer() *os.File {
 	return p.writePipe
 }
 
 // Close closes all file descriptors.
-func (p *SerialProcessor) Close() {
+func (p *SerialConsoleProcessor) Close() {
 	_ = p.writePipe.Close()
 	_ = p.readPipe.Close()
 	_ = p.output.Close()
 }
 
-// Run process the input. It blocks and returns once [io.EOF] is received, which
-// happens when [SerialProcessor.Writer] is closed.
-func (p *SerialProcessor) Run() error {
+// Run process the input. It blocks and returns once [io.EOF] is received,
+// which happens when [SerialProcessor.Writer] is closed.
+func (p *SerialConsoleProcessor) Run() error {
 	if err := clean(p.readPipe, p.output); err != nil {
 		return fmt.Errorf("serial processor run %s: %v", p.name, err)
 	}

@@ -1,4 +1,4 @@
-package internal
+package qemu
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// QEMUCommand is a single QEMU command that can be run.
-type QEMUCommand struct {
+// Command is a single QEMU command that can be run.
+type Command struct {
 	Binary      string
 	Kernel      string
 	Initrd      string
@@ -29,12 +29,11 @@ type QEMUCommand struct {
 	ErrWriter   io.Writer
 }
 
-// NewQEMUCommand creates a new QEMUCommand with defaults set to the
-// given architecture. If it does not match the host architecture, the
-// [QEMUCommand.NoKVM] flag ist set. Supported architectures so far:
-// amd64, arm64.
-func NewQEMUCommand(arch string) (*QEMUCommand, error) {
-	qemuCmd := QEMUCommand{
+// NewCommand creates a new [Command] with defaults set to the given
+// architecture. If it does not match the host architecture, the
+// [Command.NoKVM] flag ist set. Supported architectures so far: amd64, arm64.
+func NewCommand(arch string) (*Command, error) {
+	cmd := Command{
 		CPU:    "max",
 		Memory: 256,
 		SMP:    2,
@@ -43,11 +42,11 @@ func NewQEMUCommand(arch string) (*QEMUCommand, error) {
 
 	switch arch {
 	case "amd64":
-		qemuCmd.Binary = "qemu-system-x86_64"
-		qemuCmd.Machine = "microvm,pit=off,pic=off,isa-serial=off,rtc=off"
+		cmd.Binary = "qemu-system-x86_64"
+		cmd.Machine = "microvm,pit=off,pic=off,isa-serial=off,rtc=off"
 	case "arm64":
-		qemuCmd.Binary = "qemu-system-aarch64"
-		qemuCmd.Machine = "virt"
+		cmd.Binary = "qemu-system-aarch64"
+		cmd.Machine = "virt"
 	default:
 		return nil, fmt.Errorf("arch not supported: %s", arch)
 	}
@@ -56,23 +55,23 @@ func NewQEMUCommand(arch string) (*QEMUCommand, error) {
 		f, err := os.OpenFile("/dev/kvm", os.O_WRONLY, 0)
 		_ = f.Close()
 		if err == nil {
-			qemuCmd.NoKVM = false
+			cmd.NoKVM = false
 		}
 	}
 
-	return &qemuCmd, nil
+	return &cmd, nil
 }
 
-// Output returns [QEMUCommand.OutWriter] if set or [os.Stdout] otherwise.
-func (q *QEMUCommand) Output() io.Writer {
+// Output returns [Command.OutWriter] if set or [os.Stdout] otherwise.
+func (q *Command) Output() io.Writer {
 	if q.OutWriter == nil {
 		return os.Stdout
 	}
 	return q.OutWriter
 }
 
-// Output returns [QEMUCommand.ErrWriter] if set or [os.Stderr] otherwise.
-func (q *QEMUCommand) ErrOutput() io.Writer {
+// Output returns [Command.ErrWriter] if set or [os.Stderr] otherwise.
+func (q *Command) ErrOutput() io.Writer {
 	if q.ErrWriter == nil {
 		return os.Stderr
 	}
@@ -80,13 +79,13 @@ func (q *QEMUCommand) ErrOutput() io.Writer {
 }
 
 // Cmd compiles the complete QEMU command.
-func (q *QEMUCommand) Cmd(ctx context.Context) *exec.Cmd {
+func (q *Command) Cmd(ctx context.Context) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, q.Binary, q.Args()...)
 	return cmd
 }
 
 // Args compiles the argument string for the QEMU command.
-func (q *QEMUCommand) Args() []string {
+func (q *Command) Args() []string {
 	args := []string{
 		"-kernel", q.Kernel,
 		"-initrd", q.Initrd,
@@ -143,13 +142,13 @@ func (q *QEMUCommand) Args() []string {
 }
 
 // Run the QEMU command with the given context.
-func (q *QEMUCommand) Run(ctx context.Context) (int, error) {
+func (q *Command) Run(ctx context.Context) (int, error) {
 	rc := 1
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	rcParser := NewRCParser(q.Output(), q.Verbose)
+	rcParser := NewStdoutProcessor(q.Output(), q.Verbose)
 	defer rcParser.Close()
 
 	processorGroup, ctx := errgroup.WithContext(ctx)
@@ -161,7 +160,7 @@ func (q *QEMUCommand) Run(ctx context.Context) (int, error) {
 	}
 
 	for _, serialFile := range q.SerialFiles {
-		p, err := NewSerialProcessor(serialFile)
+		p, err := NewSerialConsoleProcessor(serialFile)
 		if err != nil {
 			return rc, fmt.Errorf("serial processor %s: %v", serialFile, err)
 		}

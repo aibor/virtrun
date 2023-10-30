@@ -94,7 +94,7 @@ func run() (int, error) {
 	}
 
 	if err := qemuCmd.FixSerialFiles(); err != nil {
-		return rc, fmt.Errorf(" fixing serial files: %v", err)
+		return rc, fmt.Errorf("fixing serial files: %v", err)
 	}
 
 	return rc, nil
@@ -126,15 +126,17 @@ func runInit() (int, error) {
 	rc := 0
 	err = sysinit.ExecParallel(paths, os.Args[1:], os.Stdout, os.Stderr)
 	if err != nil {
-		if !errors.Is(err, &exec.ExitError{}) {
-			return 124, err
+		var eerr *exec.ExitError
+		if errors.As(err, &eerr) {
+			rc = eerr.ExitCode()
+		} else {
+			rc = 124
 		}
 		err = nil
-		rc = 1
 	}
 	sysinit.PrintRC(rc)
 
-	return 0, nil
+	return rc, nil
 }
 
 func main() {

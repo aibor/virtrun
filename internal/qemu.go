@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"sync"
 )
 
 // RCFmt is the format string for communicating the test results
@@ -19,6 +18,8 @@ import (
 // It is parsed in the qemu wrapper. Not present in the output if the test
 // binary panicked.
 const RCFmt = "INIT_RC: %d\n"
+
+var panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
 
 // QEMUCommand is a single QEMU command that can be run.
 type QEMUCommand struct {
@@ -103,6 +104,7 @@ func (q *QEMUCommand) Args() []string {
 		"-serial", "stdio",
 		"-display", "none",
 		"-nodefaults",
+		"-monitor", "none",
 		"-no-user-config",
 	}
 
@@ -159,117 +161,75 @@ func (q *QEMUCommand) Run(ctx context.Context) (int, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	rcParser := NewRCParser(q.Output(), q.Verbose)
+	defer rcParser.Close()
+
 	cmd := q.Cmd(ctx)
-
-	cmdOut, err := cmd.StdoutPipe()
-	if err != nil {
-		return rc, fmt.Errorf("get command stdout: %v", err)
+	cmd.Stdout = rcParser
+	cmd.Stderr = q.ErrOutput()
+	if q.Verbose {
+		fmt.Println(cmd.String())
 	}
-	defer cmdOut.Close()
 
-	cmdErr, err := cmd.StderrPipe()
-	if err != nil {
-		return rc, fmt.Errorf("get command stderr: %v", err)
-	}
-	defer cmdErr.Close()
+	outDone := rcParser.Start()
 
-	if err := cmd.Start(); err != nil {
+	if err := cmd.Run(); err != nil {
 		return rc, fmt.Errorf("run qemu: %v", err)
 	}
 
-	readGroup, rcStream, err := Consume(&Output{
-		OutReader: cmdOut,
-		ErrReader: cmdErr,
-		OutWriter: q.Output(),
-		ErrWriter: q.ErrOutput(),
-		Verbose:   q.Verbose,
-	})
-	if err != nil {
-		return rc, fmt.Errorf("start readers: %v", err)
+	rcParser.Close()
+	<-outDone
+
+	if rcParser.FoundRC {
+		rc = rcParser.RC
 	}
+	return rc, nil
+}
 
-	done := make(chan bool)
-	go func() {
-		_ = cmd.Wait()
-		readGroup.Wait()
-		close(done)
-	}()
+// RCParser wraps [io.PipeWriter] and is used to find our well-known RC
+// string for communication the return code from the guest. Call [RCParser.Close]
+// in order to terminate the reader.
+type RCParser struct {
+	*io.PipeWriter
+	scanner *bufio.Scanner
+	output  io.Writer
+	verbose bool
+	RC      int
+	FoundRC bool
+}
 
-	select {
-	case <-ctx.Done():
-		return rc, ctx.Err()
-	case r := <-rcStream:
-		if r.Found || r.RC != 0 {
-			return r.RC, nil
-		}
-		return rc, nil
-	case <-done:
-		return rc, nil
+// NewRCParser sets up a new RCParser.
+func NewRCParser(output io.Writer, verbose bool) *RCParser {
+	r, w := io.Pipe()
+	return &RCParser{
+		PipeWriter: w,
+		scanner:    bufio.NewScanner(r),
+		output:     output,
+		verbose:    verbose,
 	}
 }
 
-type Output struct {
-	OutReader io.Reader
-	ErrReader io.Reader
-	OutWriter io.Writer
-	ErrWriter io.Writer
-	Verbose   bool
-}
-
-type RCValue struct {
-	Found bool
-	RC    int
-
-	sent bool
-}
-
-// StartReaders starts a goroutine each for the given readers.
+// Start the reader that writes into the given output writer.
 //
-// They terminate if the readers are closed, a kernel panic message is read or
-// the [RCFmt] is found. The returned read only channel of size one is used to
-// communicate the read return code of the go test.
-func Consume(output *Output) (*sync.WaitGroup, <-chan RCValue, error) {
-	panicRE, err := regexp.Compile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
-	if err != nil {
-		return nil, nil, fmt.Errorf("compile panic regex: %v", err)
-	}
-
-	rcStream := make(chan RCValue, 1)
-	readGroup := sync.WaitGroup{}
-
-	readGroup.Add(1)
+// It starts a go routine that terminates when the RCParser is closed. The
+// returned channel is closed when the reader processed all input.
+func (p *RCParser) Start() <-chan struct{} {
+	done := make(chan struct{})
 	go func() {
-		defer readGroup.Done()
-		defer close(rcStream)
-		scanner := bufio.NewScanner(output.OutReader)
-		var rc RCValue
-		for scanner.Scan() {
-			line := scanner.Text()
+		defer close(done)
+		for p.scanner.Scan() {
+			line := p.scanner.Text()
 			if panicRE.MatchString(line) {
-				if !rc.sent {
-					rc.RC = 126
+				if !p.FoundRC {
+					p.RC = 126
 				}
-			} else if _, err := fmt.Sscanf(line, RCFmt, &rc.RC); err == nil {
-				if !rc.sent {
-					rc.Found = true
-				}
+			} else if _, err := fmt.Sscanf(line, RCFmt, &p.RC); err == nil {
+				p.FoundRC = true
 			}
-			if !rc.sent && rc != (RCValue{}) {
-				rcStream <- rc
-				rc.sent = true
-				if !output.Verbose {
-					return
-				}
+			if !p.FoundRC || p.verbose {
+				fmt.Fprintln(p.output, line)
 			}
-			fmt.Fprintln(output.OutWriter, line)
 		}
 	}()
-
-	readGroup.Add(1)
-	go func() {
-		defer readGroup.Done()
-		_, _ = io.Copy(output.ErrWriter, output.ErrReader)
-	}()
-
-	return &readGroup, rcStream, nil
+	return done
 }

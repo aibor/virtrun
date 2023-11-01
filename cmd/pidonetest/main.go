@@ -40,6 +40,10 @@ func run() (int, error) {
 		return 1, nil
 	}
 
+	if err := qemuCmd.Validate(); err != nil {
+		return 1, fmt.Errorf("validate qemu command: %v", err)
+	}
+
 	for _, file := range binaries {
 		if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
 			return 1, fmt.Errorf("file %s doesn't exist.", file)

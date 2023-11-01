@@ -99,6 +99,27 @@ func (q *Command) SerialDevice(num uint8) string {
 	return fmt.Sprintf(f, num)
 }
 
+// Validate checks for known incompatibilities.
+func (q *Command) Validate() error {
+	switch q.Machine {
+	case "microvm":
+		if q.NoVirtioMMIO && len(q.SerialFiles) > 0 {
+			msg := "microvm supports only one isa serial port, used for stdio."
+			return fmt.Errorf(msg)
+		}
+	case "virt":
+		if q.NoVirtioMMIO {
+			return fmt.Errorf("virt requires virtio-mmio")
+		}
+	case "q35", "pc":
+		if !q.NoVirtioMMIO {
+			return fmt.Errorf("%s does not work with virtio-mmio", q.Machine)
+		}
+
+	}
+	return nil
+}
+
 // Output returns [Command.ErrWriter] if set or [os.Stderr] otherwise.
 func (q *Command) ErrOutput() io.Writer {
 	if q.ErrWriter == nil {

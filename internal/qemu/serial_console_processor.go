@@ -1,7 +1,7 @@
 package qemu
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -31,13 +31,12 @@ func NewSerialConsoleProcessor(serialFile string) (
 	if err != nil {
 		return nil, err
 	}
-	p := &SerialConsoleProcessor{
+	return &SerialConsoleProcessor{
 		name:      serialFile,
 		writePipe: w,
 		readPipe:  r,
 		output:    f,
-	}
-	return p, nil
+	}, nil
 }
 
 // Writer returns the writer end of the [os.Pipe].
@@ -55,26 +54,12 @@ func (p *SerialConsoleProcessor) Close() {
 // Run process the input. It blocks and returns once [io.EOF] is received,
 // which happens when [SerialProcessor.Writer] is closed.
 func (p *SerialConsoleProcessor) Run() error {
-	if err := clean(p.readPipe, p.output); err != nil {
-		return fmt.Errorf("serial processor run %s: %v", p.name, err)
+	scanner := bufio.NewScanner(p.readPipe)
+	for scanner.Scan() {
+		_, err := p.output.Write(append(scanner.Bytes(), byte('\n')))
+		if err != nil {
+			return fmt.Errorf("serial processor run %s: %v", p.name, err)
+		}
 	}
 	return nil
-}
-
-func clean(r io.Reader, w io.Writer) error {
-	buf := make([]byte, 256)
-	for {
-		n, err := r.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				err = nil
-			}
-			return err
-		}
-		// Remove carriage returns from the byte stream.
-		_, err = w.Write(bytes.ReplaceAll(buf[0:n], []byte("\r"), nil))
-		if err != nil {
-			return err
-		}
-	}
 }

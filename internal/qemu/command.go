@@ -203,7 +203,7 @@ func (q *Command) Run(ctx context.Context) (int, error) {
 			return rc, fmt.Errorf("serial processor %s: %v", serialFile, err)
 		}
 		defer p.Close()
-		cmd.ExtraFiles = append(cmd.ExtraFiles, p.writePipe)
+		cmd.ExtraFiles = append(cmd.ExtraFiles, p.Writer())
 		processorGroup.Go(p.Run)
 	}
 

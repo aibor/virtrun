@@ -21,11 +21,11 @@ var panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
 // [StdoutProcessor.Close] in order to terminate the reader.
 type StdoutProcessor struct {
 	io.WriteCloser
-	scanner *bufio.Scanner
-	output  io.Writer
-	verbose bool
-	RC      int
-	FoundRC bool
+	readPipe io.Reader
+	output   io.Writer
+	verbose  bool
+	RC       int
+	FoundRC  bool
 }
 
 // NewStdoutProcessor sets up a new StdoutProcessor.
@@ -33,7 +33,7 @@ func NewStdoutProcessor(output io.Writer, verbose bool) *StdoutProcessor {
 	r, w := io.Pipe()
 	return &StdoutProcessor{
 		WriteCloser: w,
-		scanner:     bufio.NewScanner(r),
+		readPipe:    r,
 		output:      output,
 		verbose:     verbose,
 	}
@@ -41,8 +41,9 @@ func NewStdoutProcessor(output io.Writer, verbose bool) *StdoutProcessor {
 
 // Run processes the input until the underlying writer is closed.
 func (p *StdoutProcessor) Run() error {
-	for p.scanner.Scan() {
-		line := p.scanner.Text()
+	scanner := bufio.NewScanner(p.readPipe)
+	for scanner.Scan() {
+		line := scanner.Text()
 		if panicRE.MatchString(line) {
 			if !p.FoundRC {
 				p.RC = 126

@@ -125,7 +125,6 @@ func (q *Command) Args() []string {
 		"-no-reboot",
 		"-display", "none",
 		"-monitor", "none",
-		"-nographic",
 		"-nodefaults",
 		"-no-user-config",
 	}

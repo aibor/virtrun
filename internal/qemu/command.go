@@ -14,19 +14,39 @@ import (
 
 // Command is a single QEMU command that can be run.
 type Command struct {
-	Binary      string
-	Kernel      string
-	Initrd      string
-	Machine     string
-	CPU         string
-	SMP         uint8
-	Memory      uint16
-	NoKVM       bool
-	Verbose     bool
+	// Path to the qemu-system binary
+	Binary string
+	// Path to the kernel to boot. The kernel should have Virtio-MMIO support
+	// compiled in. If not, set the NoVirtioMMIO flag.
+	Kernel string
+	// Path to the initrd to boot with.
+	Initrd string
+	// QEMU machine type to use. Depends on the QEMU binary used.
+	Machine string
+	// CPU type to use. Depends on machine type and QEMU binary used.
+	CPU string
+	// Number of CPUs for the guest.
+	SMP uint8
+	// Memory for the machine in MB.
+	Memory uint16
+	// Disable KVM support.
+	NoKVM bool
+	// Disable Virtio-MMIO support. Serial consoles depend on it. If this is set
+	// to true, the legacy isa-pci bus will be used.
+	NoVirtioMMIO bool
+	// Print qemu command before running, increase guest kernel logging and
+	// do not stop prinitng stdout when our RC string is found.
+	Verbose bool
+	// Additional serial files beside the default one used for stdout. They
+	// will be present in the guest system as "/dev/ttySx" where x is the index
+	// of the slice + 1.
 	SerialFiles []string
-	InitArgs    []string
-	OutWriter   io.Writer
-	ErrWriter   io.Writer
+	// Arguments to pass to the init binary.
+	InitArgs []string
+	// Stdout of the QEMU command.
+	OutWriter io.Writer
+	// Stderr of the QEMU command.
+	ErrWriter io.Writer
 }
 
 // NewCommand creates a new [Command] with defaults set to the given
@@ -70,6 +90,15 @@ func (q *Command) Output() io.Writer {
 	return q.OutWriter
 }
 
+// SerialDevice returns the name of the serial console device in the guest.
+func (q *Command) SerialDevice(num uint8) string {
+	f := "hvc%d"
+	if q.NoVirtioMMIO {
+		f = "ttyS%d"
+	}
+	return fmt.Sprintf(f, num)
+}
+
 // Output returns [Command.ErrWriter] if set or [os.Stderr] otherwise.
 func (q *Command) ErrOutput() io.Writer {
 	if q.ErrWriter == nil {
@@ -99,9 +128,16 @@ func (q *Command) Args() []string {
 		"-nographic",
 		"-nodefaults",
 		"-no-user-config",
-		"-device", "virtio-serial-device",
-		"-chardev", "stdio,id=virtiocon0",
-		"-device", "virtconsole,chardev=virtiocon0",
+	}
+
+	if q.NoVirtioMMIO {
+		args = append(args, "-serial", "stdio")
+	} else {
+		args = append(args,
+			"-device", "virtio-serial-device",
+			"-chardev", "stdio,id=virtiocon0",
+			"-device", "virtconsole,chardev=virtiocon0",
+		)
 	}
 
 	if !q.NoKVM {
@@ -111,21 +147,24 @@ func (q *Command) Args() []string {
 	// Write serial console output to file descriptors. Those are provided by
 	// the [exec.Cmd.ExtraFiles].
 	for idx := range q.SerialFiles {
-		// virtiocon0 is stdio so start at 1.
-		vcon := fmt.Sprintf("virtiocon%d", 1+idx)
 		// FDs 0, 1, 2 are standard in, out, err, so start at 3.
 		path := fmt.Sprintf("/dev/fd/%d", 3+idx)
 
-		args = append(
-			args,
-			"-chardev", fmt.Sprintf("file,id=%s,path=%s", vcon, path),
-			"-device", fmt.Sprintf("virtconsole,chardev=%s", vcon),
-		)
+		if q.NoVirtioMMIO {
+			args = append(args, "-serial", fmt.Sprintf("file:%s", path))
+		} else {
+			// virtiocon0 is stdio so start at 1.
+			vcon := fmt.Sprintf("virtiocon%d", 1+idx)
+			args = append(args,
+				"-chardev", fmt.Sprintf("file,id=%s,path=%s", vcon, path),
+				"-device", fmt.Sprintf("virtconsole,chardev=%s", vcon),
+			)
+		}
 	}
 
 	cmdline := []string{
 		"console=ttyAMA0",
-		"console=hvc0",
+		"console=" + q.SerialDevice(0),
 		"panic=-1",
 	}
 

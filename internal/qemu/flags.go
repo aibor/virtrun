@@ -45,6 +45,13 @@ func AddCommandFlags(fs *flag.FlagSet, cmd *Command) {
 	)
 
 	fs.BoolVar(
+		&cmd.NoVirtioMMIO,
+		"novmmio",
+		cmd.NoVirtioMMIO,
+		"use legacy isa pci devices instead of virtio-mmio",
+	)
+
+	fs.BoolVar(
 		&cmd.Verbose,
 		"verbose",
 		cmd.Verbose,

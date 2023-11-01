@@ -8,6 +8,13 @@
 // can only be used if the target architecture matches the pidonetest binary
 // architecture. See "Library" if you want to test for different architectures.
 //
+// If the kernel used does not have support for Virtio-MMIO compiled in, use
+// flag -novmmio in order to use legacy isa-pci serial consoles for IO.
+//
+// Set absolute path to the kernel to use by environment variable:
+//
+//	$ export QEMU_KERNEL=/boot/vmlinuz-linux
+//
 // If you have it installed with go install in your PATH:
 //
 //	$ go test -exec "pidonetest" .

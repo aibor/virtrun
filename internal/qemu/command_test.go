@@ -43,7 +43,7 @@ func TestArgs(t *testing.T) {
 		assert.Contains(t, q.Args()[len(q.Args())-1], "loglevel=0")
 	})
 
-	t.Run("serial files", func(t *testing.T) {
+	t.Run("serial files virtio-mmio", func(t *testing.T) {
 		q := qemu.Command{
 			SerialFiles: []string{
 				"/output/file1",
@@ -60,6 +60,34 @@ func TestArgs(t *testing.T) {
 		for len(args) > 1 {
 			arg := next(&args)
 			if arg != "-chardev" {
+				continue
+			}
+			if assert.Greater(t, len(expected), 0, "expected serial files already consumed") {
+				assert.Equal(t, next(&expected), next(&args))
+			}
+		}
+
+		assert.Len(t, expected, 0, "no expected serial files should be left over")
+	})
+
+	t.Run("serial files isa-pci", func(t *testing.T) {
+		q := qemu.Command{
+			SerialFiles: []string{
+				"/output/file1",
+				"/output/file2",
+			},
+			NoVirtioMMIO: true,
+		}
+		args := q.Args()
+		expected := []string{
+			"stdio",
+			"file:/dev/fd/3",
+			"file:/dev/fd/4",
+		}
+
+		for len(args) > 1 {
+			arg := next(&args)
+			if arg != "-serial" {
 				continue
 			}
 			if assert.Greater(t, len(expected), 0, "expected serial files already consumed") {

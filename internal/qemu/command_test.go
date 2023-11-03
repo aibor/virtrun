@@ -49,6 +49,7 @@ func TestArgs(t *testing.T) {
 				"/output/file1",
 				"/output/file2",
 			},
+			TransportType: qemu.TransportTypeMMIO,
 		}
 		args := q.Args()
 		expected := []string{
@@ -76,7 +77,7 @@ func TestArgs(t *testing.T) {
 				"/output/file1",
 				"/output/file2",
 			},
-			NoVirtioMMIO: true,
+			TransportType: qemu.TransportTypeISA,
 		}
 		args := q.Args()
 		expected := []string{

@@ -44,11 +44,20 @@ func AddCommandFlags(fs *flag.FlagSet, cmd *Command) {
 		"disable hardware support",
 	)
 
-	fs.BoolVar(
-		&cmd.NoVirtioMMIO,
-		"novmmio",
-		cmd.NoVirtioMMIO,
-		"use legacy isa pci devices instead of virtio-mmio",
+	fs.Func(
+		"transport",
+		fmt.Sprintf("io transport type: 0=isa, 1=pci, 2=mmio (default %d)", cmd.TransportType),
+		func(s string) error {
+			t, err := strconv.ParseUint(s, 10, 2)
+			if err != nil {
+				return err
+			}
+			if t > 2 {
+				return fmt.Errorf("unknown transport type")
+			}
+			cmd.TransportType = TransportType(t)
+			return nil
+		},
 	)
 
 	fs.BoolVar(
@@ -69,9 +78,7 @@ func AddCommandFlags(fs *flag.FlagSet, cmd *Command) {
 			if mem < 128 {
 				return fmt.Errorf("less than 128 MB is not sufficient")
 			}
-
 			cmd.Memory = uint(mem)
-
 			return nil
 		},
 	)

@@ -11,6 +11,26 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var CommandPresets = map[string]Command{
+	"amd64": {
+		Binary:  "qemu-system-x86_64",
+		Machine: "microvm",
+		//Machine: "q35",
+	},
+	"arm64": {
+		Binary:  "qemu-system-aarch64",
+		Machine: "virt",
+	},
+}
+
+type TransportType int
+
+const (
+	TransportTypeISA TransportType = iota
+	TransportTypePCI
+	TransportTypeMMIO
+)
+
 // Command is a single QEMU command that can be run.
 type Command struct {
 	// Path to the qemu-system binary
@@ -30,9 +50,10 @@ type Command struct {
 	Memory uint
 	// Disable KVM support.
 	NoKVM bool
-	// Disable Virtio-MMIO support. Serial consoles depend on it. If this is set
-	// to true, the legacy isa-pci bus will be used.
-	NoVirtioMMIO bool
+	// Transport type for IO. This depends on machine type and the kernel.
+	// TransportTypeIsa should always work, but will give only one slot for
+	// microvm machine type. ARM type virt does not support ISA type at all.
+	TransportType TransportType
 	// Print qemu command before running, increase guest kernel logging and
 	// do not stop prinitng stdout when our RC string is found.
 	Verbose bool
@@ -52,23 +73,16 @@ type Command struct {
 // architecture. If it does not match the host architecture, the
 // [Command.NoKVM] flag ist set. Supported architectures so far: amd64, arm64.
 func NewCommand(arch string) (*Command, error) {
-	cmd := Command{
-		CPU:    "max",
-		Memory: 256,
-		SMP:    2,
-		NoKVM:  true,
-	}
-
-	switch arch {
-	case "amd64":
-		cmd.Binary = "qemu-system-x86_64"
-		cmd.Machine = "microvm"
-	case "arm64":
-		cmd.Binary = "qemu-system-aarch64"
-		cmd.Machine = "virt"
-	default:
+	cmd, exists := CommandPresets[arch]
+	if !exists {
 		return nil, fmt.Errorf("arch not supported: %s", arch)
 	}
+
+	cmd.CPU = "max"
+	cmd.Memory = 256
+	cmd.SMP = 2
+	cmd.NoKVM = true
+	cmd.TransportType = TransportTypeMMIO
 
 	if runtime.GOARCH == arch {
 		f, err := os.OpenFile("/dev/kvm", os.O_WRONLY, 0)
@@ -92,7 +106,7 @@ func (q *Command) Output() io.Writer {
 // ConsoleDeviceName returns the name of the console device in the guest.
 func (q *Command) ConsoleDeviceName(num uint8) string {
 	f := "hvc%d"
-	if q.NoVirtioMMIO {
+	if q.TransportType == TransportTypeISA {
 		f = "ttyS%d"
 	}
 	return fmt.Sprintf(f, num)
@@ -102,16 +116,19 @@ func (q *Command) ConsoleDeviceName(num uint8) string {
 func (q *Command) Validate() error {
 	switch q.Machine {
 	case "microvm":
-		if q.NoVirtioMMIO && len(q.ExtraFiles) > 0 {
+		switch {
+		case q.TransportType == TransportTypePCI:
+			return fmt.Errorf("microvm does not support pci transport.")
+		case q.TransportType == TransportTypeISA && len(q.ExtraFiles) > 0:
 			msg := "microvm supports only one isa serial port, used for stdio."
 			return fmt.Errorf(msg)
 		}
 	case "virt":
-		if q.NoVirtioMMIO {
+		if q.TransportType == TransportTypeISA {
 			return fmt.Errorf("virt requires virtio-mmio")
 		}
 	case "q35", "pc":
-		if !q.NoVirtioMMIO {
+		if q.TransportType == TransportTypeMMIO {
 			return fmt.Errorf("%s does not work with virtio-mmio", q.Machine)
 		}
 
@@ -158,12 +175,22 @@ func (q *Command) Args() []string {
 	}
 
 	var addConsoleArgs func(int)
-	if q.NoVirtioMMIO {
+	switch q.TransportType {
+	case TransportTypeISA:
 		addConsoleArgs = func(fd int) {
 			a = append(a, argSerial("file:"+fdpath(fd)))
 		}
-	} else {
-		a = append(a, argDevice("virtio-serial-device"))
+	case TransportTypePCI:
+		a = append(a, argDevice("virtio-serial-pci", "max_ports=8"))
+		addConsoleArgs = func(fd int) {
+			vcon := fmt.Sprintf("vcon%d", fd)
+			a = append(a,
+				argChardev("file", "id="+vcon, "path="+fdpath(fd)),
+				argDevice("virtconsole", "chardev="+vcon),
+			)
+		}
+	case TransportTypeMMIO:
+		a = append(a, argDevice("virtio-serial-device", "max_ports=8"))
 		addConsoleArgs = func(fd int) {
 			vcon := fmt.Sprintf("vcon%d", fd)
 			a = append(a,

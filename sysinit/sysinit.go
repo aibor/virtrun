@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
 	"syscall"
 
@@ -64,7 +65,8 @@ func Exec(path string, args []string, outWriter, errWriter io.Writer) error {
 // ExecParallel executes the given files in parallel. Each is called with the
 // given args. Output of the commands is written to the given out and err
 // writers once the command exited. If there is only a single path given,
-// output is printed unbuffered. Might return [exec.ExitError].
+// output is printed unbuffered. It respects [runtime.GOMAXPROCS] and does run
+// max the number set in parallel. Might return [exec.ExitError].
 func ExecParallel(paths []string, args []string, outW, errW io.Writer) error {
 	// Fastpath.
 	switch len(paths) {
@@ -93,6 +95,7 @@ func ExecParallel(paths []string, args []string, outW, errW io.Writer) error {
 	addWriter(errW, errStream)
 
 	eg := errgroup.Group{}
+	eg.SetLimit(runtime.GOMAXPROCS(0))
 	for _, path := range paths {
 		path := path
 		eg.Go(func() error {

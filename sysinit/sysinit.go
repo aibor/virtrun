@@ -63,10 +63,15 @@ func Exec(path string, args []string, outWriter, errWriter io.Writer) error {
 
 // ExecParallel executes the given files in parallel. Each is called with the
 // given args. Output of the commands is written to the given out and err
-// writers once the command exited. Might return [exec.ExitError].
+// writers once the command exited. If there is only a single path given,
+// output is printed unbuffered. Might return [exec.ExitError].
 func ExecParallel(paths []string, args []string, outW, errW io.Writer) error {
-	if !IsPidOne() {
-		return NotPidOneError
+	// Fastpath.
+	switch len(paths) {
+	case 0:
+		return nil
+	case 1:
+		return Exec(paths[0], args, os.Stdout, os.Stderr)
 	}
 
 	var (

@@ -45,16 +45,16 @@ func TestArgs(t *testing.T) {
 
 	t.Run("serial files virtio-mmio", func(t *testing.T) {
 		q := qemu.Command{
-			SerialFiles: []string{
+			ExtraFiles: []string{
 				"/output/file1",
 				"/output/file2",
 			},
 		}
 		args := q.Args()
 		expected := []string{
-			"stdio,id=virtiocon0",
-			"file,id=virtiocon1,path=/dev/fd/3",
-			"file,id=virtiocon2,path=/dev/fd/4",
+			"file,id=vcon1,path=/dev/fd/1",
+			"file,id=vcon3,path=/dev/fd/3",
+			"file,id=vcon4,path=/dev/fd/4",
 		}
 
 		for len(args) > 1 {
@@ -72,7 +72,7 @@ func TestArgs(t *testing.T) {
 
 	t.Run("serial files isa-pci", func(t *testing.T) {
 		q := qemu.Command{
-			SerialFiles: []string{
+			ExtraFiles: []string{
 				"/output/file1",
 				"/output/file2",
 			},
@@ -80,7 +80,7 @@ func TestArgs(t *testing.T) {
 		}
 		args := q.Args()
 		expected := []string{
-			"stdio",
+			"file:/dev/fd/1",
 			"file:/dev/fd/3",
 			"file:/dev/fd/4",
 		}

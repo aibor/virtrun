@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -26,9 +25,9 @@ type Command struct {
 	// CPU type to use. Depends on machine type and QEMU binary used.
 	CPU string
 	// Number of CPUs for the guest.
-	SMP uint8
+	SMP uint
 	// Memory for the machine in MB.
-	Memory uint16
+	Memory uint
 	// Disable KVM support.
 	NoKVM bool
 	// Disable Virtio-MMIO support. Serial consoles depend on it. If this is set
@@ -37,10 +36,10 @@ type Command struct {
 	// Print qemu command before running, increase guest kernel logging and
 	// do not stop prinitng stdout when our RC string is found.
 	Verbose bool
-	// Additional serial files beside the default one used for stdout. They
-	// will be present in the guest system as "/dev/ttySx" where x is the index
-	// of the slice + 1.
-	SerialFiles []string
+	// Additional files attached to consoles besides the default one used for
+	// stdout. They will be present in the guest system as "/dev/ttySx" or
+	// "/dev/hvcx" where x is the index of the slice + 1.
+	ExtraFiles []string
 	// Arguments to pass to the init binary.
 	InitArgs []string
 	// Stdout of the QEMU command.
@@ -90,8 +89,8 @@ func (q *Command) Output() io.Writer {
 	return q.OutWriter
 }
 
-// SerialDevice returns the name of the serial console device in the guest.
-func (q *Command) SerialDevice(num uint8) string {
+// ConsoleDeviceName returns the name of the console device in the guest.
+func (q *Command) ConsoleDeviceName(num uint8) string {
 	f := "hvc%d"
 	if q.NoVirtioMMIO {
 		f = "ttyS%d"
@@ -103,7 +102,7 @@ func (q *Command) SerialDevice(num uint8) string {
 func (q *Command) Validate() error {
 	switch q.Machine {
 	case "microvm":
-		if q.NoVirtioMMIO && len(q.SerialFiles) > 0 {
+		if q.NoVirtioMMIO && len(q.ExtraFiles) > 0 {
 			msg := "microvm supports only one isa serial port, used for stdio."
 			return fmt.Errorf(msg)
 		}
@@ -136,55 +135,56 @@ func (q *Command) Cmd(ctx context.Context) *exec.Cmd {
 
 // Args compiles the argument string for the QEMU command.
 func (q *Command) Args() []string {
-	args := []string{
-		"-kernel", q.Kernel,
-		"-initrd", q.Initrd,
-		"-machine", q.Machine,
-		"-cpu", q.CPU,
-		"-smp", fmt.Sprintf("%d", q.SMP),
-		"-m", fmt.Sprintf("%d", q.Memory),
-		"-no-reboot",
-		"-display", "none",
-		"-monitor", "none",
-		"-nodefaults",
-		"-no-user-config",
-	}
-
-	if q.NoVirtioMMIO {
-		args = append(args, "-serial", "stdio")
-	} else {
-		args = append(args,
-			"-device", "virtio-serial-device",
-			"-chardev", "stdio,id=virtiocon0",
-			"-device", "virtconsole,chardev=virtiocon0",
-		)
+	a := args{
+		argKernel(q.Kernel),
+		argInitrd(q.Initrd),
+		argMachine(q.Machine),
+		argCPU(q.CPU),
+		argSMP(int(q.SMP)),
+		argMemory(int(q.Memory)),
+		argDisplay("none"),
+		argMonitor("none"),
+		uniqueArg("no-reboot"),
+		uniqueArg("nodefaults"),
+		uniqueArg("no-user-config"),
 	}
 
 	if !q.NoKVM {
-		args = append(args, "-enable-kvm")
+		a = append(a, uniqueArg("enable-kvm"))
 	}
 
-	// Write serial console output to file descriptors. Those are provided by
-	// the [exec.Cmd.ExtraFiles].
-	for idx := range q.SerialFiles {
-		// FDs 0, 1, 2 are standard in, out, err, so start at 3.
-		path := fmt.Sprintf("/dev/fd/%d", 3+idx)
+	fdpath := func(i int) string {
+		return fmt.Sprintf("/dev/fd/%d", i)
+	}
 
-		if q.NoVirtioMMIO {
-			args = append(args, "-serial", fmt.Sprintf("file:%s", path))
-		} else {
-			// virtiocon0 is stdio so start at 1.
-			vcon := fmt.Sprintf("virtiocon%d", 1+idx)
-			args = append(args,
-				"-chardev", fmt.Sprintf("file,id=%s,path=%s", vcon, path),
-				"-device", fmt.Sprintf("virtconsole,chardev=%s", vcon),
+	var addConsoleArgs func(int)
+	if q.NoVirtioMMIO {
+		addConsoleArgs = func(fd int) {
+			a = append(a, argSerial("file:"+fdpath(fd)))
+		}
+	} else {
+		a = append(a, argDevice("virtio-serial-device"))
+		addConsoleArgs = func(fd int) {
+			vcon := fmt.Sprintf("vcon%d", fd)
+			a = append(a,
+				argChardev("file", "id="+vcon, "path="+fdpath(fd)),
+				argDevice("virtconsole", "chardev="+vcon),
 			)
 		}
 	}
 
+	addConsoleArgs(1)
+
+	// Write console output to file descriptors. Those are provided by the
+	// [exec.Cmd.ExtraFiles].
+	for idx := range q.ExtraFiles {
+		// FDs 0, 1, 2 are standard in, out, err, so start at 3.
+		addConsoleArgs(3 + idx)
+	}
+
 	cmdline := []string{
 		"console=ttyAMA0",
-		"console=" + q.SerialDevice(0),
+		"console=" + q.ConsoleDeviceName(0),
 		"panic=-1",
 	}
 
@@ -197,7 +197,9 @@ func (q *Command) Args() []string {
 		cmdline = append(cmdline, q.InitArgs...)
 	}
 
-	return append(args, "-append", strings.Join(cmdline, " "))
+	a = append(a, argAppend(cmdline...))
+	out, _ := a.build()
+	return out
 }
 
 // Run the QEMU command with the given context.
@@ -218,10 +220,10 @@ func (q *Command) Run(ctx context.Context) (int, error) {
 		fmt.Println(cmd.String())
 	}
 
-	for _, serialFile := range q.SerialFiles {
-		p, err := NewSerialConsoleProcessor(serialFile)
+	for _, extraFile := range q.ExtraFiles {
+		p, err := NewSerialConsoleProcessor(extraFile)
 		if err != nil {
-			return rc, fmt.Errorf("serial processor %s: %v", serialFile, err)
+			return rc, fmt.Errorf("serial processor %s: %v", extraFile, err)
 		}
 		defer p.Close()
 		cmd.ExtraFiles = append(cmd.ExtraFiles, p.Writer())

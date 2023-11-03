@@ -70,7 +70,7 @@ func AddCommandFlags(fs *flag.FlagSet, cmd *Command) {
 				return fmt.Errorf("less than 128 MB is not sufficient")
 			}
 
-			cmd.Memory = uint16(mem)
+			cmd.Memory = uint(mem)
 
 			return nil
 		},
@@ -88,7 +88,7 @@ func AddCommandFlags(fs *flag.FlagSet, cmd *Command) {
 				return fmt.Errorf("must not be less than 1")
 			}
 
-			cmd.SMP = uint8(mem)
+			cmd.SMP = uint(mem)
 
 			return nil
 		},

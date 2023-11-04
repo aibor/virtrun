@@ -66,6 +66,7 @@ func Selftest(useInstalled, standalone, verbose bool) error {
 	args := []string{
 		"test",
 		"-v",
+		"-timeout", "2m",
 		"-exec", strings.Join(execCmd, " "),
 	}
 	if standalone {

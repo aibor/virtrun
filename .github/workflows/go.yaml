@@ -6,16 +6,23 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  go_version: '~1.21'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  go:
+  lint-and-test:
     name: Go lint and test
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.21'
-
-      - uses: actions/checkout@v3
+          go-version: '${{ env.go_version}}'
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
@@ -25,18 +32,45 @@ jobs:
       - name: Run go tests
         run: go test -race ./internal/... ./cmd/...
 
+  selftest:
+    name: Run selftests
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    strategy:
+      matrix:
+        version: ["6.6", "6.1", "5.15"]
+        arch: ["amd64", "arm64"]
+    env:
+      KERNEL_VER: "${{ matrix.version }}"
+      KERNEL_ARCH: "${{ matrix.arch }}"
+      QEMU_KERNEL: "kernel/vmlinuz-${{ matrix.version}}-${{ matrix.arch }}"
+      GOBIN: "${{ github.workspace }}/gobin"
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '${{ env.go_version }}'
+
+      - name: Install go tools and kernel
+        run: |
+          go install ./cmd/pidonetest
+          go install github.com/magefile/mage
+          bash fetch_kernel.sh
+
       - name: Install packages for selftest
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends qemu-system-x86-microvm linux-image-generic
-          sudo chmod go+r /boot/vmlinuz-*
+          if [[ $KERNEL_ARCH == amd64 ]]; then pkg=qemu-system-x86-microvm; else pkg=qemu-system-arm; fi
+          sudo apt-get install -y --no-install-recommends $pkg
 
       - name: Run selftest wrapped
+        if: "${{ env.KERNEL_ARCH == 'amd64' }}"
         env:
-          QEMU_KERNEL: /boot/vmlinuz
-        run: go run github.com/magefile/mage selftest 0 0 1
+          GOARCH: "${{ env.KERNEL_ARCH }}"
+        run: $GOBIN/mage -v selftest 1 0 1
 
       - name: Run selftest standalone
         env:
-          QEMU_KERNEL: /boot/vmlinuz
-        run: go run github.com/magefile/mage selftest 0 1 1
+          GOARCH: "${{ env.KERNEL_ARCH }}"
+        run: $GOBIN/mage -v selftest 1 1 1

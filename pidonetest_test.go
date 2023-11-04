@@ -34,11 +34,11 @@ func TestMountPoints(t *testing.T) {
 }
 
 func TestNotPidOne(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 	cmd := exec.CommandContext(ctx, "/init")
 	require.NoError(t, cmd.Start(), "command must start")
-	assert.Error(t, cmd.Wait(), "command should been killed by deadline")
+	assert.Error(t, cmd.Wait(), "command should have exited with error")
 	if assert.NotNil(t, cmd.ProcessState, "process state should be present") {
 		assert.Equal(t, 127, cmd.ProcessState.ExitCode(), "exit code should be as expected")
 	}

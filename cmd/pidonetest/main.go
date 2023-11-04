@@ -23,7 +23,11 @@ func run() (int, error) {
 		standalone bool
 	)
 
-	qemuCmd, err := qemu.NewCommand(runtime.GOARCH)
+	arch := os.Getenv("GOARCH")
+	if arch == "" {
+		arch = runtime.GOARCH
+	}
+	qemuCmd, err := qemu.NewCommand(arch)
 	if err != nil {
 		return 1, err
 	}
@@ -61,6 +65,11 @@ func run() (int, error) {
 		archive = initramfs.New(binaries[0])
 		binaries = slices.Delete(binaries, 0, 1)
 	} else {
+		if runtime.GOARCH != arch {
+			return 1, fmt.Errorf(
+				"using self as init only available with native architecture",
+			)
+		}
 		var self string
 		self, err = os.Executable()
 		if err != nil {

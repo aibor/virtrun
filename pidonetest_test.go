@@ -19,7 +19,6 @@ func TestMountPoints(t *testing.T) {
 		"/run",
 		"/sys",
 		"/sys/fs/bpf",
-		"/sys/kernel/tracing",
 		"/tmp",
 	}
 

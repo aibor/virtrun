@@ -28,7 +28,7 @@ jobs:
       - name: Install packages for selftest
         run: |
           sudo apt-get update
-          sudo apt-get install qemu-system-x86-microvm linux-image-generic
+          sudo apt-get install -y --no-install-recommends qemu-system-x86-microvm linux-image-generic
           sudo chmod go+r /boot/vmlinuz-*
 
       - name: Run selftest wrapped

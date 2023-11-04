@@ -3,14 +3,11 @@ package qemu_test
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/aibor/pidonetest/internal/qemu"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestStdoutProcessor(t *testing.T) {
@@ -83,22 +80,14 @@ func TestStdoutProcessor(t *testing.T) {
 			cmdOut := bytes.NewBuffer([]byte(strings.Join(tt.input, "\n")))
 			stdOut := bytes.NewBuffer(make([]byte, 0, 512))
 
-			rcParser := qemu.NewStdoutProcessor(stdOut, tt.verbose)
-			done := make(chan struct{})
-			go func() {
-				defer close(done)
-				require.NoError(t, rcParser.Run())
-			}()
-			_, err := io.Copy(rcParser, cmdOut)
-			require.NoError(t, err)
-			require.NoError(t, rcParser.Close())
-
-			select {
-			case <-done:
-				assert.Equal(t, tt.rc, rcParser.RC)
-			case <-time.After(100 * time.Millisecond):
-				assert.Fail(t, "rcParser did not return in time")
+			rc, err := qemu.ParseStdout(cmdOut, stdOut, tt.verbose)
+			if tt.found {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.rc, rc)
+			} else {
+				assert.ErrorIs(t, err, qemu.RCNotFoundErr)
 			}
+
 		})
 	}
 }

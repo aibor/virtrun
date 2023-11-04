@@ -2,6 +2,7 @@ package qemu
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -232,11 +233,8 @@ func (c *Command) KernelCmdlineArgs() []string {
 }
 
 // Run the QEMU command with the given context.
-func (c *Command) Cmd(ctx context.Context, args []string) (*exec.Cmd, *StdoutProcessor, []*ConsoleProcessor) {
-	rcParser := NewStdoutProcessor(c.Output(), c.Verbose)
-
+func (c *Command) Cmd(ctx context.Context, args []string) (*exec.Cmd, []*ConsoleProcessor) {
 	cmd := exec.CommandContext(ctx, c.Binary, args...)
-	cmd.Stdout = rcParser
 	cmd.Stderr = c.ErrOutput()
 	if c.Verbose {
 		fmt.Println(cmd.String())
@@ -248,7 +246,7 @@ func (c *Command) Cmd(ctx context.Context, args []string) (*exec.Cmd, *StdoutPro
 		procs = append(procs, &p)
 	}
 
-	return cmd, rcParser, procs
+	return cmd, procs
 }
 
 // Run the QEMU command with the given context.
@@ -260,9 +258,13 @@ func (c *Command) Run(ctx context.Context) (int, error) {
 		return rc, err
 	}
 
-	cmd, rcParser, processors := c.Cmd(ctx, args)
+	cmd, processors := c.Cmd(ctx, args)
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return rc, err
+	}
 
-	outputGroup := errgroup.Group{}
+	processorsGroup := errgroup.Group{}
 	for _, p := range processors {
 		w, err := p.Create()
 		if err != nil {
@@ -270,29 +272,25 @@ func (c *Command) Run(ctx context.Context) (int, error) {
 		}
 		defer p.Close()
 		cmd.ExtraFiles = append(cmd.ExtraFiles, w)
-		outputGroup.Go(p.Run)
-	}
-	outputGroup.Go(rcParser.Run)
-
-	if err := cmd.Run(); err != nil {
-		return rc, fmt.Errorf("run qemu: %v", err)
+		processorsGroup.Go(p.Run)
 	}
 
-	_ = rcParser.Close()
-	for _, f := range cmd.ExtraFiles {
-		_ = f.Close()
-	}
-	err = outputGroup.Wait()
-
-	if rcParser.FoundRC {
-		return rcParser.RC, err
-	} else if err == nil {
-		err = fmt.Errorf(
-			"return code from guest missing (wrong init or transport mode?)",
-		)
+	if err := cmd.Start(); err != nil {
+		return rc, fmt.Errorf("start: %v", err)
 	}
 
-	return rc, err
+	rc, rcErr := ParseStdout(out, c.Output(), c.Verbose)
+
+	if err := cmd.Wait(); err != nil {
+		return rc, fmt.Errorf("wait: %v", err)
+	}
+
+	for _, p := range processors {
+		_ = p.Close()
+	}
+	proccessorsErr := processorsGroup.Wait()
+
+	return rc, errors.Join(rcErr, proccessorsErr)
 }
 
 // KVMAvailableFor checks if KVM support is available for the given

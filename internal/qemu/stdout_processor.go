@@ -2,6 +2,7 @@ package qemu
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -15,47 +16,30 @@ const RCFmt = "INIT_RC: %d\n"
 
 var panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
 
-// StdoutProcessor wraps [io.PipeWriter] and is used to determine the return
-// code based on the standard output of the VM. It finds the well-known RC
-// string for communication the return code from the guest. Call
-// [StdoutProcessor.Close] in order to terminate the reader.
-type StdoutProcessor struct {
-	io.WriteCloser
-	readPipe io.Reader
-	output   io.Writer
-	verbose  bool
-	RC       int
-	FoundRC  bool
-}
+var RCNotFoundErr = errors.New("no return code found in stdout")
 
-// NewStdoutProcessor sets up a new StdoutProcessor.
-func NewStdoutProcessor(output io.Writer, verbose bool) *StdoutProcessor {
-	r, w := io.Pipe()
-	return &StdoutProcessor{
-		WriteCloser: w,
-		readPipe:    r,
-		output:      output,
-		verbose:     verbose,
-	}
-}
+// ParseStdout processes the input until the underlying writer is closed.
+func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
+	var rc int
+	// rcErr is unset once a return code is found.
+	rcErr := RCNotFoundErr
 
-// Run processes the input until the underlying writer is closed.
-func (p *StdoutProcessor) Run() error {
-	scanner := bufio.NewScanner(p.readPipe)
+	scanner := bufio.NewScanner(input)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if panicRE.MatchString(line) {
-			if !p.FoundRC {
-				p.RC = 126
+			if rcErr != nil {
+				rc = 126
 			}
-		} else if _, err := fmt.Sscanf(line, RCFmt, &p.RC); err == nil {
-			p.FoundRC = true
+		} else if _, err := fmt.Sscanf(line, RCFmt, &rc); err == nil {
+			rcErr = nil
 		}
-		if !p.FoundRC || p.verbose {
-			if _, err := fmt.Fprintln(p.output, line); err != nil {
-				return err
+		if rcErr != nil || verbose {
+			if _, err := fmt.Fprintln(output, line); err != nil {
+				return rc, err
 			}
 		}
 	}
-	return nil
+
+	return rc, rcErr
 }

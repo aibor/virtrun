@@ -8,39 +8,72 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestArgs(t *testing.T) {
-	next := func(s *[]string) string {
-		e := (*s)[0]
-		*s = (*s)[1:]
-		return e
+func TestCommmandConsoleDeviceName(t *testing.T) {
+	tests := []struct {
+		id        uint8
+		transport qemu.TransportType
+		console   string
+	}{
+		{
+			id:        5,
+			transport: qemu.TransportTypeISA,
+			console:   "ttyS5",
+		},
+		{
+			id:        3,
+			transport: qemu.TransportTypePCI,
+			console:   "hvc3",
+		},
+		{
+			id:        1,
+			transport: qemu.TransportTypeMMIO,
+			console:   "hvc1",
+		},
 	}
+	for _, tt := range tests {
+		c := qemu.Command{
+			TransportType: tt.transport,
+		}
+		assert.Equal(t, tt.console, c.ConsoleDeviceName(tt.id))
+	}
+}
 
+func TestCommmandAddExtraFile(t *testing.T) {
+	c := qemu.Command{}
+	d1 := c.AddExtraFile("test")
+	d2 := c.AddExtraFile("real")
+	assert.Equal(t, "ttyS1", d1)
+	assert.Equal(t, "ttyS2", d2)
+	assert.Equal(t, []string{"test", "real"}, c.ExtraFiles)
+}
+
+func TestCommmandArgs(t *testing.T) {
 	t.Run("yes-kvm", func(t *testing.T) {
 		q := qemu.Command{}
-
-		assert.Contains(t, q.Args(), "-enable-kvm")
+		args := q.Args()
+		assert.Contains(t, args, qemu.UniqueArg("enable-kvm"))
 	})
 
 	t.Run("no-kvm", func(t *testing.T) {
 		q := qemu.Command{
 			NoKVM: true,
 		}
-
-		assert.NotContains(t, q.Args(), "-enable-kvm")
+		args := q.Args()
+		assert.NotContains(t, args, qemu.UniqueArg("enable-kvm"))
 	})
 
 	t.Run("yes-verbose", func(t *testing.T) {
 		q := qemu.Command{
 			Verbose: true,
 		}
-
-		assert.NotContains(t, q.Args()[len(q.Args())-1], "loglevel=0")
+		args := q.Args()
+		assert.NotContains(t, args[len(args)-1].Value, "loglevel=0")
 	})
 
 	t.Run("no-verbose", func(t *testing.T) {
 		q := qemu.Command{}
-
-		assert.Contains(t, q.Args()[len(q.Args())-1], "loglevel=0")
+		args := q.Args()
+		assert.Contains(t, args[len(args)-1].Value, "loglevel=0")
 	})
 
 	t.Run("serial files virtio-mmio", func(t *testing.T) {
@@ -51,24 +84,24 @@ func TestArgs(t *testing.T) {
 			},
 			TransportType: qemu.TransportTypeMMIO,
 		}
-		args := q.Args()
-		expected := []string{
-			"file,id=vcon1,path=/dev/fd/1",
-			"file,id=vcon3,path=/dev/fd/3",
-			"file,id=vcon4,path=/dev/fd/4",
+
+		expected := qemu.Arguments{
+			qemu.ArgChardev("file,id=vcon1,path=/dev/fd/1"),
+			qemu.ArgChardev("file,id=vcon3,path=/dev/fd/3"),
+			qemu.ArgChardev("file,id=vcon4,path=/dev/fd/4"),
 		}
 
-		for len(args) > 1 {
-			arg := next(&args)
-			if arg != "-chardev" {
+		found := 0
+		for _, a := range q.Args() {
+			if a.Name != "chardev" {
 				continue
 			}
-			if assert.Greater(t, len(expected), 0, "expected serial files already consumed") {
-				assert.Equal(t, next(&expected), next(&args))
+			if assert.Less(t, found, len(expected), "expected serial files already consumed") {
+				assert.Equal(t, expected[found], a)
 			}
+			found++
 		}
-
-		assert.Len(t, expected, 0, "no expected serial files should be left over")
+		assert.Equal(t, len(expected), found, "all expected serial files should have been found")
 	})
 
 	t.Run("serial files isa-pci", func(t *testing.T) {
@@ -79,24 +112,24 @@ func TestArgs(t *testing.T) {
 			},
 			TransportType: qemu.TransportTypeISA,
 		}
-		args := q.Args()
-		expected := []string{
-			"file:/dev/fd/1",
-			"file:/dev/fd/3",
-			"file:/dev/fd/4",
+
+		expected := qemu.Arguments{
+			qemu.ArgSerial("file:/dev/fd/1"),
+			qemu.ArgSerial("file:/dev/fd/3"),
+			qemu.ArgSerial("file:/dev/fd/4"),
 		}
 
-		for len(args) > 1 {
-			arg := next(&args)
-			if arg != "-serial" {
+		found := 0
+		for _, a := range q.Args() {
+			if a.Name != "serial" {
 				continue
 			}
-			if assert.Greater(t, len(expected), 0, "expected serial files already consumed") {
-				assert.Equal(t, next(&expected), next(&args))
+			if assert.Less(t, found, len(expected), "expected serial files already consumed") {
+				assert.Equal(t, expected[found], a)
 			}
+			found++
 		}
-
-		assert.Len(t, expected, 0, "no expected serial files should be left over")
+		assert.Equal(t, len(expected), found, "all expected serial files should have been found")
 	})
 
 	t.Run("init args", func(t *testing.T) {
@@ -107,14 +140,13 @@ func TestArgs(t *testing.T) {
 				"third",
 			},
 		}
-		args := q.Args()
+
 		expected := " -- first second third"
 
 		var appendValue string
-		for len(args) > 1 {
-			arg := next(&args)
-			if arg == "-append" {
-				appendValue = next(&args)
+		for _, a := range q.Args() {
+			if a.Name == "append" {
+				appendValue = a.Value
 			}
 		}
 

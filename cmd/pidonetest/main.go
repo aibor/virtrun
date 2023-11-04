@@ -6,9 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"slices"
 	"syscall"
@@ -102,42 +100,11 @@ func run() (int, error) {
 }
 
 func runInit() (int, error) {
-	if !sysinit.IsPidOne() {
-		return 127, sysinit.NotPidOneError
+	err := sysinit.Run(initramfs.FilesDir)
+	if err == sysinit.NotPidOneError {
+		return 127, err
 	}
-
-	var err error
-	defer sysinit.Poweroff(&err)
-
-	err = sysinit.MountAll()
-	if err != nil {
-		return 126, err
-	}
-
-	files, err := os.ReadDir(initramfs.FilesDir)
-	if err != nil {
-		return 125, err
-	}
-
-	paths := make([]string, len(files))
-	for idx, f := range files {
-		paths[idx] = filepath.Join(initramfs.FilesDir, f.Name())
-	}
-
-	rc := 0
-	err = sysinit.ExecParallel(paths, os.Args[1:], os.Stdout, os.Stderr)
-	if err != nil {
-		var eerr *exec.ExitError
-		if errors.As(err, &eerr) {
-			rc = eerr.ExitCode()
-		} else {
-			rc = 124
-		}
-		err = nil
-	}
-	sysinit.PrintRC(rc)
-
-	return rc, nil
+	return 126, err
 }
 
 func main() {

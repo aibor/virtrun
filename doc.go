@@ -43,7 +43,7 @@
 // /run, /sys/fs/bpf/, /sys/kernel/tracing/.
 //
 // In a test package, define your custom TestMain function and call
-// [sysinit.RunTests]. You may keep this in a separate test file and use
+// [pidonetest.RunTests]. You may keep this in a separate test file and use
 // build constraints in order to have an easy way of separating such test from
 // normal go tests that can run on the same system:
 //
@@ -54,18 +54,18 @@
 //	import (
 //	    "testing"
 //
-//	    "github.com/aibor/pidonetest/sysinit"
+//	    "github.com/aibor/pidonetest"
 //	)
 //
 //	func TestMain(m *testing.M) {
-//	    sysinit.RunTests(m)
+//	    pidonetest.RunTests(m)
 //	}
 //
 // See the selftest directory for a working example.
 //
-// Instead of using [sysinit.RunTests] you can use call the various parts
+// Instead of using [pidonetest.RunTests] you can use call the various parts
 // individually, of course, and just mount the file systems you need or
-// additional ones. See [sysinit.RunTests] for the steps it does.
+// additional ones. See [pidonetest.RunTests] for the steps it does.
 //
 // With the TestMain function in place, run the test and specify the pidonetest
 // binary in one of the following ways. If the test binary is dynamically linked

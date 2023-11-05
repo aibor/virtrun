@@ -5,9 +5,9 @@ package selftest
 import (
 	"testing"
 
-	"github.com/aibor/pidonetest/sysinit"
+	"github.com/aibor/pidonetest"
 )
 
 func TestMain(m *testing.M) {
-	sysinit.RunTests(m)
+	pidonetest.RunTests(m)
 }

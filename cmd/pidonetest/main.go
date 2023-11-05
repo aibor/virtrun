@@ -9,12 +9,12 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"syscall"
 
 	"github.com/aibor/pidonetest/internal/initramfs"
 	"github.com/aibor/pidonetest/internal/qemu"
 	"github.com/aibor/pidonetest/sysinit"
+	"golang.org/x/exp/slices"
 )
 
 func run() (int, error) {

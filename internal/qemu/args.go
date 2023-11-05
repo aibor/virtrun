@@ -2,9 +2,10 @@ package qemu
 
 import (
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
+
+	"golang.org/x/exp/slices"
 )
 
 type Argument struct {

@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [ "main" ]
 
-env:
-  go_version: '~1.21'
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -17,12 +14,15 @@ jobs:
   lint-and-test:
     name: Go lint and test
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ["~1.21", "~1.20", "~1.19", "~1.18"]
     steps:
       - uses: actions/checkout@v3
 
       - uses: actions/setup-go@v3
         with:
-          go-version: '${{ env.go_version}}'
+          go-version: "${{ matrix.go-version }}"
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
@@ -48,7 +48,7 @@ jobs:
 
       - uses: actions/setup-go@v3
         with:
-          go-version: '${{ env.go_version }}'
+          go-version: '~1.18'
 
       - name: Install go tools and kernel
         run: |

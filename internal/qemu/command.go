@@ -2,7 +2,6 @@ package qemu
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -293,7 +292,10 @@ func (c *Command) Run(ctx context.Context) (int, error) {
 	}
 	proccessorsErr := processorsGroup.Wait()
 
-	return rc, errors.Join(rcErr, proccessorsErr)
+	if rcErr != nil {
+		return rc, rcErr
+	}
+	return rc, proccessorsErr
 }
 
 // KVMAvailableFor checks if KVM support is available for the given

@@ -30,7 +30,7 @@ jobs:
           version: latest
 
       - name: Run go tests
-        run: go test -race ./internal/... ./cmd/...
+        run: go test -race ./...
 
   selftest:
     name: Run selftests
@@ -41,9 +41,7 @@ jobs:
         version: ["6.6", "6.1", "5.15"]
         arch: ["amd64", "arm64"]
     env:
-      KERNEL_VER: "${{ matrix.version }}"
-      KERNEL_ARCH: "${{ matrix.arch }}"
-      QEMU_KERNEL: "kernel/vmlinuz-${{ matrix.version}}-${{ matrix.arch }}"
+      QEMU_KERNEL: "${{ github.workspace }}/kernel/vmlinuz-${{ matrix.version}}-${{ matrix.arch }}"
       GOBIN: "${{ github.workspace }}/gobin"
     steps:
       - uses: actions/checkout@v3
@@ -56,21 +54,21 @@ jobs:
         run: |
           go install ./cmd/pidonetest
           go install github.com/magefile/mage
-          bash fetch_kernel.sh
+          bash fetch_kernel.sh "${{ matrix.version }}" "${{ matrix.arch }}"
 
       - name: Install packages for selftest
         run: |
           sudo apt-get update
-          if [[ $KERNEL_ARCH == amd64 ]]; then pkg=qemu-system-x86-microvm; else pkg=qemu-system-arm; fi
+          if [[ "${{ matrix.arch }}" == amd64 ]]; then pkg=qemu-system-x86-microvm; else pkg=qemu-system-arm; fi
           sudo apt-get install -y --no-install-recommends $pkg
 
       - name: Run selftest wrapped
-        if: "${{ env.KERNEL_ARCH == 'amd64' }}"
+        if: "${{ matrix.version == 'amd64' }}"
         env:
-          GOARCH: "${{ env.KERNEL_ARCH }}"
+          GOARCH: "${{ matrix.arch }}"
         run: $GOBIN/mage -v selftest 1 0 1
 
       - name: Run selftest standalone
         env:
-          GOARCH: "${{ env.KERNEL_ARCH }}"
+          GOARCH: "${{ matrix.arch }}"
         run: $GOBIN/mage -v selftest 1 1 1

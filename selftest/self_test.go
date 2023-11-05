@@ -1,4 +1,6 @@
-package pidonetest_test
+//go:build selftest
+
+package selftest
 
 import (
 	"context"

@@ -47,17 +47,23 @@ func InstallPidonetest() error {
 
 // Run tests using the package itself.
 func Selftest(useInstalled, standalone, verbose bool) error {
+	cmdAbsPath, err := filepath.Abs("./cmd/pidonetest")
+	if err != nil {
+		return err
+	}
 	execCmd := []string{
 		"go",
 		"run",
-		"./cmd/pidonetest",
+		cmdAbsPath,
 	}
+	tags := []string{"selftest"}
 	if useInstalled {
 		mg.Deps(InstallPidonetest)
 		execCmd = []string{filepath.Join("$GOBIN", "pidonetest")}
 	}
 	if standalone {
 		execCmd = append(execCmd, "-standalone")
+		tags = append(tags, "standalone")
 	}
 	if verbose {
 		execCmd = append(execCmd, "-verbose")
@@ -68,11 +74,9 @@ func Selftest(useInstalled, standalone, verbose bool) error {
 		"-v",
 		"-timeout", "2m",
 		"-exec", strings.Join(execCmd, " "),
+		"-tags", strings.Join(tags, ","),
 	}
-	if standalone {
-		args = append(args, "-tags", "pidonetest")
-	}
-	args = append(args, ".")
+	args = append(args, "./selftest")
 
 	fmt.Printf("go args: %s\n", args)
 	return sh.RunWithV(env, "go", args...)

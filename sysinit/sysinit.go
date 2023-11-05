@@ -1,22 +1,16 @@
 package sysinit
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
-	"runtime"
-	"sync"
 	"syscall"
 
 	"github.com/aibor/pidonetest/internal/qemu"
-	"golang.org/x/sync/errgroup"
 )
 
-// NotPidOneError is returned if the process does not have PID 1.
-var NotPidOneError = errors.New("process has not PID 1")
+var ErrNotPidOne = errors.New("process does not have ID 1")
 
 // PrintRC prints the magic string communicating the return code of
 // the tests.
@@ -51,66 +45,51 @@ func Poweroff(err *error) {
 	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
 		fmt.Printf("error calling power off: %v\n", err)
 	}
+	// We just told the system to shutdown. There's no point in staying around.
+	os.Exit(0)
 }
 
-// Exec executes the given file wit the given arguments. Output and errors are
-// written to the given writers immediately. Might return [exec.ExitError].
-func Exec(path string, args []string, outWriter, errWriter io.Writer) error {
-	cmd := exec.Command(path, args...)
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
-	return cmd.Run()
-}
-
-// ExecParallel executes the given files in parallel. Each is called with the
-// given args. Output of the commands is written to the given out and err
-// writers once the command exited. If there is only a single path given,
-// output is printed unbuffered. It respects [runtime.GOMAXPROCS] and does run
-// max the number set in parallel. Might return [exec.ExitError].
-func ExecParallel(paths []string, args []string, outW, errW io.Writer) error {
-	// Fastpath.
-	switch len(paths) {
-	case 0:
-		return nil
-	case 1:
-		return Exec(paths[0], args, os.Stdout, os.Stderr)
+// Run is the entry point for an actual init system. It prepares the system
+// to be used. Preparing steps are:
+// - Guarding itself to be actually PID 1.
+// - Setup system poweroff on its exit.
+// - Mount all known virtual system file systems.
+//
+// Once this is done, the given function is run. The function must not call
+// [os.Exit] itself since the program would not be able to ensure a correct
+// system termination.
+//
+// After that, a return code is sent to stdout for consumption by the host
+// process. The return code returnded by the function is used, unless it
+// returned with an error. If the error is an [exec.ExitError], it is
+// parsed and its return code is used. Otherwise the return code is 99.
+func Run(fn func() (int, error)) error {
+	if !IsPidOne() {
+		return ErrNotPidOne
 	}
 
-	var (
-		writers   sync.WaitGroup
-		outStream = make(chan []byte)
-		errStream = make(chan []byte)
-		addWriter = func(writer io.Writer, byteStream <-chan []byte) {
-			writers.Add(1)
-			go func(w io.Writer, r <-chan []byte) {
-				defer writers.Done()
-				for b := range r {
-					fmt.Fprint(w, string(b))
-				}
-			}(writer, byteStream)
+	// From here on we can assume we are a systems's init program. termination
+	// will lead to system shutdown, or kernel panic, if we do not shutdown
+	// correctly.
+	var err error
+	defer Poweroff(&err)
+
+	err = MountAll()
+	if err != nil {
+		return err
+	}
+
+	rc, err := fn()
+	if err != nil {
+		var eerr *exec.ExitError
+		if errors.As(err, &eerr) {
+			rc = eerr.ExitCode()
+		} else {
+			rc = 99
 		}
-	)
-
-	addWriter(outW, outStream)
-	addWriter(errW, errStream)
-
-	eg := errgroup.Group{}
-	eg.SetLimit(runtime.GOMAXPROCS(0))
-	for _, path := range paths {
-		path := path
-		eg.Go(func() error {
-			var outBuf, errBuf bytes.Buffer
-			err := Exec(path, args, &outBuf, &errBuf)
-			outStream <- outBuf.Bytes()
-			errStream <- errBuf.Bytes()
-			return err
-		})
+		err = nil
 	}
+	PrintRC(rc)
 
-	err := eg.Wait()
-	close(outStream)
-	close(errStream)
-	writers.Wait()
-
-	return err
+	return nil
 }

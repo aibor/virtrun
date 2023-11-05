@@ -12,25 +12,15 @@ import (
 // only in case of failure. It is an error if the process does not run with
 // PID 1, since the intention of this library is to run test binaries in an
 // isolated system.
-//
-// Instead of using this convenience wrapper, you can run the commands yourself,
-// of course. Make sure to call [PrintRC] with the output of your
-// [testing.M.Run] call in order to communicate the result to the wrapping
-// "pidonetest" CLI tool.
 func RunTests(m *testing.M) {
-	if !IsPidOne() {
-		fmt.Printf("Error: %v\n", NotPidOneError)
-		os.Exit(127)
+	err := Run(func() (int, error) {
+		return m.Run(), nil
+	})
+	rc := 1
+	if err == ErrNotPidOne {
+		rc = 127
+
 	}
-
-	var err error
-	defer Poweroff(&err)
-
-	err = MountAll()
-	if err != nil {
-		err = fmt.Errorf("mounting file systems: %v", err)
-		return
-	}
-
-	PrintRC(m.Run())
+	fmt.Fprintf(os.Stderr, "Error: %v", err)
+	os.Exit(rc)
 }

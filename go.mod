@@ -1,4 +1,4 @@
-module github.com/aibor/pidonetest
+module github.com/aibor/virtrun
 
 go 1.18
 

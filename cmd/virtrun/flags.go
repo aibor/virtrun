@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aibor/pidonetest/internal/qemu"
+	"github.com/aibor/virtrun/internal/qemu"
 )
 
 func parseArgs(args []string, binaries *[]string, qemuCmd *qemu.Command, standalone *bool) error {
@@ -18,7 +18,7 @@ func parseArgs(args []string, binaries *[]string, qemuCmd *qemu.Command, standal
 		standalone,
 		"standalone",
 		*standalone,
-		"run test binary as init itself. Use this if the tests has pidonetest support built in.",
+		"run test binary as init itself. Use this if the tests has virtrun support built in.",
 	)
 
 	if err := fs.Parse(args[1:]); err != nil {

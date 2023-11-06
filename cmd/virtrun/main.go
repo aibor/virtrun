@@ -11,9 +11,9 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/aibor/pidonetest"
-	"github.com/aibor/pidonetest/internal/initramfs"
-	"github.com/aibor/pidonetest/internal/qemu"
+	"github.com/aibor/virtrun"
+	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/aibor/virtrun/internal/qemu"
 	"golang.org/x/exp/slices"
 )
 
@@ -110,7 +110,7 @@ func run() (int, error) {
 }
 
 func runInit() (int, error) {
-	err := pidonetest.Run(func() (int, error) {
+	err := virtrun.Init(func() (int, error) {
 		dir := initramfs.FilesDir
 		files, err := os.ReadDir(dir)
 		if err != nil {
@@ -122,9 +122,9 @@ func runInit() (int, error) {
 			paths[idx] = filepath.Join(dir, f.Name())
 		}
 
-		return 0, pidonetest.ExecParallel(paths, os.Args[1:], os.Stdout, os.Stderr)
+		return 0, virtrun.ExecParallel(paths, os.Args[1:], os.Stdout, os.Stderr)
 	})
-	if err == pidonetest.ErrNotPidOne {
+	if err == virtrun.ErrNotPidOne {
 		return 127, err
 	}
 	return 126, err

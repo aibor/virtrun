@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aibor/pidonetest"
+	"github.com/aibor/virtrun"
 )
 
 func main() {
-	err := pidonetest.Run(func() (int, error) {
+	err := virtrun.Init(func() (int, error) {
 		pattern := os.Args[1]
 		if pattern == "" {
 			return 98, fmt.Errorf("empty pattern")
@@ -20,7 +20,7 @@ func main() {
 			return 97, err
 		}
 
-		return 0, pidonetest.ExecParallel(paths, os.Args[2:], os.Stdout, os.Stderr)
+		return 0, virtrun.ExecParallel(paths, os.Args[2:], os.Stdout, os.Stderr)
 	})
 	if err != nil {
 		// Usually, we never reach this point, if the Run function reached the

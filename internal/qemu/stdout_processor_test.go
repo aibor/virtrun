@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aibor/pidonetest/internal/qemu"
+	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
 )
 

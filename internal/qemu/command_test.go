@@ -3,7 +3,7 @@ package qemu_test
 import (
 	"testing"
 
-	"github.com/aibor/pidonetest/internal/qemu"
+	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

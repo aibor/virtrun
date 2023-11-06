@@ -28,9 +28,9 @@ func init() {
 	env["GOBIN"] = gobin
 }
 
-// Install pidonetest to gobin directory.
-func InstallPidonetest() error {
-	path := filepath.Join(env["GOBIN"], "pidonetest")
+// Install virtrun to gobin directory.
+func InstallVirtrun() error {
+	path := filepath.Join(env["GOBIN"], "virtrun")
 	mod, err := target.Path(path)
 	if err != nil {
 		return err
@@ -40,14 +40,14 @@ func InstallPidonetest() error {
 		return nil
 	}
 
-	pkg := "github.com/aibor/pidonetest/cmd/pidonetest"
+	pkg := "github.com/aibor/virtrun/cmd/virtrun"
 	version := "latest"
 	return sh.RunWith(env, "go", "install", fmt.Sprintf("%s@%s", pkg, version))
 }
 
 // Run tests using the package itself.
 func Selftest(useInstalled, standalone, verbose bool) error {
-	cmdAbsPath, err := filepath.Abs("./cmd/pidonetest")
+	cmdAbsPath, err := filepath.Abs("./cmd/virtrun")
 	if err != nil {
 		return err
 	}
@@ -58,8 +58,8 @@ func Selftest(useInstalled, standalone, verbose bool) error {
 	}
 	tags := []string{"selftest"}
 	if useInstalled {
-		mg.Deps(InstallPidonetest)
-		execCmd = []string{filepath.Join("$GOBIN", "pidonetest")}
+		mg.Deps(InstallVirtrun)
+		execCmd = []string{filepath.Join("$GOBIN", "virtrun")}
 	}
 	if standalone {
 		execCmd = append(execCmd, "-standalone")

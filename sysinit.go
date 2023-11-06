@@ -1,4 +1,4 @@
-package pidonetest
+package virtrun
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/aibor/pidonetest/internal/qemu"
+	"github.com/aibor/virtrun/internal/qemu"
 )
 
 var ErrNotPidOne = errors.New("process does not have ID 1")
@@ -49,7 +49,7 @@ func Poweroff(err *error) {
 	os.Exit(0)
 }
 
-// Run is the entry point for an actual init system. It prepares the system
+// Init is the entry point for an actual init system. It prepares the system
 // to be used. Preparing steps are:
 // - Guarding itself to be actually PID 1.
 // - Setup system poweroff on its exit.
@@ -63,7 +63,7 @@ func Poweroff(err *error) {
 // process. The return code returnded by the function is used, unless it
 // returned with an error. If the error is an [exec.ExitError], it is
 // parsed and its return code is used. Otherwise the return code is 99.
-func Run(fn func() (int, error)) error {
+func Init(fn func() (int, error)) error {
 	if !IsPidOne() {
 		return ErrNotPidOne
 	}

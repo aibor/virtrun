@@ -52,7 +52,7 @@ jobs:
 
       - name: Install go tools and kernel
         run: |
-          go install ./cmd/pidonetest
+          go install ./cmd/virtrun
           go install github.com/magefile/mage
           bash fetch_kernel.sh "${{ matrix.version }}" "${{ matrix.arch }}"
 

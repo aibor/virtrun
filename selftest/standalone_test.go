@@ -5,9 +5,9 @@ package selftest
 import (
 	"testing"
 
-	"github.com/aibor/pidonetest"
+	"github.com/aibor/virtrun"
 )
 
 func TestMain(m *testing.M) {
-	pidonetest.RunTests(m)
+	virtrun.Tests(m)
 }

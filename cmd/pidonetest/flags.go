@@ -25,8 +25,16 @@ func parseArgs(args []string, binaries *[]string, qemuCmd *qemu.Command, standal
 		return err
 	}
 
-	// Catch coverage related paths and adjust them.
-	for _, posArg := range fs.Args() {
+	// Catch coverage related paths and adjust them. This is only done until
+	// the terminator string "--" is found.
+	for idx, posArg := range fs.Args() {
+		// Once terminator string is found, everything is considered and
+		// argument to the init.
+		if posArg == "--" {
+			qemuCmd.InitArgs = append(qemuCmd.InitArgs, fs.Args()[idx+1:]...)
+			break
+		}
+
 		splits := strings.Split(posArg, "=")
 		switch splits[0] {
 		case "-test.coverprofile":
@@ -35,6 +43,7 @@ func parseArgs(args []string, binaries *[]string, qemuCmd *qemu.Command, standal
 		case "-test.gocoverdir":
 			splits[1] = "/tmp"
 			posArg = strings.Join(splits, "=")
+			// TODO: Add handling for all profile file and outputdir flag
 		}
 
 		if strings.HasPrefix(posArg, "-") {

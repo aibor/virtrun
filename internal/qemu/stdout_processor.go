@@ -20,7 +20,7 @@ var RCNotFoundErr = errors.New("no return code found in stdout")
 
 // ParseStdout processes the input until the underlying writer is closed.
 func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
-	var rc int
+	rc := 126
 	// rcErr is unset once a return code is found.
 	rcErr := RCNotFoundErr
 
@@ -29,7 +29,7 @@ func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
 		line := scanner.Text()
 		if panicRE.MatchString(line) {
 			if rcErr != nil {
-				rc = 126
+				rc = 125
 			}
 		} else if _, err := fmt.Sscanf(line, RCFmt, &rc); err == nil {
 			rcErr = nil

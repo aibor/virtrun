@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/aibor/virtrun/internal/qemu"
@@ -25,8 +26,13 @@ func parseArgs(args []string, binaries *[]string, qemuCmd *qemu.Command, standal
 		return err
 	}
 
-	// Catch coverage related paths and adjust them. This is only done until
-	// the terminator string "--" is found.
+	// Catch coverage and profile related paths and adjust them. This is only
+	// done until the terminator string "--" is found.
+	// Only coverprofile has a relative path to the test pwd. All other profile
+	// files are relative to the actual test running and need to be prefixed
+	// with -test.outputdir. So, collect them and process them afterwards.
+	needsOutputDirPrefix := make([][]string, 0)
+	outputDir := ""
 	for idx, posArg := range fs.Args() {
 		// Once terminator string is found, everything is considered and
 		// argument to the init.
@@ -40,16 +46,33 @@ func parseArgs(args []string, binaries *[]string, qemuCmd *qemu.Command, standal
 		case "-test.coverprofile":
 			splits[1] = "/dev/" + qemuCmd.AddExtraFile(splits[1])
 			posArg = strings.Join(splits, "=")
+		case "-test.blockprofile",
+			"-test.cpuprofile",
+			"-test.memprofile",
+			"-test.mutexprofile",
+			"-test.trace":
+			needsOutputDirPrefix = append(needsOutputDirPrefix, splits)
+			continue
+		case "-test.outputdir":
+			outputDir = splits[1]
+			fallthrough
 		case "-test.gocoverdir":
 			splits[1] = "/tmp"
 			posArg = strings.Join(splits, "=")
-			// TODO: Add handling for all profile file and outputdir flag
 		}
 
 		if strings.HasPrefix(posArg, "-") {
 			qemuCmd.InitArgs = append(qemuCmd.InitArgs, posArg)
 		} else {
 			*binaries = append(*binaries, posArg)
+		}
+	}
+
+	if outputDir != "" {
+		for _, arg := range needsOutputDirPrefix {
+			path := filepath.Join(outputDir, arg[1])
+			arg[1] = "/dev/" + qemuCmd.AddExtraFile(path)
+			qemuCmd.InitArgs = append(qemuCmd.InitArgs, strings.Join(arg, "="))
 		}
 	}
 

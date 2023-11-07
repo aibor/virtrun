@@ -80,13 +80,9 @@ func Init(fn func() (int, error)) error {
 	}
 
 	rc, err := fn()
-	if err != nil {
-		var eerr *exec.ExitError
-		if errors.As(err, &eerr) {
-			rc = eerr.ExitCode()
-		} else {
-			rc = 99
-		}
+	var eerr *exec.ExitError
+	if errors.As(err, &eerr) {
+		rc = eerr.ExitCode()
 		err = nil
 	}
 	PrintRC(rc)

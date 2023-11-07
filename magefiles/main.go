@@ -75,6 +75,9 @@ func Selftest(useInstalled, standalone, verbose bool) error {
 		"-timeout", "2m",
 		"-exec", strings.Join(execCmd, " "),
 		"-tags", strings.Join(tags, ","),
+		"-cover",
+		"-coverprofile", "/tmp/cover.out",
+		"-coverpkg", "github.com/aibor/virtrun",
 	}
 	args = append(args, "./selftest")
 

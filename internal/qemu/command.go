@@ -87,7 +87,7 @@ func NewCommand(arch string) (*Command, error) {
 	}
 
 	cmd.Memory = 256
-	cmd.SMP = 2
+	cmd.SMP = 1
 	cmd.NoKVM = !KVMAvailableFor(arch)
 
 	return &cmd, nil

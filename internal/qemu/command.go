@@ -220,7 +220,6 @@ func (c *Command) Args() Arguments {
 // KernelCmdlineArgs reruns the kernel cmdline arguments.
 func (c *Command) KernelCmdlineArgs() []string {
 	cmdline := []string{
-		"console=ttyAMA0",
 		"console=" + c.ConsoleDeviceName(0),
 		"panic=-1",
 	}

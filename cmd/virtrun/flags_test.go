@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/aibor/virtrun/internal/qemu"
@@ -9,6 +10,9 @@ import (
 )
 
 func TestParseArgs(t *testing.T) {
+	absBinPath, err := filepath.Abs("bin.test")
+	require.NoError(t, err)
+
 	tests := []struct {
 		name             string
 		args             []string
@@ -24,7 +28,7 @@ func TestParseArgs(t *testing.T) {
 				"-test.timeout=10m0s",
 			},
 			expectedBinaries: []string{
-				"bin.test",
+				absBinPath,
 			},
 			expectedInitArgs: []string{
 				"-test.paniconexit0",
@@ -41,7 +45,7 @@ func TestParseArgs(t *testing.T) {
 				"-test.coverprofile=cover.out",
 			},
 			expectedBinaries: []string{
-				"bin.test",
+				absBinPath,
 			},
 			expectedInitArgs: []string{
 				"-test.paniconexit0",
@@ -59,7 +63,7 @@ func TestParseArgs(t *testing.T) {
 				"-test.coverprofile=cover.out",
 			},
 			expectedBinaries: []string{
-				"bin.test",
+				absBinPath,
 			},
 			expectedInitArgs: []string{
 				"-test.paniconexit0",

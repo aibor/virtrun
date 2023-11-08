@@ -64,7 +64,11 @@ func parseArgs(args []string, binaries *[]string, qemuCmd *qemu.Command, standal
 		if strings.HasPrefix(posArg, "-") {
 			qemuCmd.InitArgs = append(qemuCmd.InitArgs, posArg)
 		} else {
-			*binaries = append(*binaries, posArg)
+			path, err := filepath.Abs(posArg)
+			if err != nil {
+				return fmt.Errorf("absolute path for %s: %v", posArg, err)
+			}
+			*binaries = append(*binaries, path)
 		}
 	}
 

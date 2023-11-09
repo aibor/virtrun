@@ -24,10 +24,13 @@ func run() (int, error) {
 		standalone bool
 	)
 
+	libSearchPath := os.Getenv("LD_LIBRARY_PATH")
+
 	arch := os.Getenv("GOARCH")
 	if arch == "" {
 		arch = runtime.GOARCH
 	}
+
 	qemuCmd, err := qemu.NewCommand(arch)
 	if err != nil {
 		return 1, err
@@ -83,7 +86,7 @@ func run() (int, error) {
 		return 1, fmt.Errorf("add binares: %v", err)
 	}
 
-	qemuCmd.Initrd, err = archive.Write()
+	qemuCmd.Initrd, err = archive.Write(libSearchPath)
 	if err != nil {
 		return 1, fmt.Errorf("write initramfs: %v", err)
 	}

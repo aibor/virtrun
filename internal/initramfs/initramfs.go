@@ -27,11 +27,13 @@ func New(initFilePath string) *Initramfs {
 }
 
 // Write resolves ELF dynamically linked libraries of all currently added files
-// and writes the initramfs to a file in [os.TempDir]. It is the caller's
+// and writes the initramfs to a file in [os.TempDir]. The optional
+// libsearchpath is a colon separated string that specifies the directories to
+// search libraries in. Same format as LD_LIBRARY_PATH has. It is the caller's
 // responsibility to remove the file when it is no longer needed.
-func (i *Initramfs) Write() (string, error) {
+func (i *Initramfs) Write(libsearchpath string) (string, error) {
 	var err error
-	if err := i.ResolveLinkedLibs(""); err != nil {
+	if err := i.ResolveLinkedLibs(libsearchpath); err != nil {
 		return "", fmt.Errorf("resolve: %v", err)
 	}
 

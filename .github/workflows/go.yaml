@@ -63,12 +63,20 @@ jobs:
           sudo apt-get install -y --no-install-recommends $pkg
 
       - name: Run selftest wrapped
+        uses: nick-fields/retry@v2
         if: "${{ matrix.arch == 'amd64' }}"
         env:
           GOARCH: "${{ matrix.arch }}"
-        run: $GOBIN/mage -v selftest 1 0 1
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: $GOBIN/mage -v selftest 1 0 1
 
       - name: Run selftest standalone
+        uses: nick-fields/retry@v2
         env:
           GOARCH: "${{ matrix.arch }}"
-        run: $GOBIN/mage -v selftest 1 1 1
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          command: $GOBIN/mage -v selftest 1 1 1

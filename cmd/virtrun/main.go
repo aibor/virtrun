@@ -11,10 +11,12 @@ import (
 	"runtime"
 	"syscall"
 
+	// TODO: Replace with stdlib slices with go 1.21.
+	"golang.org/x/exp/slices"
+
 	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/aibor/virtrun/internal/qemu"
-	"golang.org/x/exp/slices"
 )
 
 func run() (int, error) {
@@ -64,7 +66,7 @@ func run() (int, error) {
 		return 1, fmt.Errorf("kernel file %s doesn't exist.", qemuCmd.Kernel)
 	}
 
-	var archive *initramfs.Initramfs
+	var archive *initramfs.Archive
 	if standalone {
 		archive = initramfs.New(binaries[0])
 		binaries = slices.Delete(binaries, 0, 1)

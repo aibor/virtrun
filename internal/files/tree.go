@@ -67,7 +67,8 @@ func (t *Tree) Mkdir(path string) (*Entry, error) {
 
 // Ln adds links to target for the given path.
 func (t *Tree) Ln(target string, path string) error {
-	dir, name := filepath.Split(path)
+	cleaned := filepath.Clean(path)
+	dir, name := filepath.Split(cleaned)
 	dirEntry, err := t.Mkdir(dir)
 	if err != nil {
 		return err

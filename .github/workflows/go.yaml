@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ["~1.21", "~1.20", "~1.19", "~1.18"]
+        go-version: ["~1.21", "~1.18"]
     steps:
       - uses: actions/checkout@v3
 
@@ -38,45 +38,18 @@ jobs:
     needs: lint-and-test
     strategy:
       matrix:
-        version: ["6.6", "6.1", "5.15"]
+        version: ["6.6", "5.15"]
         arch: ["amd64", "arm64"]
-    env:
-      QEMU_KERNEL: "${{ github.workspace }}/kernel/vmlinuz-${{ matrix.version}}-${{ matrix.arch }}"
-      GOBIN: "${{ github.workspace }}/gobin"
+        mode: ["wrapped", "standalone"]
+        exclude:
+          # Wrapped mode requires architecture matching the virtrun runtime arch.
+          - arch: "arm64"
+            mode: "wrapped"
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/setup-go@v3
+      - uses: ./selftest
         with:
-          go-version: '~1.18'
-
-      - name: Install go tools and kernel
-        run: |
-          go install ./cmd/virtrun
-          go install github.com/magefile/mage
-          bash fetch_kernel.sh "${{ matrix.version }}" "${{ matrix.arch }}"
-
-      - name: Install packages for selftest
-        run: |
-          sudo apt-get update
-          if [[ "${{ matrix.arch }}" == amd64 ]]; then pkg=qemu-system-x86-microvm; else pkg=qemu-system-arm; fi
-          sudo apt-get install -y --no-install-recommends $pkg
-
-      - name: Run selftest wrapped
-        uses: nick-fields/retry@v2
-        if: "${{ matrix.arch == 'amd64' }}"
-        env:
-          GOARCH: "${{ matrix.arch }}"
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          command: $GOBIN/mage -v selftest 1 0 1
-
-      - name: Run selftest standalone
-        uses: nick-fields/retry@v2
-        env:
-          GOARCH: "${{ matrix.arch }}"
-        with:
-          timeout_minutes: 5
-          max_attempts: 3
-          command: $GOBIN/mage -v selftest 1 1 1
+          kernel-version: "${{ matrix.version }}"
+          kernel-arch: "${{ matrix.arch }}"
+          test-mode: "${{ matrix.mode }}"

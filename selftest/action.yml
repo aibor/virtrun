@@ -1,0 +1,20 @@
+name: "Virtrun selftest"
+
+inputs:
+  kernel-version:
+    description: "Kernel version to test with"
+    required: true
+  kernel-arch:
+    description: "Kernel architecture to test with"
+    required: true
+  test-mode:
+    description: "selftest mode (0: wrapped, 1: standalone)"
+    required: true
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - ${{ inputs.kernel-version }}
+    - ${{ inputs.kernel-arch }}
+    - ${{ inputs.test-mode }}

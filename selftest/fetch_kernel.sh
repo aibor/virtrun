@@ -8,13 +8,15 @@ set -eEuo pipefail
 
 version=${1:-${KERNEL_VER:-6.1}}
 arch=${2:-${KERNEL_ARCH:-${GOARCH:-amd64}}}
-file_name="$KERNEL_DIR/vmlinuz-${version}-${arch}"
+file_name="vmlinuz-${version}-${arch}"
 
-if [[ -e "$file_name" ]]; then
+if [[ -e "$KERNEL_DIR/$file_name" ]]; then
 	exit 0
 fi
 
-mkdir -p "$(dirname "$file_name")"
+mkdir -p "$KERNEL_DIR"
+pushd "$KERNEL_DIR"
+
 tar \
 	--file <(
 		curl \

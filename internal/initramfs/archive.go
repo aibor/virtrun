@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/exp/slices"
-
 	"github.com/aibor/virtrun/internal/files"
 )
 
@@ -19,34 +17,7 @@ const (
 	// AdditionalFilesDir is the archive's directory for all additional files
 	// beside the init file.
 	FilesDir = "files"
-	// LibSearchPath defines the directories to lookup linked libraries.
-	LibSearchPath = "/lib64:/lib/x86_64-linux-gnu:/usr/lib64:/lib:/usr/lib"
 )
-
-// Write resolves ELF dynamically linked libraries of all currently added files
-// and writes the initramfs to a file in [os.TempDir]. The optional
-// libsearchpath is a colon separated string that specifies the directories to
-// search libraries in. Same format as LD_LIBRARY_PATH has. It is the caller's
-// responsibility to remove the file when it is no longer needed.
-func (a *Archive) Write(libsearchpath string) (string, error) {
-	var err error
-	if err := a.ResolveLinkedLibs(libsearchpath); err != nil {
-		return "", fmt.Errorf("resolve: %v", err)
-	}
-
-	archiveFile, err := os.CreateTemp("", "initramfs")
-	if err != nil {
-		return "", fmt.Errorf("create file")
-	}
-	defer archiveFile.Close()
-
-	if err := a.WriteCPIO(archiveFile); err != nil {
-		_ = os.Remove(archiveFile.Name())
-		return "", fmt.Errorf("write: %v", err)
-	}
-
-	return archiveFile.Name(), nil
-}
 
 // Archive represents a file tree that can be used as an initramfs for the
 // Linux kernel.
@@ -94,39 +65,35 @@ func (a *Archive) AddFiles(paths ...string) error {
 	})
 }
 
-// ResolveLinkedLibs recursively resolves the dynamically linked libraries of
-// all regular files in the [Archive].
+// AddRequiredSharedObjects recursively resolves the dynamically linked
+// shared objects of all ELF files in the [Archive].
 //
-// If the given searchPath string is empty the default [LibSearchPath] is used.
-// Resolved libraries are added to [LibsDir]. For each search path a symoblic
-// link is added pointiong to [LibsDir].
-func (a *Archive) ResolveLinkedLibs(searchPath string) error {
-	if searchPath == "" {
-		searchPath = LibSearchPath
-	}
-	searchPaths := filepath.SplitList(searchPath)
-	searchPaths = slices.DeleteFunc(searchPaths, func(e string) bool { return e == "" })
-
-	resolver := files.ELFLibResolver{
-		SearchPaths: searchPaths,
-	}
-
-	err := a.fileTree.Walk(func(path string, entry *files.Entry) error {
+// The dynamic linker consumed LD_LIBRARY_PATH from the environment.
+// Resolved libraries are added to [LibsDir]. For each search path a symbolic
+// link is added pointing to [LibsDir].
+func (a *Archive) AddRequiredSharedObjects() error {
+	// Walk file tree. For each regular file, try to get linked shared objects.
+	// Ignore if it is not an ELF file or if it is statically linked (has no
+	// interpreter). Collect the absolute paths of the found shared objects
+	// deduplicated in a set.
+	pathSet := make(map[string]bool)
+	if err := a.fileTree.Walk(func(path string, entry *files.Entry) error {
 		if entry.Type != files.TypeRegular {
 			return nil
 		}
-		return resolver.Resolve(entry.RelatedPath)
-	})
-	if err != nil {
-		return fmt.Errorf("resolve: %v", err)
-	}
-
-	if err := a.withDirEntry(LibsDir, func(dirEntry *files.Entry) error {
-		for _, lib := range resolver.Libs {
-			name := filepath.Base(lib)
-			if _, err := dirEntry.AddFile(name, lib); err != nil {
-				return fmt.Errorf("add lib %s: %v", name, err)
+		paths, err := files.Ldd(entry.RelatedPath)
+		if err != nil {
+			if err == files.ErrNotELFFile || err == files.ErrNoInterpreter {
+				return nil
 			}
+			return fmt.Errorf("resolve %s: %v", path, err)
+		}
+		for _, p := range paths {
+			absPath, err := filepath.Abs(p)
+			if err != nil {
+				return fmt.Errorf("abs path for %s: %v", p, err)
+			}
+			pathSet[absPath] = true
 		}
 		return nil
 	}); err != nil {
@@ -134,11 +101,43 @@ func (a *Archive) ResolveLinkedLibs(searchPath string) error {
 	}
 
 	absLibDir := filepath.Join(string(filepath.Separator), LibsDir)
-	for _, searchPath := range searchPaths {
-		err := a.fileTree.Ln(absLibDir, searchPath)
-		if err != nil && err != files.ErrEntryExists {
-			return fmt.Errorf("add link %s: %v", searchPath, err)
+	addLinkToLibDir := func(dir string) error {
+		if dir == "" || dir == absLibDir {
+			return nil
 		}
+		err := a.fileTree.Ln(absLibDir, dir)
+		if err != nil && err != files.ErrEntryExists {
+			return fmt.Errorf("add link for %s: %v", dir, err)
+		}
+		return nil
+	}
+
+	// Walk the found shared object paths and add all to the central lib dir.
+	// In order to keep any references and search paths of the dynamic linker
+	// working, add symbolic links for all other directories where libs are
+	// copied from to the central lib dir.
+	if err := a.withDirEntry(LibsDir, func(dirEntry *files.Entry) error {
+		for path := range pathSet {
+			// Resolve symbolic links so we get the real paths that the
+			// dynamic linker probably has.
+			real, err := filepath.EvalSymlinks(path)
+			if err != nil {
+				return err
+			}
+			dir, name := filepath.Split(real)
+			if _, err := dirEntry.AddFile(name, real); err != nil {
+				return fmt.Errorf("add file %s: %v", name, err)
+			}
+			if err := addLinkToLibDir(dir); err != nil {
+				return err
+			}
+			if err := addLinkToLibDir(filepath.Dir(path)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	return nil

@@ -27,17 +27,15 @@ func run(args []string) error {
 		additionalFiles = append(additionalFiles, path)
 	}
 
-	libSearchPath := os.Getenv("LD_LIBRARY_PATH")
-
 	initRamFS := initramfs.New(initFile)
 	if err := initRamFS.AddFiles(additionalFiles...); err != nil {
 		return fmt.Errorf("add files: %v", err)
 	}
-	if err := initRamFS.ResolveLinkedLibs(libSearchPath); err != nil {
-		return fmt.Errorf("add linked libs: %v", err)
+	if err := initRamFS.AddRequiredSharedObjects(); err != nil {
+		return fmt.Errorf("add libs: %v", err)
 	}
 	if err := initRamFS.WriteCPIO(os.Stdout); err != nil {
-		return fmt.Errorf("write: %v", err)
+		return fmt.Errorf("create archive: %v", err)
 	}
 
 	return nil

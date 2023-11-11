@@ -1,80 +1,167 @@
 package files
 
 import (
+	"bufio"
+	"bytes"
+	"context"
 	"debug/elf"
 	"errors"
 	"fmt"
-	"os"
+	"io"
+	"os/exec"
 	"path/filepath"
+	"strings"
+	"time"
 
+	// TODO: Replace with stdlib slices with go 1.21.
 	"golang.org/x/exp/slices"
+	"golang.org/x/sys/unix"
 )
 
-// TODO: Instead of trying to resolve shared objects ourself, which is quite
-// fragile, use the actual shared object resolving by the actual interpreter.
-// The elf.File has the actually used interpreter in the progs slice wit type
-// elf.PT_INTERP. Call it with flag "--list" to get the actual resolved,
-// deduplicated list of libs.
+var (
+	// ErrNoInterpreter is returned if no interpreter is found in an ELF file.
+	ErrNoInterpreter = errors.New("no interpreter in ELF file")
+	// ErrNoELFFile is returned if the file does not have an ELF magic number.
+	ErrNotELFFile = errors.New("is not an ELF file")
+)
 
-// ELFLibResolver resolves dynamically linked libraries of ELF file. It collects
-// the libraries deduplicated for all files resolved with
-// [ELFLibResolver.Resolve].
-type ELFLibResolver struct {
-	SearchPaths []string
-	Libs        []string
-}
-
-// Resolve analyzes the required linked libraries of the ELF file with the
-// given path. The libraries are search for in the library search paths and
-// are added with their absolute path to [ELFLibResolver]'s list of libs. Call
-// [ELFLibResolver.Libs] once all files are resolved.
-func (r *ELFLibResolver) Resolve(elfFile string) error {
-	libs, err := LinkedLibs(elfFile)
-	if err != nil {
-		return fmt.Errorf("get linked libs: %v", err)
-	}
-
-	for _, lib := range libs {
-		var found bool
-		for _, searchPath := range r.SearchPaths {
-			path := filepath.Join(searchPath, lib)
-			_, err := os.Stat(path)
-			if err != nil {
-				if errors.Is(err, os.ErrNotExist) {
-					continue
-				}
-				return err
-			}
-			if !slices.Contains(r.Libs, path) {
-				r.Libs = append(r.Libs, path)
-				if err := r.Resolve(path); err != nil {
-					return err
-				}
-			}
-			found = true
-			break
-		}
-		if !found {
-			return fmt.Errorf("lib could not be resolved: %s", lib)
-		}
-	}
-
-	return nil
-}
-
-// LinkedLibs fetches the list of dynamically linked libraries from the ELF
-// file.
-func LinkedLibs(elfFilePath string) ([]string, error) {
-	elfFile, err := elf.Open(elfFilePath)
+// Ldd gathers the required shared objects of the ELF file with the given path.
+// The path must point to an ELF file. [ErrNotELFFile] is returned if it is not
+// an ELF file. [ErrNoInterpreter] is returned if no interpreter path is found
+// in the ELF file. This is the case if the binary was statically linked.
+//
+// The objects are searched for in the usual search paths of the
+// file's interpreter. Note that the dynamic linker consumes the environment
+// variable LD_LIBRARY_PATH, so it can be used to add additional search paths.
+func Ldd(path string) ([]string, error) {
+	interpreter, err := readInterpreter(path)
 	if err != nil {
 		return nil, err
 	}
-	defer elfFile.Close()
 
-	libs, err := elfFile.ImportedLibraries()
+	infos, err := ldd(interpreter, path)
 	if err != nil {
-		return nil, fmt.Errorf("read libs: %v", err)
+		return nil, err
 	}
 
-	return libs, nil
+	paths := infos.realPaths()
+	// Append the interpreter itself to the paths, to make sure it is present
+	// in the list. Usually, it is already in there pulled in by libc.
+	if !slices.Contains(paths, interpreter) {
+		paths = append(paths, interpreter)
+	}
+
+	return paths, nil
+}
+
+// readInterpreter fetches the ELF interpreter path from the ELF file. If the
+// file does not have an ELF magic number, [ErrNoELFFile] is returned. If no
+// interpreter path is found, [ErrNoInterpreter] is returned.
+func readInterpreter(path string) (string, error) {
+	elfFile, err := elf.Open(path)
+	if err != nil {
+		if strings.Contains(err.Error(), "bad magic number") {
+			return "", ErrNotELFFile
+		}
+		return "", err
+	}
+	defer elfFile.Close()
+
+	for _, prog := range elfFile.Progs {
+		if prog.Type != elf.PT_INTERP {
+			continue
+		}
+		buf := make([]byte, prog.Filesz)
+		_, err := prog.Open().Read(buf)
+		if err != nil && err != io.EOF {
+			return "", fmt.Errorf("read interpreter: %v", err)
+		}
+		// Only terminate if the found path is not empty. If there is no other
+		// prog with a valid path, it will result in the final ErrNoInterpreter.
+		interpreter := unix.ByteSliceToString(buf)
+		if interpreter != "" {
+			return interpreter, nil
+		}
+	}
+	return "", ErrNoInterpreter
+}
+
+// ldd fetches the list of shared objects for the elfFile and populates its
+// ldInfos field.
+//
+// This is how the glibc provided ldd works. The main difference is, that
+// it does not try a list of interpreters, but uses the one found in the file
+// itself. so, call [elfFile.readInterpreter] before calling ldd.
+//
+// It returns ErrNoInterpreter if the elfFile has no interpreter set.
+func ldd(interpreter, path string) (ldInfos, error) {
+	if interpreter == "" {
+		return nil, ErrNoInterpreter
+	}
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+
+	ctx, stop := context.WithTimeout(context.Background(), 5*time.Second)
+	defer stop()
+
+	cmd := exec.CommandContext(ctx, interpreter, "--list", path)
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("ldd: %v: %s", err, stderrBuf.String())
+	}
+
+	var infos ldInfos
+	infos.parseFrom(&stdoutBuf)
+	return infos, nil
+}
+
+type ldInfo struct {
+	name  string
+	path  string
+	start uint
+}
+
+type ldInfos []ldInfo
+
+// parseFrom takes a ldd output, processes each line and adds an [ldInfo] to
+// the list.
+func (l *ldInfos) parseFrom(buf *bytes.Buffer) {
+	scanner := bufio.NewScanner(buf)
+	for scanner.Scan() {
+		var info ldInfo
+		info.parseFrom(scanner.Text())
+		*l = append(*l, info)
+	}
+}
+
+// realPaths returns all shared objects that are a real file in the file system.
+// So, everything except vdso.
+func (l *ldInfos) realPaths() []string {
+	var paths []string
+	for _, i := range *l {
+		switch {
+		case i.path != "":
+			paths = append(paths, i.path)
+		case filepath.IsAbs(i.name):
+			paths = append(paths, i.name)
+		}
+	}
+	return paths
+}
+
+// parseLddLibPathFrom returns the resolved path to a shared object if the given
+// line has one. Empty string if nothing is found.
+func (l *ldInfo) parseFrom(line string) {
+	// Format for shared objects that reference an absolute path.
+	// From glibc rtld.c: _dl_printf ("\t%s => %s (0x%0*zx)\n",
+	_, err := fmt.Sscanf(line, "\t%s => %s (0x%x)", &l.name, &l.path, &l.start)
+	if err == nil {
+		return
+	}
+	// Format for shared objects that do not reference anything and might be
+	// an absolute path already.
+	// From glibc rtld.c: _dl_printf ("\t%s (0x%0*zx)\n"
+	_, _ = fmt.Sscanf(line, "\t%s (0x%x)", &l.name, &l.start)
 }

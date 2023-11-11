@@ -26,8 +26,6 @@ func run() (int, error) {
 		standalone bool
 	)
 
-	libSearchPath := os.Getenv("LD_LIBRARY_PATH")
-
 	arch := os.Getenv("GOARCH")
 	if arch == "" {
 		arch = runtime.GOARCH
@@ -88,10 +86,23 @@ func run() (int, error) {
 		return 1, fmt.Errorf("add binares: %v", err)
 	}
 
-	qemuCmd.Initrd, err = archive.Write(libSearchPath)
-	if err != nil {
-		return 1, fmt.Errorf("write initramfs: %v", err)
+	if err := archive.AddRequiredSharedObjects(); err != nil {
+		return 1, fmt.Errorf("add libs: %v", err)
 	}
+
+	archiveFile, err := os.CreateTemp("", "initramfs")
+	if err != nil {
+		return 1, fmt.Errorf("create initramfs archive file: %v", err)
+	}
+
+	if err := archive.WriteCPIO(archiveFile); err != nil {
+		archiveFile.Close()
+		_ = os.Remove(archiveFile.Name())
+		return 1, fmt.Errorf("write initramfs archive: %v", err)
+	}
+	archiveFile.Close()
+
+	qemuCmd.Initrd = archiveFile.Name()
 	defer func() {
 		_ = os.Remove(qemuCmd.Initrd)
 	}()

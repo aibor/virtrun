@@ -158,8 +158,9 @@ func TestArchiveWriteTo(t *testing.T) {
 }
 
 func TestArchiveResolveLinkedLibs(t *testing.T) {
+	t.Setenv("LD_LIBRARY_PATH", "../files/testdata/lib")
 	archive := New("../files/testdata/bin/main")
-	err := archive.ResolveLinkedLibs("../files/testdata/lib")
+	err := archive.AddRequiredSharedObjects()
 	require.NoError(t, err)
 
 	expectedFiles := map[string]files.Entry{
@@ -184,7 +185,11 @@ func TestArchiveResolveLinkedLibs(t *testing.T) {
 		entry, err := archive.fileTree.GetEntry(f)
 		if assert.NoError(t, err, f) {
 			assert.Equal(t, e.Type, entry.Type, f)
-			assert.Equal(t, e.RelatedPath, entry.RelatedPath, f)
+			if e.RelatedPath != "" {
+				expectedPath, err := filepath.Abs(e.RelatedPath)
+				require.NoError(t, err)
+				assert.Equal(t, expectedPath, entry.RelatedPath, f)
+			}
 		}
 	}
 }

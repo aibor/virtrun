@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aibor/virtrun"
+	"github.com/aibor/virtrun/sysinit"
 )
 
 func main() {
-	err := virtrun.Init(func() (int, error) {
+	err := sysinit.Run(func() (int, error) {
 		pattern := os.Args[1]
 		if pattern == "" {
 			return 98, fmt.Errorf("empty pattern")
@@ -20,7 +20,7 @@ func main() {
 			return 97, err
 		}
 
-		return 0, virtrun.ExecParallel(paths, os.Args[2:], os.Stdout, os.Stderr)
+		return 0, sysinit.ExecParallel(paths, os.Args[2:], os.Stdout, os.Stderr)
 	})
 	if err != nil {
 		// Usually, we never reach this point, if the Run function reached the

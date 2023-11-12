@@ -1,4 +1,4 @@
-package virtrun
+package sysinit
 
 import (
 	"fmt"

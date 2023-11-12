@@ -5,9 +5,9 @@ package selftest
 import (
 	"testing"
 
-	"github.com/aibor/virtrun"
+	"github.com/aibor/virtrun/sysinit"
 )
 
 func TestMain(m *testing.M) {
-	virtrun.Tests(m)
+	sysinit.RunTests(m)
 }

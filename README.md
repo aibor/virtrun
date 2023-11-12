@@ -55,15 +55,18 @@ $ virtrun -kernel /boot/vmlinuz-linux /usr/bin/env
 
 In Standalone mode, the first given binary is required to be able to act as a 
 system init binary. The only essential required functions are to communicate 
-the exit code on stdout and shutdown the system.
+the exit code on stdout and shutdown the system. 
 
-For go test binaries this can be done by using `virtrun.Tests` in a custom
+A simple init can be built using `sysinit.Run` which is a wrapper for those 
+essential tasks.
+
+For go test binaries this can be done by using `sysinit.RunTests` in a custom
 `TestMain` function. It is is a wrapper for `testing.M.Run`. Before running the 
 tests some special system file systems are mounted and handles communicating 
 the return code.
 
 So, in a test package, define your custom TestMain function and call
-`virtrun.Tests`. You may keep this in a separate test file and use build 
+`sysinit.RunTests`. You may keep this in a separate test file and use build 
 constraints in order to have an easy way of separating such test from normal go
 tests that can run on the same system:
 
@@ -75,19 +78,19 @@ package some_test
 import (
     "testing"
 
-    "github.com/aibor/virtrun"
+    "github.com/aibor/virtrun/sysinit"
 )
 
 func TestMain(m *testing.M) {
-    virtrun.Tests(m)
+    sysinit.RunTests(m)
 }
 ```
 
 See the selftest directory for a working example.
 
-Instead of using `virtrun.Tests` you can use call the various parts 
+Instead of using `sysinit.RunTests` you can use call the various parts 
 individually, of course, and just mount the file systems you need or additional 
-ones. See `virtrun.Tests` for the steps it does.
+ones. See `sysinit.RunTests` for the steps it does.
 
 With the `TestMain` function in place, run the test and specify the virtrun
 binary in one of the following ways:

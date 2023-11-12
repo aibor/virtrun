@@ -1,4 +1,4 @@
-package virtrun
+package sysinit
 
 import (
 	"errors"
@@ -49,7 +49,7 @@ func Poweroff(err *error) {
 	os.Exit(0)
 }
 
-// Init is the entry point for an actual init system. It prepares the system
+// Run is the entry point for an actual init system. It prepares the system
 // to be used. Preparing steps are:
 // - Guarding itself to be actually PID 1.
 // - Setup system poweroff on its exit.
@@ -60,10 +60,10 @@ func Poweroff(err *error) {
 // system termination.
 //
 // After that, a return code is sent to stdout for consumption by the host
-// process. The return code returnded by the function is used, unless it
+// process. The return code returned by the function is used, unless it
 // returned with an error. If the error is an [exec.ExitError], it is
 // parsed and its return code is used. Otherwise the return code is 99.
-func Init(fn func() (int, error)) error {
+func Run(fn func() (int, error)) error {
 	if !IsPidOne() {
 		return ErrNotPidOne
 	}

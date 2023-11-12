@@ -5,8 +5,7 @@ virtrun is a library and binary QEMU wrapper for running binaries in an
 isolated system as PID 1.
 
 The package uses itself for testing, so see 
-[self_test.go](selftest/standalone_test.go) and [Magefile](magefiles/main.go) for a real life 
-example.
+[self_test.go](selftest/standalone_test.go) for a real life example.
 
 ## Commands
 

@@ -118,20 +118,20 @@ func (a *Archive) AddRequiredSharedObjects() error {
 	// copied from to the central lib dir.
 	if err := a.withDirEntry(LibsDir, func(dirEntry *files.Entry) error {
 		for path := range pathSet {
-			// Resolve symbolic links so we get the real paths that the
-			// dynamic linker probably has.
-			real, err := filepath.EvalSymlinks(path)
-			if err != nil {
-				return err
-			}
-			dir, name := filepath.Split(real)
-			if _, err := dirEntry.AddFile(name, real); err != nil {
+			dir, name := filepath.Split(path)
+			if _, err := dirEntry.AddFile(name, path); err != nil {
 				return fmt.Errorf("add file %s: %v", name, err)
 			}
 			if err := addLinkToLibDir(dir); err != nil {
 				return err
 			}
-			if err := addLinkToLibDir(filepath.Dir(path)); err != nil {
+			// Try if the directory has symbolic links and resolve them, so we
+			// get the real path that the dynamic linker needs.
+			canonicalDir, err := filepath.EvalSymlinks(dir)
+			if err != nil {
+				return err
+			}
+			if err := addLinkToLibDir(canonicalDir); err != nil {
 				return err
 			}
 		}

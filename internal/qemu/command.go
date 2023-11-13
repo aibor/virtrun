@@ -14,8 +14,8 @@ import (
 var CommandPresets = map[string]Command{
 	"amd64": {
 		Binary:        "qemu-system-x86_64",
-		Machine:       "microvm",
-		TransportType: TransportTypeMMIO,
+		Machine:       "q35",
+		TransportType: TransportTypePCI,
 		CPU:           "max",
 	},
 	"arm64": {
@@ -163,6 +163,8 @@ func (c *Command) Args() Arguments {
 		ArgDisplay("none"),
 		ArgMonitor("none"),
 		UniqueArg("no-reboot"),
+		UniqueArg("nodefaults"),
+		UniqueArg("no-user-config"),
 	}
 
 	if !c.NoKVM {

@@ -74,8 +74,11 @@ func Run(fn func() (int, error)) error {
 	var err error
 	defer Poweroff(&err)
 
-	err = MountAll()
-	if err != nil {
+	if err = ConfigureLoopbackInterface(); err != nil {
+		return err
+	}
+
+	if err = MountAll(); err != nil {
 		return err
 	}
 

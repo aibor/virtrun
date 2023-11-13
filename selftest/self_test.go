@@ -5,6 +5,7 @@ package selftest
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"testing"
@@ -44,4 +45,19 @@ func TestNotPidOne(t *testing.T) {
 	if assert.NotNil(t, cmd.ProcessState, "process state should be present") {
 		assert.Equal(t, 127, cmd.ProcessState.ExitCode(), "exit code should be as expected")
 	}
+}
+
+func TestLoopbackInterface(t *testing.T) {
+	iface, err := net.InterfaceByName("lo")
+	require.NoError(t, err, "must get interface")
+
+	assert.True(t, iface.Flags&net.FlagUp > 0)
+
+	addrs, err := iface.Addrs()
+	require.NoError(t, err, "must get addresses")
+
+	assert.Len(t, addrs, 2, "should have 2 addresses")
+
+	assert.Equal(t, addrs[0].String(), "127.0.0.1/8")
+	assert.Equal(t, addrs[1].String(), "::1/128")
 }

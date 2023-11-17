@@ -40,7 +40,7 @@ func TestProcessGoTestFlags(t *testing.T) {
 			expectedArgs: []string{
 				"-test.paniconexit0",
 				"-test.gocoverdir=/tmp",
-				"-test.coverprofile=/dev/ttyS2",
+				"-test.coverprofile=/dev/ttyS1",
 			},
 			expectedFiles: []string{
 				"cover.out",
@@ -59,11 +59,11 @@ func TestProcessGoTestFlags(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"-test.paniconexit0",
-				"-test.blockprofile=/dev/ttyS2",
-				"-test.cpuprofile=/dev/ttyS3",
-				"-test.memprofile=/dev/ttyS4",
-				"-test.mutexprofile=/dev/ttyS5",
-				"-test.trace=/dev/ttyS6",
+				"-test.blockprofile=/dev/ttyS1",
+				"-test.cpuprofile=/dev/ttyS2",
+				"-test.memprofile=/dev/ttyS3",
+				"-test.mutexprofile=/dev/ttyS4",
+				"-test.trace=/dev/ttyS5",
 				"-test.outputdir=/tmp",
 			},
 			expectedFiles: []string{

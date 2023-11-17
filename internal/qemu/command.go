@@ -88,11 +88,10 @@ func (c *Command) ConsoleDeviceName(num uint8) string {
 
 // AddExtraFile adds an additional file to the QEMU command. This will be
 // writable from the guest via the device name returned by this command.
-// Console device number is starting at 2, as console 0 and 1 are stdout and
-// stderr.
+// Console device number is starting at 1, as console 0 is the default stdout.
 func (c *Command) AddExtraFile(file string) string {
 	c.ExtraFiles = append(c.ExtraFiles, file)
-	return c.ConsoleDeviceName(uint8(len(c.ExtraFiles) + 1))
+	return c.ConsoleDeviceName(uint8(len(c.ExtraFiles)))
 }
 
 // Validate checks for known incompatibilities.
@@ -169,9 +168,8 @@ func (c *Command) Args() Arguments {
 		}
 	}
 
-	// Add stdout and stderr fd.
+	// Add stdout console.
 	addConsoleArgs(1)
-	addConsoleArgs(2)
 
 	// Write console output to file descriptors. Those are provided by the
 	// [exec.Cmd.ExtraFiles].

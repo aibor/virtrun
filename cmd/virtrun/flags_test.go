@@ -14,61 +14,110 @@ func TestParseArgs(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name             string
-		args             []string
-		expectedBinaries []string
-		expectedInitArgs []string
+		name     string
+		args     []string
+		expected config
+		errMsg   string
 	}{
 		{
-			name: "usual go test arguments",
+			name: "requires kernel",
 			args: []string{
+				"bin.test",
+			},
+			errMsg: "no kernel given",
+		},
+		{
+			name: "requires binary",
+			args: []string{
+				"-kernel=/boot/this",
+			},
+			errMsg: "no binary given",
+		},
+		{
+			name: "simple go test invocation",
+			args: []string{
+				"-kernel=/boot/this",
 				"bin.test",
 				"-test.paniconexit0",
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expectedBinaries: []string{
-				absBinPath,
+			expected: config{
+				binaries: []string{
+					absBinPath,
+				},
+				qemuCmd: qemu.Command{
+					Kernel: "/boot/this",
+					InitArgs: []string{
+						"-test.paniconexit0",
+						"-test.v=true",
+						"-test.timeout=10m0s",
+					},
+				},
 			},
-			expectedInitArgs: []string{
+		},
+		{
+			name: "go test invocation with virtrun flags",
+			args: []string{
+				"-kernel=/boot/this",
+				"-cpu", "host",
+				"-machine=pc",
+				"-transport", "2",
+				"-memory=269",
+				"-verbose",
+				"-smp", "7",
+				"-nokvm=true",
+				"-standalone",
+				"bin.test",
 				"-test.paniconexit0",
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
+			expected: config{
+				binaries: []string{
+					absBinPath,
+				},
+				qemuCmd: qemu.Command{
+					Kernel:        "/boot/this",
+					CPU:           "host",
+					Machine:       "pc",
+					TransportType: qemu.TransportTypeMMIO,
+					Memory:        269,
+					Verbose:       true,
+					NoKVM:         true,
+					SMP:           7,
+					InitArgs: []string{
+						"-test.paniconexit0",
+						"-test.v=true",
+						"-test.timeout=10m0s",
+					},
+				},
+				standalone: true,
+			},
 		},
 		{
-			name: "go test arguments modified",
+			name: "flag parsing stops at flags after positional arguments",
 			args: []string{
+				"-kernel=/boot/this",
 				"bin.test",
 				"-test.paniconexit0",
-				"-test.gocoverdir=/some/where",
-				"-test.coverprofile=cover.out",
+				"another.binary",
+				"-x",
+				"-standalone",
 			},
-			expectedBinaries: []string{
-				absBinPath,
-			},
-			expectedInitArgs: []string{
-				"-test.paniconexit0",
-				"-test.gocoverdir=/tmp",
-				"-test.coverprofile=/dev/ttyS2",
-			},
-		},
-		{
-			name: "go test arguments modification suppressed",
-			args: []string{
-				"bin.test",
-				"-test.paniconexit0",
-				"--",
-				"-test.gocoverdir=/some/where",
-				"-test.coverprofile=cover.out",
-			},
-			expectedBinaries: []string{
-				absBinPath,
-			},
-			expectedInitArgs: []string{
-				"-test.paniconexit0",
-				"-test.gocoverdir=/some/where",
-				"-test.coverprofile=cover.out",
+			expected: config{
+				binaries: []string{
+					absBinPath,
+				},
+				qemuCmd: qemu.Command{
+					Kernel: "/boot/this",
+					InitArgs: []string{
+						"-test.paniconexit0",
+						"another.binary",
+						"-x",
+						"-standalone",
+					},
+				},
 			},
 		},
 	}
@@ -76,18 +125,18 @@ func TestParseArgs(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			var (
-				binaries   []string
-				qemuCmd    qemu.Command
-				standalone bool
-			)
+			var cfg config
 
 			execArgs := append([]string{"self"}, tt.args...)
-			err := parseArgs(execArgs, &binaries, &qemuCmd, &standalone)
-			require.NoError(t, err)
+			err := cfg.parseArgs(execArgs)
 
-			assert.Equal(t, tt.expectedBinaries, binaries, "binaries should be as expected")
-			assert.Equal(t, tt.expectedInitArgs, qemuCmd.InitArgs, "init args should be as expected")
+			if tt.errMsg != "" {
+				assert.ErrorContains(t, err, tt.errMsg)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, cfg)
 		})
 	}
 }

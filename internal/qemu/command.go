@@ -6,25 +6,9 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"runtime"
 
 	"golang.org/x/sync/errgroup"
 )
-
-var CommandPresets = map[string]Command{
-	"amd64": {
-		Binary:        "qemu-system-x86_64",
-		Machine:       "q35",
-		TransportType: TransportTypePCI,
-		CPU:           "max",
-	},
-	"arm64": {
-		Binary:        "qemu-system-aarch64",
-		Machine:       "virt",
-		TransportType: TransportTypeMMIO,
-		CPU:           "max",
-	},
-}
 
 // TransportType represents QEMU IO transport types.
 type TransportType int
@@ -75,22 +59,6 @@ type Command struct {
 	OutWriter io.Writer
 	// Stderr of the QEMU command. If not set, os.Stderr will be used.
 	ErrWriter io.Writer
-}
-
-// NewCommand creates a new [Command] with defaults set to the given
-// architecture. If it does not match the host architecture, the
-// [Command.NoKVM] flag ist set. Supported architectures so far: amd64, arm64.
-func NewCommand(arch string) (*Command, error) {
-	cmd, exists := CommandPresets[arch]
-	if !exists {
-		return nil, fmt.Errorf("arch not supported: %s", arch)
-	}
-
-	cmd.Memory = 256
-	cmd.SMP = 1
-	cmd.NoKVM = !KVMAvailableFor(arch)
-
-	return &cmd, nil
 }
 
 // Output returns [Command.OutWriter] if set or [os.Stdout] otherwise.
@@ -295,15 +263,4 @@ func (c *Command) Run(ctx context.Context) (int, error) {
 		return rc, rcErr
 	}
 	return rc, proccessorsErr
-}
-
-// KVMAvailableFor checks if KVM support is available for the given
-// architecture.
-func KVMAvailableFor(arch string) bool {
-	if runtime.GOARCH != arch {
-		return false
-	}
-	f, err := os.OpenFile("/dev/kvm", os.O_WRONLY, 0)
-	_ = f.Close()
-	return err == nil
 }

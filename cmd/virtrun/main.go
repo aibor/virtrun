@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
@@ -21,9 +22,8 @@ import (
 
 func run() (int, error) {
 	var (
-		binaries   []string
-		err        error
-		standalone bool
+		cfg config
+		err error
 	)
 
 	arch := os.Getenv("GOARCH")
@@ -31,43 +31,45 @@ func run() (int, error) {
 		arch = runtime.GOARCH
 	}
 
-	qemuCmd, err := qemu.NewCommand(arch)
+	cfg.qemuCmd, err = qemu.CommandFor(arch)
 	if err != nil {
 		return 1, err
 	}
 
-	qemuCmd.Kernel = os.Getenv("QEMU_KERNEL")
+	cfg.qemuCmd.Kernel = os.Getenv("QEMU_KERNEL")
 
 	// ParseArgs already prints errors, so we just exit.
-	if err := parseArgs(os.Args, &binaries, qemuCmd, &standalone); err != nil {
+	if err := cfg.parseArgs(os.Args); err != nil {
 		if err == flag.ErrHelp {
 			return 0, nil
 		}
 		return 1, nil
 	}
 
-	if err := qemuCmd.Validate(); err != nil {
-		return 1, fmt.Errorf("validate qemu command: %v", err)
-	}
-
-	for _, file := range binaries {
+	for _, file := range cfg.binaries {
 		if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
 			return 1, fmt.Errorf("file %s doesn't exist.", file)
 		}
 	}
 
-	if qemuCmd.Kernel == "" {
-		msg := "no kernel specified (use env var QEMU_KERNEL or flag -kernel)"
-		return 1, fmt.Errorf(msg)
+	if err := cfg.qemuCmd.Validate(); err != nil {
+		return 1, fmt.Errorf("validate qemu command: %v", err)
 	}
-	if _, err := os.Stat(qemuCmd.Kernel); errors.Is(err, os.ErrNotExist) {
-		return 1, fmt.Errorf("kernel file %s doesn't exist.", qemuCmd.Kernel)
+	if _, err := exec.LookPath(cfg.qemuCmd.Binary); errors.Is(err, os.ErrNotExist) {
+		return 1, fmt.Errorf("kernel file %s doesn't exist.", cfg.qemuCmd.Kernel)
+	}
+	if _, err := os.Stat(cfg.qemuCmd.Kernel); errors.Is(err, os.ErrNotExist) {
+		return 1, fmt.Errorf("qemu binary %s: %v", cfg.qemuCmd.Binary, err)
+	}
+
+	if !cfg.noGoTestFlagRewrite {
+		qemu.ProcessGoTestFlags(&cfg.qemuCmd)
 	}
 
 	var archive *initramfs.Archive
-	if standalone {
-		archive = initramfs.New(binaries[0])
-		binaries = slices.Delete(binaries, 0, 1)
+	if cfg.standalone {
+		archive = initramfs.New(cfg.binaries[0])
+		cfg.binaries = slices.Delete(cfg.binaries, 0, 1)
 	} else {
 		if runtime.GOARCH != arch {
 			return 1, fmt.Errorf(
@@ -82,7 +84,7 @@ func run() (int, error) {
 		archive = initramfs.New(self)
 	}
 
-	if err := archive.AddFiles(binaries...); err != nil {
+	if err := archive.AddFiles(cfg.binaries...); err != nil {
 		return 1, fmt.Errorf("add binares: %v", err)
 	}
 
@@ -102,9 +104,9 @@ func run() (int, error) {
 	}
 	archiveFile.Close()
 
-	qemuCmd.Initrd = archiveFile.Name()
+	cfg.qemuCmd.Initrd = archiveFile.Name()
 	defer func() {
-		_ = os.Remove(qemuCmd.Initrd)
+		_ = os.Remove(cfg.qemuCmd.Initrd)
 	}()
 
 	ctx, cancel := signal.NotifyContext(
@@ -117,7 +119,7 @@ func run() (int, error) {
 	)
 	defer cancel()
 
-	rc, err := qemuCmd.Run(ctx)
+	rc, err := cfg.qemuCmd.Run(ctx)
 	if err != nil {
 		return rc, fmt.Errorf("running QEMU command: %v", err)
 	}

@@ -4,86 +4,170 @@ import (
 	"flag"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/aibor/virtrun/internal/qemu"
 )
 
-func parseArgs(args []string, binaries *[]string, qemuCmd *qemu.Command, standalone *bool) error {
-	fsName := fmt.Sprintf("%s [flags...] [testbinaries...] [testflags...]", args[0])
+type config struct {
+	binaries            []string
+	qemuCmd             qemu.Command
+	standalone          bool
+	noGoTestFlagRewrite bool
+}
+
+func (cfg *config) parseArgs(args []string) error {
+	fsName := fmt.Sprintf("%s [flags...] binaries... [initflags...]", args[0])
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 
-	qemu.AddCommandFlags(fs, qemuCmd)
-
-	fs.BoolVar(
-		standalone,
-		"standalone",
-		*standalone,
-		"run test binary as init itself. Use this if the tests has virtrun support built in.",
+	fs.StringVar(
+		&cfg.qemuCmd.Binary,
+		"qemu-bin",
+		cfg.qemuCmd.Binary,
+		"QEMU binary to use",
 	)
 
+	fs.StringVar(
+		&cfg.qemuCmd.Kernel,
+		"kernel",
+		cfg.qemuCmd.Kernel,
+		"path to kernel to use",
+	)
+
+	fs.StringVar(
+		&cfg.qemuCmd.Machine,
+		"machine",
+		cfg.qemuCmd.Machine,
+		"QEMU machine type to use",
+	)
+
+	fs.StringVar(
+		&cfg.qemuCmd.CPU,
+		"cpu",
+		cfg.qemuCmd.CPU,
+		"QEMU CPU type to use",
+	)
+
+	fs.BoolVar(
+		&cfg.qemuCmd.NoKVM,
+		"nokvm",
+		cfg.qemuCmd.NoKVM,
+		"disable hardware support",
+	)
+
+	fs.Func(
+		"transport",
+		fmt.Sprintf("io transport type: 0=isa, 1=pci, 2=mmio (default %d)", cfg.qemuCmd.TransportType),
+		func(s string) error {
+			t, err := strconv.ParseUint(s, 10, 2)
+			if err != nil {
+				return err
+			}
+			if t > 2 {
+				return fmt.Errorf("unknown transport type")
+			}
+			cfg.qemuCmd.TransportType = qemu.TransportType(t)
+			return nil
+		},
+	)
+
+	fs.BoolVar(
+		&cfg.qemuCmd.Verbose,
+		"verbose",
+		cfg.qemuCmd.Verbose,
+		"enable verbose guest system output",
+	)
+
+	fs.Func(
+		"memory",
+		fmt.Sprintf("memory (in MB) for the QEMU VM (default %dMB)", cfg.qemuCmd.Memory),
+		func(s string) error {
+			mem, err := strconv.ParseUint(s, 10, 16)
+			if err != nil {
+				return err
+			}
+			if mem < 128 {
+				return fmt.Errorf("less than 128 MB is not sufficient")
+			}
+			cfg.qemuCmd.Memory = uint(mem)
+			return nil
+		},
+	)
+
+	fs.Func(
+		"smp",
+		fmt.Sprintf("number of CPUs for the QEMU VM (default %d)", cfg.qemuCmd.SMP),
+		func(s string) error {
+			mem, err := strconv.ParseUint(s, 10, 4)
+			if err != nil {
+				return err
+			}
+			if mem < 1 {
+				return fmt.Errorf("must not be less than 1")
+			}
+
+			cfg.qemuCmd.SMP = uint(mem)
+
+			return nil
+		},
+	)
+
+	fs.BoolVar(
+		&cfg.standalone,
+		"standalone",
+		cfg.standalone,
+		"run first given binary as init itself. Use this if it has virtrun support built in.",
+	)
+
+	fs.BoolVar(
+		&cfg.noGoTestFlagRewrite,
+		"noGoTestFlagRewrite",
+		cfg.noGoTestFlagRewrite,
+		"disable automatic go test flag rewrite for file based output.",
+	)
+
+	// Parses arguments up to the first one that is not prefixed with a "-" or
+	// is "--".
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
 
-	// Catch coverage and profile related paths and adjust them. This is only
-	// done until the terminator string "--" is found.
-	// Only coverprofile has a relative path to the test pwd. All other profile
-	// files are relative to the actual test running and need to be prefixed
-	// with -test.outputdir. So, collect them and process them afterwards.
-	needsOutputDirPrefix := make([][]string, 0)
-	outputDir := ""
-	for idx, posArg := range fs.Args() {
-		// Once terminator string is found, everything is considered and
-		// argument to the init.
-		if posArg == "--" {
-			qemuCmd.InitArgs = append(qemuCmd.InitArgs, fs.Args()[idx+1:]...)
-			break
-		}
-
-		splits := strings.Split(posArg, "=")
-		switch splits[0] {
-		case "-test.coverprofile":
-			splits[1] = "/dev/" + qemuCmd.AddExtraFile(splits[1])
-			posArg = strings.Join(splits, "=")
-		case "-test.blockprofile",
-			"-test.cpuprofile",
-			"-test.memprofile",
-			"-test.mutexprofile",
-			"-test.trace":
-			needsOutputDirPrefix = append(needsOutputDirPrefix, splits)
-			continue
-		case "-test.outputdir":
-			outputDir = splits[1]
-			fallthrough
-		case "-test.gocoverdir":
-			splits[1] = "/tmp"
-			posArg = strings.Join(splits, "=")
-		}
-
-		if strings.HasPrefix(posArg, "-") {
-			qemuCmd.InitArgs = append(qemuCmd.InitArgs, posArg)
-		} else {
-			path, err := filepath.Abs(posArg)
-			if err != nil {
-				return fmt.Errorf("absolute path for %s: %v", posArg, err)
-			}
-			*binaries = append(*binaries, path)
-		}
-	}
-
-	if outputDir != "" {
-		for _, arg := range needsOutputDirPrefix {
-			path := filepath.Join(outputDir, arg[1])
-			arg[1] = "/dev/" + qemuCmd.AddExtraFile(path)
-			qemuCmd.InitArgs = append(qemuCmd.InitArgs, strings.Join(arg, "="))
-		}
-	}
-
-	if len(*binaries) < 1 {
-		fmt.Fprintln(fs.Output(), "no binary given")
+	// Fail like flag does.
+	failf := func(format string, a ...any) error {
+		msg := fmt.Sprintf(format, a...)
+		fmt.Fprintln(fs.Output(), msg)
 		fs.Usage()
-		return fmt.Errorf("no binary given")
+		return fmt.Errorf(msg)
+	}
+
+	if cfg.qemuCmd.Kernel == "" {
+		return failf("no kernel given (use env var QEMU_KERNEL or flag -kernel)")
+	}
+
+	// Consider all positional arguments until one begins with "-" as binary
+	// files that should be added to the initramfs. All further arguments
+	// are added as [qemu.Command.InitArgs] that will be passed to the guest
+	// system's init program.
+	var binariesDone bool
+	for _, arg := range fs.Args() {
+		switch {
+		case strings.HasPrefix(arg, "-"):
+			binariesDone = true
+			fallthrough
+		case binariesDone:
+			cfg.qemuCmd.InitArgs = append(cfg.qemuCmd.InitArgs, arg)
+		default:
+			path, err := filepath.Abs(arg)
+			if err != nil {
+				return failf("absolute path for %s: %v", arg, err)
+			}
+			cfg.binaries = append(cfg.binaries, path)
+		}
+	}
+
+	if len(cfg.binaries) < 1 {
+		return failf("no binary given")
 	}
 
 	return nil

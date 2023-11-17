@@ -36,5 +36,5 @@ GOARCH=$kernel_arch go test \
 	-tags "$test_tags" \
 	-cover \
 	-coverprofile /tmp/cover.out \
-	-coverpkg github.com/aibor/virtrun \
+	-coverpkg github.com/aibor/virtrun/sysinit \
 	./selftest

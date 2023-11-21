@@ -100,12 +100,6 @@ $ go test -tags virtrun -exec 'virtrun -standalone' .
 $ go test -tags virtrun -exec 'virtrun -standalone' -cover -coverprofile cover.out .
 ```
 
-### init
-
-Init is a simple init program that runs all files in the initramfs. It can be 
-used to pre-build init binaries for multiple architectures and use them with
-[virtrun's standalone mode](#standalone-mode).
-
 ### mkinitramfs
 
 Mkinitramfs can be used to build simple initramfs. It is mainly used for

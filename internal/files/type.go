@@ -11,4 +11,7 @@ const (
 	TypeDirectory
 	// A symbolic link in the archive.
 	TypeLink
+	// A file with its content written from an io.Reader instead of being
+	// copied from the fs.
+	TypeVirtual
 )

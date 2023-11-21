@@ -2,6 +2,7 @@ package files
 
 import (
 	"fmt"
+	"io/fs"
 	"path/filepath"
 
 	"golang.org/x/exp/maps"
@@ -14,6 +15,8 @@ type Entry struct {
 	// Related path depending on the file type. Empty for directories,
 	// target path for links, source files for regular files.
 	RelatedPath string
+	// Source is the content for a virtual regular file.
+	Source fs.File
 
 	children map[string]*Entry
 }
@@ -27,6 +30,8 @@ func (e *Entry) String() string {
 		return fmt.Sprintf("Dir with entries: % s", maps.Keys(e.children))
 	case TypeLink:
 		return "Link to: " + e.RelatedPath
+	case TypeVirtual:
+		return "File virtual"
 	default:
 		return "invalid type"
 	}
@@ -45,6 +50,11 @@ func (e *Entry) IsLink() bool {
 // IsRegular returns true if the [Entry] is a regular file.
 func (e *Entry) IsRegular() bool {
 	return e.Type == TypeRegular
+}
+
+// IsVirtual returns true if the [Entry] is a virtual regular file.
+func (e *Entry) IsVirtual() bool {
+	return e.Type == TypeVirtual
 }
 
 // AddFile adds a new regular file [Entry] children.
@@ -69,6 +79,15 @@ func (e *Entry) AddLink(name, relatedPath string) (*Entry, error) {
 	entry := &Entry{
 		Type:        TypeLink,
 		RelatedPath: relatedPath,
+	}
+	return e.AddEntry(name, entry)
+}
+
+// AddVirtualFile adds a new virtual regular file [Entry] children.
+func (e *Entry) AddVirtualFile(name string, source fs.File) (*Entry, error) {
+	entry := &Entry{
+		Type:   TypeVirtual,
+		Source: source,
 	}
 	return e.AddEntry(name, entry)
 }

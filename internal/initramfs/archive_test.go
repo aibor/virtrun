@@ -130,6 +130,18 @@ func TestArchiveWriteTo(t *testing.T) {
 					RelatedPath: "/lib",
 				},
 			},
+			{
+				name: "virtual",
+				entry: files.Entry{
+					Type:   files.TypeVirtual,
+					Source: testFile,
+				},
+				mock: MockWriter{
+					Path:   "/init",
+					Source: testFile,
+					Mode:   0755,
+				},
+			},
 		}
 
 		for _, tt := range tests {

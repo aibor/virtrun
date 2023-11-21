@@ -166,6 +166,8 @@ func (a *Archive) writeTo(writer Writer) error {
 			return writer.WriteDirectory(path)
 		case files.TypeLink:
 			return writer.WriteLink(path, entry.RelatedPath)
+		case files.TypeVirtual:
+			return writer.WriteRegular(path, entry.Source, 0755)
 		default:
 			return fmt.Errorf("unknown file type %d", entry.Type)
 		}

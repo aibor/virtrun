@@ -1,17 +1,11 @@
 #!/bin/bash
 
-set -eEuo pipefail
+mode=${1:?mode missing}
 
-kernel_version=${1:?missing kernel version}
-kernel_arch=${2:?missing kernel arch}
-mode=${3:?mode missing}
+GOARCH= go install -buildvcs=false ./cmd/virtrun
 
-rundir="$(dirname "${BASH_SOURCE[0]}")"
-
-go install -buildvcs=false ./cmd/virtrun
-
-kernel_path="$($rundir/fetch_kernel.sh $kernel_version $kernel_arch)"
-virtrun_args=("-kernel" "$(realpath $kernel_path)")
+# KERNEL provided by container.
+virtrun_args=("-kernel" "$KERNEL")
 test_tags=selftest
 
 case "$mode" in
@@ -26,7 +20,7 @@ standalone)
 	;;
 esac
 
-GOARCH=$kernel_arch go test \
+go test \
 	-v \
 	-timeout 2m \
 	-exec "virtrun ${virtrun_args[*]} -verbose" \

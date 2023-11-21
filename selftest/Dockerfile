@@ -21,8 +21,8 @@ RUN apt-get update \
 		&& apt-get clean \
 		&& rm -rf /var/lib/apt/lists
 
-COPY run_test.sh /run_test.sh
+COPY entrypoint.sh /entrypoint.sh
 COPY fetch_kernel.sh /fetch_kernel.sh
 
 WORKDIR /virtrun
-ENTRYPOINT ["/run_test.sh"]
+ENTRYPOINT ["/entrypoint.sh"]

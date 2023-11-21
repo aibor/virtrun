@@ -7,14 +7,15 @@ inputs:
   kernel-arch:
     description: "Kernel architecture to test with"
     required: true
-  test-mode:
-    description: "selftest mode (0: wrapped, 1: standalone)"
+  cmd:
+    description: "Command to run. $KERNEL has the absolute path to the fetched kernel."
     required: true
 
 runs:
   using: "docker"
   image: "Dockerfile"
+  env:
+    KERNEL_VER: ${{ inputs.kernel-version }}
+    KERNEL_ARCH: ${{ inputs.kernel-arch }}
   args:
-    - ${{ inputs.kernel-version }}
-    - ${{ inputs.kernel-arch }}
-    - ${{ inputs.test-mode }}
+    - ${{ inputs.cmd }}

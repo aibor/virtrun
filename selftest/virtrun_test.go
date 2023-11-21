@@ -22,7 +22,7 @@ import (
 )
 
 func fetchKernel(path, version, arch string) error {
-	urlFmt := "https://github.com/cilium/ci-kernels/raw/master/linux-%s-%s.tgz"
+	urlFmt := "https://github.com/aibor/ci-kernels/raw/master/linux-%s-%s.tgz"
 	resp, err := http.Get(fmt.Sprintf(urlFmt, version, arch))
 	if err != nil {
 		return fmt.Errorf("fetch archive: %v", err)

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Fetch pre-built kernel. See https://github.com/cilium/ci-kernels for
+# Fetch pre-built kernel. See https://github.com/aibor/ci-kernels for
 # available versions and architectures.
 set -eEuo pipefail
 
@@ -19,7 +19,7 @@ if [[ ! -e "$KERNEL_DIR/$file_name" ]]; then
 				--no-progress-meter \
 				--location \
 				--fail \
-				"https://github.com/cilium/ci-kernels/raw/master/linux-${version}-${arch}.tgz"
+				"https://github.com/aibor/ci-kernels/raw/master/linux-${version}-${arch}.tgz"
 		) \
 		--extract \
 		--ignore-failed-read \

@@ -6,7 +6,7 @@ GOARCH= go install -buildvcs=false ./cmd/virtrun
 
 # KERNEL provided by container.
 virtrun_args=("-kernel" "$KERNEL")
-test_tags=selftest
+test_tags=sysinit
 
 case "$mode" in
 wrapped) ;;

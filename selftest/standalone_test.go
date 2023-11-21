@@ -1,6 +1,6 @@
 //go:build standalone
 
-package selftest
+package sysinit_test
 
 import (
 	"testing"

@@ -1,6 +1,6 @@
-//go:build selftest
+//go:build sysinit
 
-package selftest
+package sysinit_test
 
 import (
 	"context"

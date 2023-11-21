@@ -30,7 +30,7 @@ jobs:
           version: latest
 
       - name: Run go tests
-        run: go test -race ./...
+        run: go test -race -v -cover -covermode=atomic ./...
 
   selftest:
     name: Run selftests

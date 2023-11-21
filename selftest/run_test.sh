@@ -6,14 +6,11 @@ kernel_version=${1:?missing kernel version}
 kernel_arch=${2:?missing kernel arch}
 mode=${3:?mode missing}
 
-export KERNEL_DIR=kernel
-
 rundir="$(dirname "${BASH_SOURCE[0]}")"
-"$rundir"/fetch_kernel.sh $kernel_version $kernel_arch
 
 go install -buildvcs=false ./cmd/virtrun
 
-kernel_path="$KERNEL_DIR/vmlinuz-${kernel_version}-${kernel_arch}"
+kernel_path="$($rundir/fetch_kernel.sh $kernel_version $kernel_arch)"
 virtrun_args=("-kernel" "$(realpath $kernel_path)")
 test_tags=selftest
 

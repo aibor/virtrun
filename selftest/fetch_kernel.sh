@@ -10,24 +10,23 @@ version=${1:-${KERNEL_VER:-6.1}}
 arch=${2:-${KERNEL_ARCH:-${GOARCH:-amd64}}}
 file_name="vmlinuz-${version}-${arch}"
 
-if [[ -e "$KERNEL_DIR/$file_name" ]]; then
-	exit 0
+if [[ ! -e "$KERNEL_DIR/$file_name" ]]; then
+	mkdir -p "$KERNEL_DIR"
+
+	tar \
+		--file <(
+			curl \
+				--no-progress-meter \
+				--location \
+				--fail \
+				"https://github.com/cilium/ci-kernels/raw/master/linux-${version}-${arch}.tgz"
+		) \
+		--extract \
+		--ignore-failed-read \
+		--ignore-command-error \
+		--warning=none \
+		--transform="s@.*@$KERNEL_DIR/$file_name@" \
+		./boot/vmlinuz
 fi
 
-mkdir -p "$KERNEL_DIR"
-pushd "$KERNEL_DIR"
-
-tar \
-	--file <(
-		curl \
-			--no-progress-meter \
-			--location \
-			--fail \
-			"https://github.com/cilium/ci-kernels/raw/master/linux-${version}-${arch}.tgz"
-	) \
-	--extract \
-	--ignore-failed-read \
-	--ignore-command-error \
-	--warning=none \
-	--transform="s@.*@$file_name@" \
-	./boot/vmlinuz
+echo "$(realpath "$KERNEL_DIR/$file_name")"

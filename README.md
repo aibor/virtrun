@@ -39,9 +39,8 @@ coverprofile can be used.
 
 #### Wrapped mode (default)
 
-The easiest way to use virtrun is to use itself as init. With this, no init 
-binary needs to be provided. The downside is, that it can only be used if the 
-target architecture matches the virtrun binary architecture.
+The easiest way to use virtrun is to use the embedded init programs. With this, 
+no init binary needs to be provided. 
 
 If you have it installed in your PATH, run a go test like this:
 

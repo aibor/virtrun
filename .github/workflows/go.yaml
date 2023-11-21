@@ -41,10 +41,6 @@ jobs:
         version: ["6.6", "5.15"]
         arch: ["amd64", "arm64"]
         mode: ["wrapped", "standalone"]
-        exclude:
-          # Wrapped mode requires architecture matching the virtrun runtime arch.
-          - arch: "arm64"
-            mode: "wrapped"
     steps:
       - uses: actions/checkout@v3
 

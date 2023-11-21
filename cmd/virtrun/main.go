@@ -8,16 +8,15 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"syscall"
 
 	// TODO: Replace with stdlib slices with go 1.21.
 	"golang.org/x/exp/slices"
 
+	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/aibor/virtrun/internal/qemu"
-	"github.com/aibor/virtrun/sysinit"
 )
 
 func run() (int, error) {
@@ -71,17 +70,11 @@ func run() (int, error) {
 		archive = initramfs.New(cfg.binaries[0])
 		cfg.binaries = slices.Delete(cfg.binaries, 0, 1)
 	} else {
-		if runtime.GOARCH != arch {
-			return 1, fmt.Errorf(
-				"using self as init only available with native architecture",
-			)
-		}
-		var self string
-		self, err = os.Executable()
+		initFile, err := virtrun.InitFor(arch)
 		if err != nil {
-			return 1, fmt.Errorf("get own path: %v", err)
+			return 1, err
 		}
-		archive = initramfs.New(self)
+		archive = initramfs.NewWithEmbedded(initFile)
 	}
 
 	if err := archive.AddFiles(cfg.binaries...); err != nil {
@@ -127,33 +120,8 @@ func run() (int, error) {
 	return rc, nil
 }
 
-func runInit() (int, error) {
-	err := sysinit.Run(func() (int, error) {
-		dir := initramfs.FilesDir
-		files, err := os.ReadDir(dir)
-		if err != nil {
-			return 98, err
-		}
-
-		paths := make([]string, len(files))
-		for idx, f := range files {
-			paths[idx] = filepath.Join(dir, f.Name())
-		}
-
-		return 0, sysinit.ExecParallel(paths, os.Args[1:], os.Stdout, os.Stderr)
-	})
-	if err == sysinit.ErrNotPidOne {
-		return 127, err
-	}
-	return 126, err
-}
-
 func main() {
-	f := run
-	if os.Args[0] == "/init" {
-		f = runInit
-	}
-	rc, err := f()
+	rc, err := run()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}

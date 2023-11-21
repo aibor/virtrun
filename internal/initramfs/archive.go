@@ -40,6 +40,17 @@ func New(initFilePath string) *Archive {
 	return &a
 }
 
+// NewWithEmbedded creates a new [Archive] with the given [fs.File] used as
+// "/init".
+//
+// The given file must be statically linked.
+func NewWithEmbedded(init fs.File) *Archive {
+	a := Archive{sourceFS: os.DirFS("/")}
+	// This can never fail on a new tree.
+	_, _ = a.fileTree.GetRoot().AddVirtualFile("init", init)
+	return &a
+}
+
 // AddFile creates [FilesDir] and adds the given file to it. If name is empty
 // the base name of the file is used.
 // The file path must be absolute or relative to "/".

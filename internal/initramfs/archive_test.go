@@ -21,6 +21,22 @@ func TestArchiveNew(t *testing.T) {
 	assert.Equal(t, files.TypeRegular, entry.Type)
 }
 
+func TestArchiveNewWithEmbedded(t *testing.T) {
+	testFS := fstest.MapFS{
+		"input": &fstest.MapFile{},
+	}
+	testFile, err := testFS.Open("input")
+	require.NoError(t, err)
+
+	archive := NewWithEmbedded(testFile)
+	assert.Equal(t, os.DirFS("/"), archive.sourceFS)
+	entry, err := archive.fileTree.GetEntry("/init")
+	require.NoError(t, err)
+	assert.Empty(t, entry.RelatedPath)
+	assert.Equal(t, testFile, entry.Source)
+	assert.Equal(t, files.TypeVirtual, entry.Type)
+}
+
 func TestArchiveAddFile(t *testing.T) {
 	archive := New("first")
 

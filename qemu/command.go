@@ -49,6 +49,10 @@ type Command struct {
 	// Print qemu command before running, increase guest kernel logging and
 	// do not stop prinitng stdout when our RC string is found.
 	Verbose bool
+	// ExtraArgs are  extra arguments that are passed to the QEMU command.
+	// They may not interfere with the essential arguments set by the command
+	// itself or an error wil lbe returned on [Command.Run].
+	ExtraArgs Arguments
 	// Additional files attached to consoles besides the default one used for
 	// stdout. They will be present in the guest system as "/dev/ttySx" or
 	// "/dev/hvcx" where x is the index of the slice + 1.
@@ -123,17 +127,19 @@ func (c *Command) args() Arguments {
 	a := Arguments{
 		ArgKernel(c.Kernel),
 		ArgInitrd(c.Initrd),
-		ArgMachine(c.Machine),
-		ArgCPU(c.CPU),
-		ArgSMP(int(c.SMP)),
-		ArgMemory(int(c.Memory)),
-		ArgDisplay("none"),
-		ArgMonitor("none"),
-		UniqueArg("no-reboot"),
-		UniqueArg("nodefaults"),
-		UniqueArg("no-user-config"),
 	}
-
+	if c.Machine != "" {
+		a.Add(ArgMachine(c.Machine))
+	}
+	if c.CPU != "" {
+		a.Add(ArgCPU(c.CPU))
+	}
+	if c.SMP != 0 {
+		a.Add(ArgSMP(int(c.SMP)))
+	}
+	if c.Memory != 0 {
+		a.Add(ArgMemory(int(c.Memory)))
+	}
 	if !c.NoKVM {
 		a.Add(UniqueArg("enable-kvm"))
 	}
@@ -178,6 +184,7 @@ func (c *Command) args() Arguments {
 		addConsoleArgs(3 + idx)
 	}
 
+	a.Add(c.ExtraArgs...)
 	a.Add(ArgAppend(c.kernelCmdlineArgs()...))
 
 	return a

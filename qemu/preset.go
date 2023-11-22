@@ -12,12 +12,26 @@ var CommandPresets = map[string]Command{
 		Machine:       "q35",
 		TransportType: TransportTypePCI,
 		CPU:           "max",
+		ExtraArgs: Arguments{
+			ArgDisplay("none"),
+			ArgMonitor("none"),
+			UniqueArg("no-reboot"),
+			UniqueArg("nodefaults"),
+			UniqueArg("no-user-config"),
+		},
 	},
 	"arm64": {
 		Binary:        "qemu-system-aarch64",
 		Machine:       "virt",
 		TransportType: TransportTypeMMIO,
 		CPU:           "max",
+		ExtraArgs: Arguments{
+			ArgDisplay("none"),
+			ArgMonitor("none"),
+			UniqueArg("no-reboot"),
+			UniqueArg("nodefaults"),
+			UniqueArg("no-user-config"),
+		},
 	},
 }
 

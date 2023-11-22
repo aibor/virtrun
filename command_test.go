@@ -1,10 +1,11 @@
-package qemu_test
+package virtrun_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/qemu"
 )
 
@@ -31,18 +32,18 @@ func TestCommmandConsoleDeviceName(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		c := qemu.Command{
+		s := virtrun.Command{
 			TransportType: tt.transport,
 		}
-		assert.Equal(t, tt.console, c.ConsoleDeviceName(tt.id))
+		assert.Equal(t, tt.console, s.TransportType.ConsoleDeviceName(tt.id))
 	}
 }
 
 func TestCommmandAddExtraFile(t *testing.T) {
-	c := qemu.Command{}
-	d1 := c.AddExtraFile("test")
-	d2 := c.AddExtraFile("real")
+	s := virtrun.Command{}
+	d1 := s.AddConsole("test")
+	d2 := s.AddConsole("real")
 	assert.Equal(t, "ttyS1", d1)
 	assert.Equal(t, "ttyS2", d2)
-	assert.Equal(t, []string{"test", "real"}, c.ExtraFiles)
+	assert.Equal(t, []string{"test", "real"}, s.AdditionalConsoles)
 }

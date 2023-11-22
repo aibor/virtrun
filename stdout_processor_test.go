@@ -1,4 +1,4 @@
-package qemu_test
+package virtrun_test
 
 import (
 	"bytes"
@@ -8,7 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aibor/virtrun/qemu"
+	"github.com/aibor/virtrun"
+	"github.com/aibor/virtrun/sysinit"
 )
 
 func TestStdoutProcessor(t *testing.T) {
@@ -53,7 +54,7 @@ func TestStdoutProcessor(t *testing.T) {
 			input: []string{
 				"something out",
 				"more out",
-				fmt.Sprintf(qemu.RCFmt, 4),
+				fmt.Sprintf(sysinit.RCFmt, 4),
 			},
 			output: []string{
 				"something out",
@@ -81,12 +82,12 @@ func TestStdoutProcessor(t *testing.T) {
 			cmdOut := bytes.NewBuffer([]byte(strings.Join(tt.input, "\n")))
 			stdOut := bytes.NewBuffer(make([]byte, 0, 512))
 
-			rc, err := qemu.ParseStdout(cmdOut, stdOut, tt.verbose)
+			rc, err := virtrun.ParseStdout(cmdOut, stdOut, tt.verbose)
 			if tt.found {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.rc, rc)
 			} else {
-				assert.ErrorIs(t, err, qemu.RCNotFoundErr)
+				assert.ErrorIs(t, err, virtrun.RCNotFoundErr)
 			}
 
 		})

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/qemu"
 )
 
@@ -47,7 +48,7 @@ func TestParseArgs(t *testing.T) {
 				binaries: []string{
 					absBinPath,
 				},
-				qemuCmd: qemu.Command{
+				cmd: &virtrun.Command{
 					Kernel: "/boot/this",
 					InitArgs: []string{
 						"-test.paniconexit0",
@@ -69,6 +70,8 @@ func TestParseArgs(t *testing.T) {
 				"-smp", "7",
 				"-nokvm=true",
 				"-standalone",
+				"-noGoTestFlagRewrite",
+				"-keepInitramfs",
 				"bin.test",
 				"-test.paniconexit0",
 				"-test.v=true",
@@ -78,7 +81,7 @@ func TestParseArgs(t *testing.T) {
 				binaries: []string{
 					absBinPath,
 				},
-				qemuCmd: qemu.Command{
+				cmd: &virtrun.Command{
 					Kernel:        "/boot/this",
 					CPU:           "host",
 					Machine:       "pc",
@@ -93,7 +96,9 @@ func TestParseArgs(t *testing.T) {
 						"-test.timeout=10m0s",
 					},
 				},
-				standalone: true,
+				standalone:          true,
+				noGoTestFlagRewrite: true,
+				keepInitramfs:       true,
 			},
 		},
 		{
@@ -110,7 +115,7 @@ func TestParseArgs(t *testing.T) {
 				binaries: []string{
 					absBinPath,
 				},
-				qemuCmd: qemu.Command{
+				cmd: &virtrun.Command{
 					Kernel: "/boot/this",
 					InitArgs: []string{
 						"-test.paniconexit0",
@@ -126,7 +131,9 @@ func TestParseArgs(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			var cfg config
+			cfg := config{
+				cmd: &virtrun.Command{},
+			}
 
 			execArgs := append([]string{"self"}, tt.args...)
 			err := cfg.parseArgs(execArgs)

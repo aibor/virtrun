@@ -1,11 +1,11 @@
-package qemu_test
+package virtrun_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aibor/virtrun/qemu"
+	"github.com/aibor/virtrun"
 )
 
 func TestProcessGoTestFlags(t *testing.T) {
@@ -80,13 +80,13 @@ func TestProcessGoTestFlags(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			qemuCmd := qemu.Command{
+			cmd := virtrun.Command{
 				InitArgs: tt.inputArgs,
 			}
-			qemu.ProcessGoTestFlags(&qemuCmd)
+			virtrun.ProcessGoTestFlags(&cmd)
 
-			assert.Equal(t, tt.expectedArgs, qemuCmd.InitArgs)
-			assert.Equal(t, tt.expectedFiles, qemuCmd.ExtraFiles)
+			assert.Equal(t, tt.expectedArgs, cmd.InitArgs)
+			assert.Equal(t, tt.expectedFiles, cmd.AdditionalConsoles)
 		})
 	}
 }

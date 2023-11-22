@@ -1,4 +1,4 @@
-package qemu
+package virtrun
 
 import (
 	"bufio"
@@ -33,8 +33,8 @@ func (p *consoleProcessor) create() (*os.File, error) {
 	return p.writePipe, nil
 }
 
-// close closes the file descriptors.
-func (p *consoleProcessor) close() error {
+// Close closes the file descriptors.
+func (p *consoleProcessor) Close() error {
 	var errs [3]error
 	errs[0] = p.writePipe.Close()
 	if !p.ran {

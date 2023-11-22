@@ -1,4 +1,4 @@
-package qemu
+package virtrun
 
 import (
 	"bufio"
@@ -6,13 +6,9 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-)
 
-// RCFmt is the format string for communicating the test results
-//
-// It is parsed in the qemu wrapper. Not present in the output if the test
-// binary panicked.
-const RCFmt = "INIT_RC: %d\n"
+	"github.com/aibor/virtrun/sysinit"
+)
 
 var panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
 
@@ -31,7 +27,7 @@ func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
 			if rcErr != nil {
 				rc = 125
 			}
-		} else if _, err := fmt.Sscanf(line, RCFmt, &rc); err == nil {
+		} else if _, err := fmt.Sscanf(line, sysinit.RCFmt, &rc); err == nil {
 			rcErr = nil
 		}
 		if rcErr != nil || verbose {

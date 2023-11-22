@@ -1,59 +1,60 @@
-package qemu
+package virtrun
 
 import (
 	"testing"
 
+	"github.com/aibor/virtrun/qemu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCommmandArgs(t *testing.T) {
 	t.Run("yes-kvm", func(t *testing.T) {
-		q := Command{}
-		args := q.args()
-		assert.Contains(t, args, UniqueArg("enable-kvm"))
+		cmd := Command{}
+		args := cmd.Args()
+		assert.Contains(t, args, qemu.UniqueArg("enable-kvm"))
 	})
 
 	t.Run("no-kvm", func(t *testing.T) {
-		q := Command{
+		cmd := Command{
 			NoKVM: true,
 		}
-		args := q.args()
-		assert.NotContains(t, args, UniqueArg("enable-kvm"))
+		args := cmd.Args()
+		assert.NotContains(t, args, qemu.UniqueArg("enable-kvm"))
 	})
 
 	t.Run("yes-verbose", func(t *testing.T) {
-		q := Command{
+		cmd := Command{
 			Verbose: true,
 		}
-		args := q.args()
-		assert.NotContains(t, args[len(args)-1].value, "loglevel=0")
+		args := cmd.Args()
+		assert.NotContains(t, args[len(args)-1].Value(), "loglevel=0")
 	})
 
 	t.Run("no-verbose", func(t *testing.T) {
-		q := Command{}
-		args := q.args()
-		assert.Contains(t, args[len(args)-1].value, "loglevel=0")
+		cmd := Command{}
+		args := cmd.Args()
+		assert.Contains(t, args[len(args)-1].Value(), "loglevel=0")
 	})
 
 	t.Run("serial files virtio-mmio", func(t *testing.T) {
-		q := Command{
-			ExtraFiles: []string{
+		cmd := Command{
+			AdditionalConsoles: []string{
 				"/output/file1",
 				"/output/file2",
 			},
-			TransportType: TransportTypeMMIO,
+			TransportType: qemu.TransportTypeMMIO,
 		}
 
-		expected := Arguments{
-			ArgChardev("file,id=vcon1,path=/dev/fd/1"),
-			ArgChardev("file,id=vcon3,path=/dev/fd/3"),
-			ArgChardev("file,id=vcon4,path=/dev/fd/4"),
+		expected := qemu.Arguments{
+			qemu.ArgChardev("file,id=vcon1,path=/dev/fd/1"),
+			qemu.ArgChardev("file,id=vcon3,path=/dev/fd/3"),
+			qemu.ArgChardev("file,id=vcon4,path=/dev/fd/4"),
 		}
 
 		found := 0
-		for _, a := range q.args() {
-			if a.name != "chardev" {
+		for _, a := range cmd.Args() {
+			if a.Name() != "chardev" {
 				continue
 			}
 			if assert.Less(t, found, len(expected), "expected serial files already consumed") {
@@ -65,23 +66,23 @@ func TestCommmandArgs(t *testing.T) {
 	})
 
 	t.Run("serial files isa-pci", func(t *testing.T) {
-		q := Command{
-			ExtraFiles: []string{
+		cmd := Command{
+			AdditionalConsoles: []string{
 				"/output/file1",
 				"/output/file2",
 			},
-			TransportType: TransportTypeISA,
+			TransportType: qemu.TransportTypeISA,
 		}
 
-		expected := Arguments{
-			ArgSerial("file:/dev/fd/1"),
-			ArgSerial("file:/dev/fd/3"),
-			ArgSerial("file:/dev/fd/4"),
+		expected := qemu.Arguments{
+			qemu.ArgSerial("file:/dev/fd/1"),
+			qemu.ArgSerial("file:/dev/fd/3"),
+			qemu.ArgSerial("file:/dev/fd/4"),
 		}
 
 		found := 0
-		for _, a := range q.args() {
-			if a.name != "serial" {
+		for _, a := range cmd.Args() {
+			if a.Name() != "serial" {
 				continue
 			}
 			if assert.Less(t, found, len(expected), "expected serial files already consumed") {
@@ -93,7 +94,7 @@ func TestCommmandArgs(t *testing.T) {
 	})
 
 	t.Run("init args", func(t *testing.T) {
-		q := Command{
+		cmd := Command{
 			InitArgs: []string{
 				"first",
 				"second",
@@ -104,9 +105,9 @@ func TestCommmandArgs(t *testing.T) {
 		expected := " -- first second third"
 
 		var appendValue string
-		for _, a := range q.args() {
-			if a.name == "append" {
-				appendValue = a.value
+		for _, a := range cmd.Args() {
+			if a.Name() == "append" {
+				appendValue = a.Value()
 			}
 		}
 

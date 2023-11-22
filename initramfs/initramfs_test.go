@@ -30,17 +30,8 @@ func TestInitramfsNew(t *testing.T) {
 	tests := []struct {
 		name     string
 		initFile InitFile
-		opts     []InitramfsOption
 		verify   func(*testing.T, *Initramfs)
 	}{
-		{
-			name:     "correct defaults",
-			initFile: func(_ *files.Entry) (*files.Entry, error) { return nil, nil },
-			verify: func(t *testing.T, i *Initramfs) {
-				assert.Equal(t, "lib", i.libsDir)
-				assert.Equal(t, "files", i.filesDir)
-			},
-		},
 		{
 			name:     "init from real path",
 			initFile: InitFilePath("first"),
@@ -57,21 +48,12 @@ func TestInitramfsNew(t *testing.T) {
 				Source: testFile,
 			}),
 		},
-		{
-			name:     "with options",
-			initFile: func(_ *files.Entry) (*files.Entry, error) { return nil, nil },
-			opts:     []InitramfsOption{WithLibsDir("some"), WithFilesDir("where")},
-			verify: func(t *testing.T, i *Initramfs) {
-				assert.Equal(t, "some", i.libsDir)
-				assert.Equal(t, "where", i.filesDir)
-			},
-		},
 	}
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			i := New(tt.initFile, tt.opts...)
+			i := New(tt.initFile)
 			tt.verify(t, i)
 		})
 	}
@@ -80,8 +62,8 @@ func TestInitramfsNew(t *testing.T) {
 func TestInitramfsAddFile(t *testing.T) {
 	archive := New(InitFilePath("first"))
 
-	require.NoError(t, archive.AddFile("second", "rel/third"))
-	require.NoError(t, archive.AddFile("", "/abs/fourth"))
+	require.NoError(t, archive.AddFile("dir", "second", "rel/third"))
+	require.NoError(t, archive.AddFile("dir", "", "/abs/fourth"))
 
 	expected := map[string]string{
 		"second": "rel/third",
@@ -89,7 +71,7 @@ func TestInitramfsAddFile(t *testing.T) {
 	}
 
 	for file, relPath := range expected {
-		path := filepath.Join("files", file)
+		path := filepath.Join("dir", file)
 		e, err := archive.fileTree.GetEntry(path)
 		require.NoError(t, err, path)
 		assert.Equal(t, files.TypeRegular, e.Type)
@@ -100,9 +82,9 @@ func TestInitramfsAddFile(t *testing.T) {
 func TestInitramfsAddFiles(t *testing.T) {
 	archive := New(InitFilePath("first"))
 
-	require.NoError(t, archive.AddFiles("second", "rel/third", "/abs/fourth"))
-	require.NoError(t, archive.AddFiles("fifth"))
-	require.NoError(t, archive.AddFiles())
+	require.NoError(t, archive.AddFiles("dir", "second", "rel/third", "/abs/fourth"))
+	require.NoError(t, archive.AddFiles("dir", "fifth"))
+	require.NoError(t, archive.AddFiles("dir"))
 
 	expected := map[string]string{
 		"second": "second",
@@ -112,7 +94,7 @@ func TestInitramfsAddFiles(t *testing.T) {
 	}
 
 	for file, relPath := range expected {
-		path := filepath.Join("files", file)
+		path := filepath.Join("dir", file)
 		e, err := archive.fileTree.GetEntry(path)
 		require.NoError(t, err, path)
 		assert.Equal(t, files.TypeRegular, e.Type)
@@ -228,7 +210,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 func TestInitramfsResolveLinkedLibs(t *testing.T) {
 	t.Setenv("LD_LIBRARY_PATH", "../internal/files/testdata/lib")
 	irfs := New(InitFilePath("../internal/files/testdata/bin/main"))
-	err := irfs.AddRequiredSharedObjects()
+	err := irfs.AddRequiredSharedObjects("")
 	require.NoError(t, err)
 
 	expectedFiles := map[string]files.Entry{

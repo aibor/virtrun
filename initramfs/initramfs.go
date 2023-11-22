@@ -12,23 +12,6 @@ import (
 	"github.com/aibor/virtrun/internal/files"
 )
 
-// InitramfsOption is a functional option that can be passed to the constructor.
-type InitramfsOption func(*Initramfs)
-
-// WithLibsDir sets the directory for all collected shared libraries.
-func WithLibsDir(dir string) InitramfsOption {
-	return func(i *Initramfs) {
-		i.libsDir = dir
-	}
-}
-
-// WithFilesDir sets the directory where all additional files are placed into.
-func WithFilesDir(dir string) InitramfsOption {
-	return func(i *Initramfs) {
-		i.filesDir = dir
-	}
-}
-
 // InitFile defines how the file used as init program at "/init" is created.
 type InitFile func(*files.Entry) (*files.Entry, error)
 
@@ -58,26 +41,14 @@ func InitFileVirtual(file fs.File) InitFile {
 // [Initramfs.AddRequiredSharedObjects]. Once ready, write the [Initramfs] with
 // [Initramfs.WriteInto].
 type Initramfs struct {
-	// LibsDir is the archive's directory for all dynamically linked libraries.
-	libsDir string
-	// AdditionalFilesDir is the archive's directory for all additional files
-	// beside the init file.
-	filesDir string
 	fileTree files.Tree
 }
 
 // New creates a new [Initramfs].
 //
 // The init file is created from the given [InitFile] function.
-func New(initFile InitFile, opts ...InitramfsOption) *Initramfs {
-	i := &Initramfs{
-		libsDir:  "lib",
-		filesDir: "files",
-	}
-	for _, opt := range opts {
-		opt(i)
-	}
-
+func New(initFile InitFile) *Initramfs {
+	i := &Initramfs{}
 	// This can never fail on a new tree.
 	_, _ = initFile(i.fileTree.GetRoot())
 	return i
@@ -86,19 +57,19 @@ func New(initFile InitFile, opts ...InitramfsOption) *Initramfs {
 // AddFile creates [Initramfs.filesDir] and adds the given file to it. If name
 // is empty the base name of the file is used.
 // The file path must be absolute or relative to "/".
-func (i *Initramfs) AddFile(name, path string) error {
+func (i *Initramfs) AddFile(dir, name, path string) error {
 	if name == "" {
 		name = filepath.Base(path)
 	}
-	return i.withDirEntry(i.filesDir, func(dirEntry *files.Entry) error {
+	return i.withDirEntry(dir, func(dirEntry *files.Entry) error {
 		return addFile(dirEntry, name, path)
 	})
 }
 
 // AddFiles creates [Initramfs.filesDir] and adds the given files to it.
 // The file paths must be absolute or relative to "/".
-func (i *Initramfs) AddFiles(paths ...string) error {
-	return i.withDirEntry(i.filesDir, func(dirEntry *files.Entry) error {
+func (i *Initramfs) AddFiles(dir string, paths ...string) error {
+	return i.withDirEntry(dir, func(dirEntry *files.Entry) error {
 		for _, file := range paths {
 			if err := addFile(dirEntry, filepath.Base(file), file); err != nil {
 				return err
@@ -114,7 +85,13 @@ func (i *Initramfs) AddFiles(paths ...string) error {
 // The dynamic linker consumed LD_LIBRARY_PATH from the environment.
 // Resolved libraries are added to [Initramfs.libsDir]. For each search path a
 // symbolic link is added pointing to [Initramfs.libsDir].
-func (i *Initramfs) AddRequiredSharedObjects() error {
+func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
+	if libsDir == "" {
+		libsDir = "lib"
+	}
+	// Ensure libsDir is absolute.
+	libsDir = filepath.Join(string(filepath.Separator), libsDir)
+
 	// Walk file tree. For each regular file, try to get linked shared objects.
 	// Ignore if it is not an ELF file or if it is statically linked (has no
 	// interpreter). Collect the absolute paths of the found shared objects
@@ -143,12 +120,11 @@ func (i *Initramfs) AddRequiredSharedObjects() error {
 		return err
 	}
 
-	absLibDir := filepath.Join(string(filepath.Separator), i.libsDir)
 	addLinkToLibDir := func(dir string) error {
-		if dir == "" || dir == absLibDir {
+		if dir == "" || dir == libsDir {
 			return nil
 		}
-		err := i.fileTree.Ln(absLibDir, dir)
+		err := i.fileTree.Ln(libsDir, dir)
 		if err != nil && err != files.ErrEntryExists {
 			return fmt.Errorf("add link for %s: %v", dir, err)
 		}
@@ -159,7 +135,7 @@ func (i *Initramfs) AddRequiredSharedObjects() error {
 	// In order to keep any references and search paths of the dynamic linker
 	// working, add symbolic links for all other directories where libs are
 	// copied from to the central lib dir.
-	if err := i.withDirEntry(i.libsDir, func(dirEntry *files.Entry) error {
+	if err := i.withDirEntry(libsDir, func(dirEntry *files.Entry) error {
 		for path := range pathSet {
 			dir, name := filepath.Split(path)
 			if _, err := dirEntry.AddFile(name, path); err != nil {
@@ -184,6 +160,27 @@ func (i *Initramfs) AddRequiredSharedObjects() error {
 	}
 
 	return nil
+}
+
+// WriteToTempFile writes the complete CPIO archive into a new file nthe given
+// directory and returns its filename. If tmpDir is the empty string the
+// default directory is used as returned by [os.TempDir].
+// The caller is responsible for removing the file once it is not needed
+// anymore.
+func (i *Initramfs) WriteToTempFile(tmpDir string) (string, error) {
+	file, err := os.CreateTemp(tmpDir, "initramfs")
+	if err != nil {
+		return "", fmt.Errorf("create temp file: %v", err)
+	}
+	defer file.Close()
+
+	err = i.WriteInto(file)
+	if err != nil {
+		_ = os.Remove(file.Name())
+		return "", fmt.Errorf("create archive: %v", err)
+	}
+
+	return file.Name(), nil
 }
 
 // WriteInto writes the [Initramfs] as CPIO archive to the given writer.

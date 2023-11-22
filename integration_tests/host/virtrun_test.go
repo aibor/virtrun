@@ -20,7 +20,6 @@ import (
 
 	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/initramfs"
-	"github.com/aibor/virtrun/qemu"
 )
 
 func fetchKernel(ctx context.Context, path, version, arch string) error {
@@ -114,36 +113,30 @@ func TestVirtrun(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			qemuCmd, err := qemu.CommandFor(tt.arch)
+			cmd, err := virtrun.NewCommand(tt.arch)
 			require.NoError(t, err)
 
-			qemuCmd.Kernel = kernelPath(tt.arch)
-			qemuCmd.Initrd = filepath.Join(tmpDir, "initramfs-"+tt.arch)
-			qemuCmd.Verbose = true
+			cmd.Kernel = kernelPath(tt.arch)
+			cmd.Verbose = true
 
 			init, err := virtrun.InitFor(tt.arch)
 			require.NoError(t, err)
 
-			archive := initramfs.New(
-				initramfs.InitFileVirtual(init),
-				initramfs.WithFilesDir("virtrun"),
-			)
+			irfs := initramfs.New(initramfs.InitFileVirtual(init))
 
-			err = archive.AddFiles(binary)
+			err = irfs.AddFiles("virtrun", binary)
 			require.NoError(t, err)
 
-			err = archive.AddRequiredSharedObjects()
+			err = irfs.AddRequiredSharedObjects("")
 			require.NoError(t, err)
 
-			file, err := os.Create(qemuCmd.Initrd)
-			require.NoError(t, err)
-
-			err = archive.WriteInto(file)
+			cmd.Initramfs, err = irfs.WriteToTempFile(tmpDir)
 			require.NoError(t, err)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			t.Cleanup(cancel)
-			rc, err := qemuCmd.Run(ctx)
+
+			rc, err := cmd.Run(ctx, os.Stdout, os.Stderr)
 			require.NoError(t, err)
 			assert.Equal(t, tt.rc, rc)
 		})

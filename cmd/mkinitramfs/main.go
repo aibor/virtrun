@@ -28,10 +28,10 @@ func run(args []string) error {
 	}
 
 	initRamFS := initramfs.New(initramfs.InitFilePath(initFile))
-	if err := initRamFS.AddFiles(additionalFiles...); err != nil {
+	if err := initRamFS.AddFiles("bin", additionalFiles...); err != nil {
 		return fmt.Errorf("add files: %v", err)
 	}
-	if err := initRamFS.AddRequiredSharedObjects(); err != nil {
+	if err := initRamFS.AddRequiredSharedObjects(""); err != nil {
 		return fmt.Errorf("add libs: %v", err)
 	}
 	if err := initRamFS.WriteInto(os.Stdout); err != nil {

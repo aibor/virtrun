@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/qemu"
 )
 
 var ErrNotPidOne = errors.New("process does not have ID 1")

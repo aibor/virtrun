@@ -7,9 +7,9 @@ import (
 	"os"
 )
 
-// ConsoleProcessor is used to process input from a serial console and
+// consoleProcessor is used to process input from a serial console and
 // write it into a file.
-type ConsoleProcessor struct {
+type consoleProcessor struct {
 	Path      string
 	writePipe *os.File
 	readPipe  io.ReadCloser
@@ -17,10 +17,10 @@ type ConsoleProcessor struct {
 	ran       bool
 }
 
-// Create creates the [os.Pipe] and returns the writing end. It also opens and
+// create creates the [os.Pipe] and returns the writing end. It also opens and
 // truncates or creates the output file. Call [ConsoleProcessor.Close] in order
 // to clean up the file descriptors after use.
-func (p *ConsoleProcessor) Create() (*os.File, error) {
+func (p *consoleProcessor) create() (*os.File, error) {
 	var err error
 	p.readPipe, p.writePipe, err = os.Pipe()
 	if err != nil {
@@ -33,8 +33,8 @@ func (p *ConsoleProcessor) Create() (*os.File, error) {
 	return p.writePipe, nil
 }
 
-// Close closes the file descriptors.
-func (p *ConsoleProcessor) Close() error {
+// close closes the file descriptors.
+func (p *consoleProcessor) close() error {
 	var errs [3]error
 	errs[0] = p.writePipe.Close()
 	if !p.ran {
@@ -49,9 +49,9 @@ func (p *ConsoleProcessor) Close() error {
 	return nil
 }
 
-// Run process the input. It blocks and returns once [io.EOF] is received,
+// run process the input. It blocks and returns once [io.EOF] is received,
 // which happens when [ConsoleProcessor.Close] is called.
-func (p *ConsoleProcessor) Run() error {
+func (p *consoleProcessor) run() error {
 	defer p.output.Close()
 	defer p.readPipe.Close()
 	p.ran = true

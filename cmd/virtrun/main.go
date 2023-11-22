@@ -16,7 +16,7 @@ import (
 
 	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/internal/initramfs"
-	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/qemu"
 )
 
 func run() (int, error) {

@@ -6,8 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aibor/virtrun/qemu"
 )
 
 func TestStdoutProcessor(t *testing.T) {

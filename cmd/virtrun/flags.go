@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/qemu"
 )
 
 type config struct {

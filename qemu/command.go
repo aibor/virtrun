@@ -61,16 +61,16 @@ type Command struct {
 	ErrWriter io.Writer
 }
 
-// Output returns [Command.OutWriter] if set or [os.Stdout] otherwise.
-func (c *Command) Output() io.Writer {
+// output returns [Command.OutWriter] if set or [os.Stdout] otherwise.
+func (c *Command) output() io.Writer {
 	if c.OutWriter == nil {
 		return os.Stdout
 	}
 	return c.OutWriter
 }
 
-// Output returns [Command.ErrWriter] if set or [os.Stderr] otherwise.
-func (c *Command) ErrOutput() io.Writer {
+// errOutput returns [Command.ErrWriter] if set or [os.Stderr] otherwise.
+func (c *Command) errOutput() io.Writer {
 	if c.ErrWriter == nil {
 		return os.Stderr
 	}
@@ -118,8 +118,8 @@ func (c *Command) Validate() error {
 	return nil
 }
 
-// Args compiles the argument string for the QEMU command.
-func (c *Command) Args() Arguments {
+// args compiles the argument string for the QEMU command.
+func (c *Command) args() Arguments {
 	a := Arguments{
 		ArgKernel(c.Kernel),
 		ArgInitrd(c.Initrd),
@@ -178,13 +178,13 @@ func (c *Command) Args() Arguments {
 		addConsoleArgs(3 + idx)
 	}
 
-	a.Add(ArgAppend(c.KernelCmdlineArgs()...))
+	a.Add(ArgAppend(c.kernelCmdlineArgs()...))
 
 	return a
 }
 
-// KernelCmdlineArgs reruns the kernel cmdline arguments.
-func (c *Command) KernelCmdlineArgs() []string {
+// kernelCmdlineArgs reruns the kernel cmdline arguments.
+func (c *Command) kernelCmdlineArgs() []string {
 	cmdline := []string{
 		"console=" + c.ConsoleDeviceName(0),
 		"panic=-1",
@@ -199,17 +199,22 @@ func (c *Command) KernelCmdlineArgs() []string {
 	return cmdline
 }
 
-// Run the QEMU command with the given context.
-func (c *Command) Cmd(ctx context.Context, args []string) (*exec.Cmd, []*ConsoleProcessor) {
+// cmd constructs a new [exec.Cmd] with the given context and arguments.
+//
+// Besides the [exec.Cmd] it returns a list of [ConsoleProcessor]s that depend
+// on the number of extra files/consoles added to the command. They are
+// required to process  the console output and write it to the expected files
+// on the host. They are only created but not started.
+func (c *Command) cmd(ctx context.Context, args []string) (*exec.Cmd, []*consoleProcessor) {
 	cmd := exec.CommandContext(ctx, c.Binary, args...)
-	cmd.Stderr = c.ErrOutput()
+	cmd.Stderr = c.errOutput()
 	if c.Verbose {
 		fmt.Println(cmd.String())
 	}
 
-	procs := make([]*ConsoleProcessor, 0, 8)
+	procs := make([]*consoleProcessor, 0, 8)
 	for _, extraFile := range c.ExtraFiles {
-		p := ConsoleProcessor{Path: extraFile}
+		p := consoleProcessor{Path: extraFile}
 		procs = append(procs, &p)
 	}
 
@@ -217,15 +222,21 @@ func (c *Command) Cmd(ctx context.Context, args []string) (*exec.Cmd, []*Console
 }
 
 // Run the QEMU command with the given context.
+//
+// The final QEMU command is constructed, console processors are setup and the
+// command is executed. A return code is returned. It can only be 0 if the
+// guest system correctly communicated a 0 value via stdout. In any other case,
+// a non 0 value is returned. If no error is returned, the value was received
+// by the guest system.
 func (c *Command) Run(ctx context.Context) (int, error) {
 	rc := 1
 
-	args, err := c.Args().Build()
+	args, err := c.args().Build()
 	if err != nil {
 		return rc, err
 	}
 
-	cmd, processors := c.Cmd(ctx, args)
+	cmd, processors := c.cmd(ctx, args)
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return rc, err
@@ -233,31 +244,36 @@ func (c *Command) Run(ctx context.Context) (int, error) {
 
 	processorsGroup := errgroup.Group{}
 	for _, p := range processors {
-		w, err := p.Create()
+		w, err := p.create()
 		if err != nil {
-			return 1, fmt.Errorf("create processor %s: %v", p.Path, err)
+			return rc, fmt.Errorf("create processor %s: %v", p.Path, err)
 		}
-		defer p.Close()
+		defer p.close()
 		cmd.ExtraFiles = append(cmd.ExtraFiles, w)
-		processorsGroup.Go(p.Run)
+		processorsGroup.Go(p.run)
 	}
 
 	if err := cmd.Start(); err != nil {
 		return rc, fmt.Errorf("start: %v", err)
 	}
 
-	rc, rcErr := ParseStdout(out, c.Output(), c.Verbose)
+	rc, rcErr := ParseStdout(out, c.output(), c.Verbose)
 
 	if err := cmd.Wait(); err != nil {
+		// Never return 0 along with an execution error.
+		if rc == 0 {
+			rc = 1
+		}
 		return rc, fmt.Errorf("wait: %v", err)
 	}
 
 	for _, p := range processors {
-		_ = p.Close()
+		_ = p.close()
 	}
 	proccessorsErr := processorsGroup.Wait()
 
 	if rcErr != nil {
+		// rc == 0 is fine here since the error is an processor error only.
 		return rc, rcErr
 	}
 	return rc, proccessorsErr

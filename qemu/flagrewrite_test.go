@@ -3,8 +3,9 @@ package qemu_test
 import (
 	"testing"
 
-	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aibor/virtrun/qemu"
 )
 
 func TestProcessGoTestFlags(t *testing.T) {

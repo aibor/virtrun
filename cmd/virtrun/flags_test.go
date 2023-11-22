@@ -4,9 +4,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aibor/virtrun/qemu"
 )
 
 func TestParseArgs(t *testing.T) {

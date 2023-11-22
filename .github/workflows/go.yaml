@@ -29,11 +29,14 @@ jobs:
         with:
           version: latest
 
+      - name: Run vet with all constraints
+        run: go vet -tags integration,standalone ./...
+
       - name: Run go tests
         run: go test -race -v -cover -covermode=atomic ./...
 
-  sysinit-selftest:
-    name: Run sysinit selftests
+  integration-tests-guest:
+    name: Run integration tests for guest
     runs-on: ubuntu-latest
     needs: lint-and-test
     strategy:
@@ -44,23 +47,23 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: ./selftest
+      - uses: ./integration_tests
         env:
           GOARCH: "${{ matrix.arch }}"
         with:
           kernel-version: "${{ matrix.version }}"
           kernel-arch: "${{ matrix.arch }}"
-          cmd: bash selftest/run_sysinit_test.sh ${{ matrix.mode }}
+          cmd: integration_tests/run_guest_tests.sh ${{ matrix.mode }}
 
-  virtrun-selftest:
-    name: Run virtrun selftests
+  integration-tests-host:
+    name: Run integration tests for host
     runs-on: ubuntu-latest
     needs: lint-and-test
     steps:
       - uses: actions/checkout@v3
 
-      - uses: ./selftest
+      - uses: ./integration_tests
         with:
           kernel-version: "${{ matrix.version }}"
           kernel-arch: "${{ matrix.arch }}"
-          cmd: go test -race -v -cover -covermode atomic -tags virtrun ./selftest 
+          cmd: go test -race -v -cover -covermode atomic -tags integration ./integration_tests/host/... 

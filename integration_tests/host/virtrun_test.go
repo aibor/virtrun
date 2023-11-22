@@ -1,6 +1,6 @@
-//go:build virtrun
+//go:build integration
 
-package virtrun_test
+package main
 
 import (
 	"archive/tar"
@@ -62,9 +62,9 @@ func mustFetchKernel(t testing.TB, path, version, arch string) {
 }
 
 func TestVirtrun(t *testing.T) {
-	t.Setenv("LD_LIBRARY_PATH", "../internal/files/testdata/lib")
+	t.Setenv("LD_LIBRARY_PATH", "../../internal/files/testdata/lib")
 
-	binary, err := filepath.Abs("../internal/files/testdata/bin/main")
+	binary, err := filepath.Abs("../../internal/files/testdata/bin/main")
 	require.NoError(t, err)
 
 	tests := []struct {

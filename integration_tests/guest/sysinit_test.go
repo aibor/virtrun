@@ -1,6 +1,6 @@
-//go:build sysinit
+//go:build integration
 
-package sysinit_test
+package main
 
 import (
 	"context"

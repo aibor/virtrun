@@ -5,7 +5,7 @@ virtrun is a library and binary QEMU wrapper for running binaries in an
 isolated system as PID 1.
 
 The package uses itself for testing, so see 
-[self_test.go](selftest/standalone_test.go) for a real life example.
+[integration tests](integration_tests/) for real life examples.
 
 ## Commands
 
@@ -85,7 +85,7 @@ func TestMain(m *testing.M) {
 }
 ```
 
-See the selftest directory for a working example.
+See the integration_tests/guest directory for a working example.
 
 Instead of using `sysinit.RunTests` you can use call the various parts 
 individually, of course, and just mount the file systems you need or additional 

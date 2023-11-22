@@ -6,7 +6,7 @@ GOARCH= go install -buildvcs=false ./cmd/virtrun
 
 # KERNEL provided by container.
 virtrun_args=("-kernel" "$KERNEL")
-test_tags=sysinit
+test_tags=integration
 
 case "$mode" in
 wrapped) ;;
@@ -28,4 +28,4 @@ go test \
 	-cover \
 	-coverprofile /tmp/cover.out \
 	-coverpkg github.com/aibor/virtrun/sysinit \
-	./selftest
+	./integration_tests/guest/...

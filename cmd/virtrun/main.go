@@ -15,7 +15,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/aibor/virtrun"
-	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/aibor/virtrun/initramfs"
 	"github.com/aibor/virtrun/qemu"
 )
 
@@ -65,17 +65,18 @@ func run() (int, error) {
 		qemu.ProcessGoTestFlags(&cfg.qemuCmd)
 	}
 
-	var archive *initramfs.Archive
+	var initFile initramfs.InitFile
 	if cfg.standalone {
-		archive = initramfs.New(cfg.binaries[0])
+		initFile = initramfs.InitFilePath(cfg.binaries[0])
 		cfg.binaries = slices.Delete(cfg.binaries, 0, 1)
 	} else {
-		initFile, err := virtrun.InitFor(arch)
+		init, err := virtrun.InitFor(arch)
 		if err != nil {
 			return 1, err
 		}
-		archive = initramfs.NewWithEmbedded(initFile)
+		initFile = initramfs.InitFileVirtual(init)
 	}
+	archive := initramfs.New(initFile, initramfs.WithFilesDir("virtrun"))
 
 	if err := archive.AddFiles(cfg.binaries...); err != nil {
 		return 1, fmt.Errorf("add binares: %v", err)
@@ -90,7 +91,7 @@ func run() (int, error) {
 		return 1, fmt.Errorf("create initramfs archive file: %v", err)
 	}
 
-	if err := archive.WriteCPIO(archiveFile); err != nil {
+	if err := archive.WriteInto(archiveFile); err != nil {
 		archiveFile.Close()
 		_ = os.Remove(archiveFile.Name())
 		return 1, fmt.Errorf("write initramfs archive: %v", err)

@@ -5,13 +5,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/aibor/virtrun/sysinit"
 )
 
 func runInit() (int, error) {
 	err := sysinit.Run(func() (int, error) {
-		dir := initramfs.FilesDir
+		dir := "virtrun"
 		files, err := os.ReadDir(dir)
 		if err != nil {
 			return 98, err

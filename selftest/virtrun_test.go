@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/aibor/virtrun"
-	"github.com/aibor/virtrun/internal/initramfs"
-	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/initramfs"
+	"github.com/aibor/virtrun/qemu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -101,7 +101,10 @@ func TestVirtrun(t *testing.T) {
 			init, err := virtrun.InitFor(tt.arch)
 			require.NoError(t, err)
 
-			archive := initramfs.NewWithEmbedded(init)
+			archive := initramfs.New(
+				initramfs.InitFileVirtual(init),
+				initramfs.WithFilesDir("virtrun"),
+			)
 
 			err = archive.AddFiles(binary)
 			require.NoError(t, err)
@@ -112,7 +115,7 @@ func TestVirtrun(t *testing.T) {
 			file, err := os.Create(qemuCmd.Initrd)
 			require.NoError(t, err)
 
-			err = archive.WriteCPIO(file)
+			err = archive.WriteInto(file)
 			require.NoError(t, err)
 
 			t.Logf("Fetch kernel %s %s", "6.6", tt.arch)

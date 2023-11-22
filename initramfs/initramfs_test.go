@@ -1,7 +1,6 @@
 package initramfs
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 	"testing/fstest"
@@ -9,36 +8,77 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aibor/virtrun/internal/archive"
 	"github.com/aibor/virtrun/internal/files"
 )
 
-func TestArchiveNew(t *testing.T) {
-	archive := New("first")
-	assert.Equal(t, os.DirFS("/"), archive.sourceFS)
-	entry, err := archive.fileTree.GetEntry("/init")
-	require.NoError(t, err)
-	assert.Equal(t, "first", entry.RelatedPath)
-	assert.Equal(t, files.TypeRegular, entry.Type)
-}
-
-func TestArchiveNewWithEmbedded(t *testing.T) {
+func TestInitramfsNew(t *testing.T) {
 	testFS := fstest.MapFS{
 		"input": &fstest.MapFile{},
 	}
 	testFile, err := testFS.Open("input")
 	require.NoError(t, err)
 
-	archive := NewWithEmbedded(testFile)
-	assert.Equal(t, os.DirFS("/"), archive.sourceFS)
-	entry, err := archive.fileTree.GetEntry("/init")
-	require.NoError(t, err)
-	assert.Empty(t, entry.RelatedPath)
-	assert.Equal(t, testFile, entry.Source)
-	assert.Equal(t, files.TypeVirtual, entry.Type)
+	verifyInitEntry := func(expected files.Entry) func(*testing.T, *Initramfs) {
+		return func(t *testing.T, i *Initramfs) {
+			entry, err := i.fileTree.GetEntry("/init")
+			require.NoError(t, err, "must get init entry")
+			assert.Equal(t, expected, *entry)
+		}
+	}
+
+	tests := []struct {
+		name     string
+		initFile InitFile
+		opts     []InitramfsOption
+		verify   func(*testing.T, *Initramfs)
+	}{
+		{
+			name:     "correct defaults",
+			initFile: func(_ *files.Entry) (*files.Entry, error) { return nil, nil },
+			verify: func(t *testing.T, i *Initramfs) {
+				assert.Equal(t, "lib", i.libsDir)
+				assert.Equal(t, "files", i.filesDir)
+			},
+		},
+		{
+			name:     "init from real path",
+			initFile: InitFilePath("first"),
+			verify: verifyInitEntry(files.Entry{
+				Type:        files.TypeRegular,
+				RelatedPath: "first",
+			}),
+		},
+		{
+			name:     "init from embedded file",
+			initFile: InitFileVirtual(testFile),
+			verify: verifyInitEntry(files.Entry{
+				Type:   files.TypeVirtual,
+				Source: testFile,
+			}),
+		},
+		{
+			name:     "with options",
+			initFile: func(_ *files.Entry) (*files.Entry, error) { return nil, nil },
+			opts:     []InitramfsOption{WithLibsDir("some"), WithFilesDir("where")},
+			verify: func(t *testing.T, i *Initramfs) {
+				assert.Equal(t, "some", i.libsDir)
+				assert.Equal(t, "where", i.filesDir)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			i := New(tt.initFile, tt.opts...)
+			tt.verify(t, i)
+		})
+	}
 }
 
-func TestArchiveAddFile(t *testing.T) {
-	archive := New("first")
+func TestInitramfsAddFile(t *testing.T) {
+	archive := New(InitFilePath("first"))
 
 	require.NoError(t, archive.AddFile("second", "rel/third"))
 	require.NoError(t, archive.AddFile("", "/abs/fourth"))
@@ -57,8 +97,8 @@ func TestArchiveAddFile(t *testing.T) {
 	}
 }
 
-func TestArchiveAddFiles(t *testing.T) {
-	archive := New("first")
+func TestInitramfsAddFiles(t *testing.T) {
+	archive := New(InitFilePath("first"))
 
 	require.NoError(t, archive.AddFiles("second", "rel/third", "/abs/fourth"))
 	require.NoError(t, archive.AddFiles("fifth"))
@@ -80,22 +120,22 @@ func TestArchiveAddFiles(t *testing.T) {
 	}
 }
 
-func TestArchiveWriteTo(t *testing.T) {
+func TestInitramfsWriteTo(t *testing.T) {
 	testFS := fstest.MapFS{
 		"input": &fstest.MapFile{},
 	}
 	testFile, err := testFS.Open("input")
 	require.NoError(t, err)
 
-	test := func(entry *files.Entry, w *MockWriter) error {
-		i := Archive{sourceFS: testFS}
+	test := func(entry *files.Entry, w *archive.MockWriter) error {
+		i := Initramfs{}
 		_, err := i.fileTree.GetRoot().AddEntry("init", entry)
 		require.NoError(t, err)
-		return i.writeTo(w)
+		return i.writeTo(w, testFS)
 	}
 
 	t.Run("unknown file type", func(t *testing.T) {
-		err := test(&files.Entry{Type: files.Type(99)}, &MockWriter{})
+		err := test(&files.Entry{Type: files.Type(99)}, &archive.MockWriter{})
 		assert.ErrorContains(t, err, "unknown file type 99")
 	})
 
@@ -104,7 +144,7 @@ func TestArchiveWriteTo(t *testing.T) {
 			Type:        files.TypeRegular,
 			RelatedPath: "nonexisting",
 		}
-		err := test(entry, &MockWriter{})
+		err := test(entry, &archive.MockWriter{})
 		assert.ErrorContains(t, err, "open nonexisting: file does not exist")
 	})
 
@@ -112,7 +152,7 @@ func TestArchiveWriteTo(t *testing.T) {
 		tests := []struct {
 			name  string
 			entry files.Entry
-			mock  MockWriter
+			mock  archive.MockWriter
 		}{
 			{
 				name: "regular",
@@ -120,7 +160,7 @@ func TestArchiveWriteTo(t *testing.T) {
 					Type:        files.TypeRegular,
 					RelatedPath: "/input",
 				},
-				mock: MockWriter{
+				mock: archive.MockWriter{
 					Path:   "/init",
 					Source: testFile,
 					Mode:   0755,
@@ -131,7 +171,7 @@ func TestArchiveWriteTo(t *testing.T) {
 				entry: files.Entry{
 					Type: files.TypeDirectory,
 				},
-				mock: MockWriter{
+				mock: archive.MockWriter{
 					Path: "/init",
 				},
 			},
@@ -141,7 +181,7 @@ func TestArchiveWriteTo(t *testing.T) {
 					Type:        files.TypeLink,
 					RelatedPath: "/lib",
 				},
-				mock: MockWriter{
+				mock: archive.MockWriter{
 					Path:        "/init",
 					RelatedPath: "/lib",
 				},
@@ -152,7 +192,7 @@ func TestArchiveWriteTo(t *testing.T) {
 					Type:   files.TypeVirtual,
 					Source: testFile,
 				},
-				mock: MockWriter{
+				mock: archive.MockWriter{
 					Path:   "/init",
 					Source: testFile,
 					Mode:   0755,
@@ -164,20 +204,20 @@ func TestArchiveWriteTo(t *testing.T) {
 			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
 				t.Run("works", func(t *testing.T) {
-					i := Archive{sourceFS: testFS}
+					i := Initramfs{}
 					_, err := i.fileTree.GetRoot().AddEntry("init", &tt.entry)
 					require.NoError(t, err)
-					mock := MockWriter{}
-					err = i.writeTo(&mock)
+					mock := archive.MockWriter{}
+					err = i.writeTo(&mock, testFS)
 					require.NoError(t, err)
 					assert.Equal(t, tt.mock, mock)
 				})
 				t.Run("fails", func(t *testing.T) {
-					i := Archive{sourceFS: testFS}
+					i := Initramfs{}
 					_, err := i.fileTree.GetRoot().AddEntry("init", &tt.entry)
 					require.NoError(t, err)
-					mock := MockWriter{Err: assert.AnError}
-					err = i.writeTo(&mock)
+					mock := archive.MockWriter{Err: assert.AnError}
+					err = i.writeTo(&mock, testFS)
 					assert.Error(t, err, assert.AnError)
 				})
 			})
@@ -185,10 +225,10 @@ func TestArchiveWriteTo(t *testing.T) {
 	})
 }
 
-func TestArchiveResolveLinkedLibs(t *testing.T) {
-	t.Setenv("LD_LIBRARY_PATH", "../files/testdata/lib")
-	archive := New("../files/testdata/bin/main")
-	err := archive.AddRequiredSharedObjects()
+func TestInitramfsResolveLinkedLibs(t *testing.T) {
+	t.Setenv("LD_LIBRARY_PATH", "../internal/files/testdata/lib")
+	irfs := New(InitFilePath("../internal/files/testdata/bin/main"))
+	err := irfs.AddRequiredSharedObjects()
 	require.NoError(t, err)
 
 	expectedFiles := map[string]files.Entry{
@@ -197,20 +237,20 @@ func TestArchiveResolveLinkedLibs(t *testing.T) {
 		},
 		"/lib/libfunc2.so": {
 			Type:        files.TypeRegular,
-			RelatedPath: "../files/testdata/lib/libfunc2.so",
+			RelatedPath: "../internal/files/testdata/lib/libfunc2.so",
 		},
 		"/lib/libfunc3.so": {
 			Type:        files.TypeRegular,
-			RelatedPath: "../files/testdata/lib/libfunc3.so",
+			RelatedPath: "../internal/files/testdata/lib/libfunc3.so",
 		},
 		"/lib/libfunc1.so": {
 			Type:        files.TypeRegular,
-			RelatedPath: "../files/testdata/lib/libfunc1.so",
+			RelatedPath: "../internal/files/testdata/lib/libfunc1.so",
 		},
 	}
 
 	for f, e := range expectedFiles {
-		entry, err := archive.fileTree.GetEntry(f)
+		entry, err := irfs.fileTree.GetEntry(f)
 		if assert.NoError(t, err, f) {
 			assert.Equal(t, e.Type, entry.Type, f)
 			if e.RelatedPath != "" {

@@ -1,4 +1,4 @@
-package initramfs
+package archive
 
 import "io/fs"
 

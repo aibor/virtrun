@@ -1,4 +1,4 @@
-package initramfs_test
+package archive_test
 
 import (
 	"bytes"
@@ -6,20 +6,21 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/cavaliergopher/cpio"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aibor/virtrun/internal/archive"
 )
 
 func TestCPIOWriterWriteDirectory(t *testing.T) {
 	t.Run("works", func(t *testing.T) {
-		w := initramfs.NewCPIOWriter(&bytes.Buffer{})
+		w := archive.NewCPIOWriter(&bytes.Buffer{})
 		err := w.WriteDirectory("test")
 		assert.NoError(t, err)
 	})
 	t.Run("closed", func(t *testing.T) {
-		w := initramfs.NewCPIOWriter(&bytes.Buffer{})
+		w := archive.NewCPIOWriter(&bytes.Buffer{})
 		w.Close()
 		err := w.WriteDirectory("test")
 		assert.ErrorContains(t, err, "write header for test:")
@@ -29,7 +30,7 @@ func TestCPIOWriterWriteDirectory(t *testing.T) {
 func TestCPIOWriterWriteLink(t *testing.T) {
 	t.Run("works", func(t *testing.T) {
 		var b bytes.Buffer
-		w := initramfs.NewCPIOWriter(&b)
+		w := archive.NewCPIOWriter(&b)
 		err := w.WriteLink("test", "target")
 		require.NoError(t, err)
 
@@ -42,7 +43,7 @@ func TestCPIOWriterWriteLink(t *testing.T) {
 		assert.Equal(t, "target", h.Linkname)
 	})
 	t.Run("closed", func(t *testing.T) {
-		w := initramfs.NewCPIOWriter(&bytes.Buffer{})
+		w := archive.NewCPIOWriter(&bytes.Buffer{})
 		w.Close()
 		err := w.WriteLink("test", "target")
 		assert.ErrorContains(t, err, "write header for test:")
@@ -62,7 +63,7 @@ func TestCPIOWriterWriteRegular(t *testing.T) {
 
 	for _, f := range []string{"dir", "link"} {
 		t.Run(f, func(t *testing.T) {
-			w := initramfs.NewCPIOWriter(&bytes.Buffer{})
+			w := archive.NewCPIOWriter(&bytes.Buffer{})
 			file, err := testFS.Open(f)
 			require.NoError(t, err)
 			err = w.WriteRegular("test", file, 0755)
@@ -73,7 +74,7 @@ func TestCPIOWriterWriteRegular(t *testing.T) {
 	t.Run("regular", func(t *testing.T) {
 		t.Run("works", func(t *testing.T) {
 			var b bytes.Buffer
-			w := initramfs.NewCPIOWriter(&b)
+			w := archive.NewCPIOWriter(&b)
 
 			file, err := testFS.Open("regular")
 			require.NoError(t, err)
@@ -93,7 +94,7 @@ func TestCPIOWriterWriteRegular(t *testing.T) {
 			assert.Equal(t, fileBody, body)
 		})
 		t.Run("closed", func(t *testing.T) {
-			w := initramfs.NewCPIOWriter(&bytes.Buffer{})
+			w := archive.NewCPIOWriter(&bytes.Buffer{})
 			w.Close()
 
 			file, err := testFS.Open("regular")

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/aibor/virtrun/initramfs"
 )
 
 func run(args []string) error {
@@ -27,14 +27,14 @@ func run(args []string) error {
 		additionalFiles = append(additionalFiles, path)
 	}
 
-	initRamFS := initramfs.New(initFile)
+	initRamFS := initramfs.New(initramfs.InitFilePath(initFile))
 	if err := initRamFS.AddFiles(additionalFiles...); err != nil {
 		return fmt.Errorf("add files: %v", err)
 	}
 	if err := initRamFS.AddRequiredSharedObjects(); err != nil {
 		return fmt.Errorf("add libs: %v", err)
 	}
-	if err := initRamFS.WriteCPIO(os.Stdout); err != nil {
+	if err := initRamFS.WriteInto(os.Stdout); err != nil {
 		return fmt.Errorf("create archive: %v", err)
 	}
 

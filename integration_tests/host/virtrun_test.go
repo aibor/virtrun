@@ -14,18 +14,30 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/initramfs"
 	"github.com/aibor/virtrun/qemu"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func fetchKernel(path, version, arch string) error {
-	urlFmt := "https://github.com/aibor/ci-kernels/raw/master/linux-%s-%s.tgz"
-	resp, err := http.Get(fmt.Sprintf(urlFmt, version, arch))
+func fetchKernel(ctx context.Context, path, version, arch string) error {
+	url := fmt.Sprintf(
+		"https://github.com/aibor/ci-kernels/raw/master/linux-%s-%s.tgz",
+		version,
+		arch,
+	)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return fmt.Errorf("fetch archive: %v", err)
+		return fmt.Errorf("new request (%s, %s): %v", version, arch, err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("fetch archive (%s, %s): %v", version, arch, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -55,17 +67,31 @@ func fetchKernel(path, version, arch string) error {
 	return fmt.Errorf("kernel file not found")
 }
 
-func mustFetchKernel(t testing.TB, path, version, arch string) {
-	t.Helper()
-
-	require.NoError(t, fetchKernel(path, version, arch))
-}
-
 func TestVirtrun(t *testing.T) {
 	t.Setenv("LD_LIBRARY_PATH", "../../internal/files/testdata/lib")
 
 	binary, err := filepath.Abs("../../internal/files/testdata/bin/main")
 	require.NoError(t, err)
+
+	tmpDir := t.TempDir()
+	kernelPath := func(arch string) string {
+		return filepath.Join(tmpDir, "kernel-"+arch)
+	}
+
+	// Fetch kernel in parallel beforehand. Running the whole tests in parallel
+	// messes up the debug output, so run the actual tests serialized while
+	// speeding up the whole test by pre-fetching the kernels in parallel.
+	ctx, stop := context.WithTimeout(context.Background(), 30*time.Second)
+	t.Cleanup(stop)
+
+	eg, ctx := errgroup.WithContext(ctx)
+	for _, arch := range []string{"amd64", "arm64"} {
+		arch := arch
+		eg.Go(func() error {
+			return fetchKernel(ctx, kernelPath(arch), "6.6", arch)
+		})
+	}
+	require.NoError(t, eg.Wait(), "must fetch kernels")
 
 	tests := []struct {
 		name   string
@@ -88,14 +114,11 @@ func TestVirtrun(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			qemuCmd, err := qemu.CommandFor(tt.arch)
 			require.NoError(t, err)
 
-			tmpDir := t.TempDir()
-			qemuCmd.Kernel = filepath.Join(tmpDir, "kernel")
-			qemuCmd.Initrd = filepath.Join(tmpDir, "initramfs")
+			qemuCmd.Kernel = kernelPath(tt.arch)
+			qemuCmd.Initrd = filepath.Join(tmpDir, "initramfs-"+tt.arch)
 			qemuCmd.Verbose = true
 
 			init, err := virtrun.InitFor(tt.arch)
@@ -117,10 +140,6 @@ func TestVirtrun(t *testing.T) {
 
 			err = archive.WriteInto(file)
 			require.NoError(t, err)
-
-			t.Logf("Fetch kernel %s %s", "6.6", tt.arch)
-			mustFetchKernel(t, qemuCmd.Kernel, "6.6", tt.arch)
-			t.Logf("Fetched kernel")
 
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			t.Cleanup(cancel)

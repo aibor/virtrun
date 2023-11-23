@@ -1,0 +1,14 @@
+name: "Virtrun selftest"
+
+inputs:
+  cmd:
+    description: "Command to run."
+    required: true
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  entrypoint: "bash"
+  args:
+    - "-c"
+    - ${{ inputs.cmd }}

@@ -5,7 +5,7 @@ virtrun is a library and binary QEMU wrapper for running binaries in an
 isolated system as PID 1.
 
 The package uses itself for testing, so see 
-[integration tests](integration_tests/) for real life examples.
+[integrationtesting](integrationtesting/) for real life examples.
 
 ## Commands
 

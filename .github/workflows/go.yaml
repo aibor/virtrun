@@ -30,40 +30,21 @@ jobs:
           version: latest
 
       - name: Run vet with all constraints
-        run: go vet -tags integration,standalone ./...
+        run: go vet -tags integration,integration_guest,standalone ./...
 
       - name: Run go tests
         run: go test -race -v -cover -covermode=atomic ./...
 
-  integration-tests-guest:
-    name: Run integration tests for guest
+  integration-tests:
+    name: Run integration tests
     runs-on: ubuntu-latest
-    needs: lint-and-test
-    strategy:
-      matrix:
-        version: ["6.6", "5.15"]
-        arch: ["amd64", "arm64"]
-        mode: ["wrapped", "standalone"]
     steps:
       - uses: actions/checkout@v3
 
-      - uses: ./integration_tests
-        env:
-          GOARCH: "${{ matrix.arch }}"
-        with:
-          kernel-version: "${{ matrix.version }}"
-          kernel-arch: "${{ matrix.arch }}"
-          cmd: integration_tests/run_guest_tests.sh ${{ matrix.mode }}
+      - name: Ensure kernel dir exists
+        run: mkdir -p ./integrationtesting/kernels
 
-  integration-tests-host:
-    name: Run integration tests for host
-    runs-on: ubuntu-latest
-    needs: lint-and-test
-    steps:
-      - uses: actions/checkout@v3
-
-      - uses: ./integration_tests
+      - name: Run tests
+        uses: ./integrationtesting
         with:
-          kernel-version: "${{ matrix.version }}"
-          kernel-arch: "${{ matrix.arch }}"
-          cmd: go test -race -v -cover -covermode atomic -tags integration ./integration_tests/host/... 
+          cmd: go test -race -v -tags integration ./integrationtesting/ 

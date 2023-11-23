@@ -33,6 +33,18 @@ var (
 // The objects are searched for in the usual search paths of the
 // file's interpreter. Note that the dynamic linker consumes the environment
 // variable LD_LIBRARY_PATH, so it can be used to add additional search paths.
+//
+// Since this implementation executes the ELF interpreter of the given file,
+// it should be run only for trusted binaries!
+//
+// Until version 2.27 the glibc provided ldd worked like this implementation
+// and executed the binaries ELF interpreter directly. Since this has some
+// security implications and may lead to unintended execution of arbitrary code
+// it was changed with version 2.27. With newer versions, ldd tries a set of
+// fixed known ELF interpreters. Since they are specific to the glibc build,
+// thus Linux distribution specific, it is not feasible for this
+// implementation. Because of this the former procedure is used, so use with
+// great care!
 func Ldd(path string) ([]string, error) {
 	interpreter, err := readInterpreter(path)
 	if err != nil {

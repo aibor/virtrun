@@ -7,9 +7,32 @@ isolated system as PID 1.
 The package uses itself for testing, so see 
 [integrationtesting](integrationtesting/) for real life examples.
 
-## Commands
+## Quick start
 
-### virtrun
+The easiest way to use virtrun is to use the embedded init programs. With this, 
+no init binary needs to be provided. 
+
+The path to the kernel must be given, either by flag `-kernel` or by the 
+environment variable `QEMU_KERNEL`. Make sure the kernel matches the 
+architecture of the binaries and the QEMU binary.
+
+If you have it installed in your PATH, run a go test like this:
+
+```
+$ go test -exec "virtrun -kernel /boot/vmlinuz-linux" .
+$ virtrun -kernel /boot/vmlinuz-linux /usr/bin/env
+```
+
+Or use directly:
+
+```
+$ go test -exec "go run github.com/aibor/virtrun" .
+```
+
+Other architectures work as well. You need a kernel for the target
+architecture. Currently supported are "amd64" and "arm64".
+
+## How it works
 
 Virtrun wraps QEMU running an init that runs and communicates its exit code 
 via stdout back to virtrun. It is intended to run simple binaries like 
@@ -21,13 +44,6 @@ qemu-system binary and machine type is used. KVM is enabled if present and
 accessible. Those things can be overridden by flags. See "virtrun -help"
 for all flags.
 
-The path to the kernel must be given, either by flag `-kernel` or by the 
-environment variable `QEMU_KERNEL`. Make sure the kernel matches the 
-architecture of the binaries and the QEMU binary.
-
-Other architectures work as well. You need a kernel for the target
-architecture.
-
 Virtrun supports different QEMU IO transport types. Which is needed depends on 
 the kernel and machine type used. If you don't get any output, try different
 transport types with flag `-transport`
@@ -37,20 +53,7 @@ All flags that are given after the binaries will be passed to the guest's
 are rewritten to virtual consoles before they are passed. So, gotestflags like 
 coverprofile can be used.
 
-#### Wrapped mode (default)
-
-The easiest way to use virtrun is to use the embedded init programs. With this, 
-no init binary needs to be provided. 
-
-If you have it installed in your PATH, run a go test like this:
-
-```
-$ go test -exec "virtrun" .
-$ go test -exec "go run github.com/aibor/virtruncmd/virtrun" .
-$ virtrun -kernel /boot/vmlinuz-linux /usr/bin/env
-```
-
-#### Standalone mode
+## Standalone mode
 
 In Standalone mode, the first given binary is required to be able to act as a 
 system init binary. The only essential required functions are to communicate 
@@ -98,8 +101,3 @@ binary in one of the following ways:
 $ go test -tags virtrun -exec 'virtrun -standalone' .
 $ go test -tags virtrun -exec 'virtrun -standalone' -cover -coverprofile cover.out .
 ```
-
-### mkinitramfs
-
-Mkinitramfs can be used to build simple initramfs. It is mainly used for
-debugging. It outputs the initramfs cpio archive on stdout.

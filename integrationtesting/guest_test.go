@@ -20,7 +20,7 @@ func TestGuestSysinit(t *testing.T) {
 
 	goBinDir := filepath.Join(cwd, "gobin")
 
-	cmd := exec.Command("go", "install", "-buildvcs=false", "../cmd/virtrun")
+	cmd := exec.Command("go", "install", "-buildvcs=false", "..")
 	cmd.Env = append(
 		os.Environ(),
 		fmt.Sprintf("GOBIN=%s", goBinDir),

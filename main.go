@@ -90,7 +90,7 @@ func run() (int, error) {
 	}
 	defer func() {
 		if cfg.keepInitramfs {
-			fmt.Fprintf(os.Stderr, "initramfs kept at: %s", cfg.cmd.Initramfs)
+			fmt.Fprintf(os.Stderr, "initramfs kept at: %s\n", cfg.cmd.Initramfs)
 		} else {
 			_ = os.Remove(cfg.cmd.Initramfs)
 		}

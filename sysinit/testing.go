@@ -21,6 +21,6 @@ func RunTests(m *testing.M) {
 		rc = 127
 
 	}
-	fmt.Fprintf(os.Stderr, "Error: %v", err)
+	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	os.Exit(rc)
 }

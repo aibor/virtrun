@@ -14,14 +14,15 @@ import (
 type config struct {
 	cmd                 *virtrun.Command
 	arch                string
-	binaries            []string
+	binary              string
+	files               []string
 	standalone          bool
 	noGoTestFlagRewrite bool
 	keepInitramfs       bool
 }
 
 func (cfg *config) parseArgs(args []string) error {
-	fsName := fmt.Sprintf("%s [flags...] binaries... [initflags...]", args[0])
+	fsName := fmt.Sprintf("%s [flags...] binary [files...] [initflags...]", args[0])
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 
 	fs.StringVar(
@@ -120,7 +121,7 @@ func (cfg *config) parseArgs(args []string) error {
 		&cfg.standalone,
 		"standalone",
 		cfg.standalone,
-		"run first given binary as init itself. Use this if it has virtrun support built in.",
+		"run first given file as init itself. Use this if it has virtrun support built in.",
 	)
 
 	fs.BoolVar(
@@ -152,33 +153,47 @@ func (cfg *config) parseArgs(args []string) error {
 		return fmt.Errorf(msg)
 	}
 
+	absPath := func(path string) (string, error) {
+		p, err := filepath.Abs(path)
+		if err != nil {
+			return "", failf("absolute path for %s: %v", path, err)
+		}
+		return p, nil
+	}
+
 	if cfg.cmd.Kernel == "" {
 		return failf("no kernel given (use env var QEMU_KERNEL or flag -kernel)")
 	}
 
-	// Consider all positional arguments until one begins with "-" as binary
+	// First positional argument is  supposed to be a binary file.
+	if len(fs.Args()) < 1 {
+		return failf("no binary given")
+	}
+	var err error
+	cfg.binary, err = absPath(fs.Args()[0])
+	if err != nil {
+		return err
+	}
+
+	// Until one begins with "-" consider all further positional arguments
 	// files that should be added to the initramfs. All further arguments
 	// are added as [qemu.Command.InitArgs] that will be passed to the guest
 	// system's init program.
-	var binariesDone bool
-	for _, arg := range fs.Args() {
+	var filesDone bool
+	for _, arg := range fs.Args()[1:] {
 		switch {
 		case strings.HasPrefix(arg, "-"):
-			binariesDone = true
+			filesDone = true
 			fallthrough
-		case binariesDone:
+		case filesDone:
 			cfg.cmd.InitArgs = append(cfg.cmd.InitArgs, arg)
 		default:
-			path, err := filepath.Abs(arg)
+			path, err := absPath(arg)
 			if err != nil {
-				return failf("absolute path for %s: %v", arg, err)
+				return err
 			}
-			cfg.binaries = append(cfg.binaries, path)
+			cfg.files = append(cfg.files, path)
 		}
-	}
-
-	if len(cfg.binaries) < 1 {
-		return failf("no binary given")
 	}
 
 	return nil

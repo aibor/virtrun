@@ -19,16 +19,19 @@ type InitFile func(*files.Entry)
 // required shared libraries can be resolved and added to the Initramfs.
 func InitFilePath(path string) InitFile {
 	return func(rootDir *files.Entry) {
-		rootDir.AddFile("init", path)
+		_, _ = rootDir.AddFile("init", path)
 	}
 }
 
-// InitFileVirtual creates the "/init" file from an [fs.File]. This must be
-// a statically linked binary or it will not start correctly unless the required
-// shared libraries are added manually.
-func InitFileVirtual(init fs.File) InitFile {
+// InitFileVirtual creates the "/init" file from the given init [fs.File]. This
+// must be a statically linked binary or it will not start correctly unless the
+// required shared libraries are added manually. The given main file is added
+// as regular file and supposed to be called by the given "init". Since it is a
+// regular file, it may be dynamically linked.
+func InitFileVirtual(init fs.File, main string) InitFile {
 	return func(rootDir *files.Entry) {
-		rootDir.AddVirtualFile("init", init)
+		_, _ = rootDir.AddVirtualFile("init", init)
+		_, _ = rootDir.AddFile("main", main)
 	}
 }
 

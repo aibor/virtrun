@@ -11,28 +11,9 @@ import (
 	"runtime"
 	"syscall"
 
-	// TODO: Replace with stdlib slices with go 1.21.
-	"golang.org/x/exp/slices"
-
 	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/initramfs"
 )
-
-// buildInitramfs creates an initramfs CPIO archive file in the temporary
-// directory with a unique name.
-func buildInitramfs(initFile initramfs.InitFile, files []string) (string, error) {
-	archive := initramfs.New(initFile)
-
-	if err := archive.AddFiles("virtrun", files...); err != nil {
-		return "", fmt.Errorf("add binaries: %v", err)
-	}
-
-	if err := archive.AddRequiredSharedObjects(""); err != nil {
-		return "", fmt.Errorf("add libs: %v", err)
-	}
-
-	return archive.WriteToTempFile("")
-}
 
 func run() (int, error) {
 	var err error
@@ -70,7 +51,7 @@ func run() (int, error) {
 	if _, err := os.Stat(cfg.cmd.Kernel); errors.Is(err, os.ErrNotExist) {
 		return 1, fmt.Errorf("kernel file %s doesn't exist.", cfg.cmd.Kernel)
 	}
-	for _, file := range cfg.binaries {
+	for _, file := range cfg.files {
 		if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
 			return 1, fmt.Errorf("file %s doesn't exist.", file)
 		}
@@ -83,24 +64,30 @@ func run() (int, error) {
 	}
 
 	// Build initramfs for the run.
-	var initFile initramfs.InitFile
+	var irfs *initramfs.Initramfs
 	if cfg.standalone {
-		// In standalone mode, the first binary (which might be the only one)
+		// In standalone mode, the first file (which might be the only one)
 		// is supposed to work as an init matching our requirements.
-		initFile = initramfs.InitFilePath(cfg.binaries[0])
-		cfg.binaries = slices.Delete(cfg.binaries, 0, 1)
+		irfs = initramfs.New(initramfs.InitFilePath(cfg.binary))
 	} else {
 		// In the default wrapped mode a pre-compiled init is used that just
-		// execute anything that it finds in the "/virtrun" directory.
+		// executes "/main".
 		init, err := virtrun.InitFor(cfg.arch)
 		if err != nil {
 			return 1, err
 		}
-		initFile = initramfs.InitFileVirtual(init)
+		irfs = initramfs.New(initramfs.InitFileVirtual(init, cfg.binary))
 	}
-	cfg.cmd.Initramfs, err = buildInitramfs(initFile, cfg.binaries)
+	if err := irfs.AddFiles("data", cfg.files...); err != nil {
+		return 1, fmt.Errorf("add files: %v", err)
+	}
+	if err := irfs.AddRequiredSharedObjects(""); err != nil {
+		return 1, fmt.Errorf("add libs: %v", err)
+	}
+
+	cfg.cmd.Initramfs, err = irfs.WriteToTempFile("")
 	if err != nil {
-		return 1, fmt.Errorf("initramfs: %v", err)
+		return 1, fmt.Errorf("write initramfs: %v", err)
 	}
 	defer func() {
 		if cfg.keepInitramfs {

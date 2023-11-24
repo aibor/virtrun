@@ -3,25 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/aibor/virtrun/sysinit"
 )
 
 func runInit() (int, error) {
 	err := sysinit.Run(func() (int, error) {
-		dir := "virtrun"
-		files, err := os.ReadDir(dir)
-		if err != nil {
-			return 98, err
-		}
-
-		paths := make([]string, len(files))
-		for idx, f := range files {
-			paths[idx] = filepath.Join(dir, f.Name())
-		}
-
-		return 0, sysinit.ExecParallel(paths, os.Args[1:], os.Stdout, os.Stderr)
+		return 0, sysinit.Exec("/main", os.Args[1:], os.Stdout, os.Stderr)
 	})
 	if err == sysinit.ErrNotPidOne {
 		return 127, err

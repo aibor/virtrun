@@ -45,9 +45,7 @@ func TestParseArgs(t *testing.T) {
 				"-test.timeout=10m0s",
 			},
 			expected: config{
-				binaries: []string{
-					absBinPath,
-				},
+				binary: absBinPath,
 				cmd: &virtrun.Command{
 					Kernel: "/boot/this",
 					InitArgs: []string{
@@ -78,9 +76,7 @@ func TestParseArgs(t *testing.T) {
 				"-test.timeout=10m0s",
 			},
 			expected: config{
-				binaries: []string{
-					absBinPath,
-				},
+				binary: absBinPath,
 				cmd: &virtrun.Command{
 					Kernel:        "/boot/this",
 					CPU:           "host",
@@ -107,19 +103,17 @@ func TestParseArgs(t *testing.T) {
 				"-kernel=/boot/this",
 				"bin.test",
 				"-test.paniconexit0",
-				"another.binary",
+				"another.file",
 				"-x",
 				"-standalone",
 			},
 			expected: config{
-				binaries: []string{
-					absBinPath,
-				},
+				binary: absBinPath,
 				cmd: &virtrun.Command{
 					Kernel: "/boot/this",
 					InitArgs: []string{
 						"-test.paniconexit0",
-						"another.binary",
+						"another.file",
 						"-x",
 						"-standalone",
 					},

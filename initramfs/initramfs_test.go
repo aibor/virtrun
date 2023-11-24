@@ -19,34 +19,44 @@ func TestInitramfsNew(t *testing.T) {
 	testFile, err := testFS.Open("input")
 	require.NoError(t, err)
 
-	verifyInitEntry := func(expected files.Entry) func(*testing.T, *Initramfs) {
+	verifyEntry := func(path string, expected files.Entry) func(*testing.T, *Initramfs) {
 		return func(t *testing.T, i *Initramfs) {
-			entry, err := i.fileTree.GetEntry("/init")
+			entry, err := i.fileTree.GetEntry(path)
 			require.NoError(t, err, "must get init entry")
 			assert.Equal(t, expected, *entry)
 		}
 	}
 
+	type verifyFunc func(*testing.T, *Initramfs)
+
 	tests := []struct {
 		name     string
 		initFile InitFile
-		verify   func(*testing.T, *Initramfs)
+		verify   []verifyFunc
 	}{
 		{
 			name:     "init from real path",
 			initFile: InitFilePath("first"),
-			verify: verifyInitEntry(files.Entry{
-				Type:        files.TypeRegular,
-				RelatedPath: "first",
-			}),
+			verify: []verifyFunc{
+				verifyEntry("/init", files.Entry{
+					Type:        files.TypeRegular,
+					RelatedPath: "first",
+				}),
+			},
 		},
 		{
 			name:     "init from embedded file",
-			initFile: InitFileVirtual(testFile),
-			verify: verifyInitEntry(files.Entry{
-				Type:   files.TypeVirtual,
-				Source: testFile,
-			}),
+			initFile: InitFileVirtual(testFile, "main"),
+			verify: []verifyFunc{
+				verifyEntry("/init", files.Entry{
+					Type:   files.TypeVirtual,
+					Source: testFile,
+				}),
+				verifyEntry("/main", files.Entry{
+					Type:        files.TypeRegular,
+					RelatedPath: "main",
+				}),
+			},
 		},
 	}
 
@@ -54,7 +64,9 @@ func TestInitramfsNew(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			i := New(tt.initFile)
-			tt.verify(t, i)
+			for _, verify := range tt.verify {
+				verify(t, i)
+			}
 		})
 	}
 }

@@ -30,7 +30,7 @@ func TestHostVirtrunCmd(t *testing.T) {
 			require.NoError(t, err)
 
 			cmd.Kernel = kernel.Path(KernelCacheDir)
-			cmd.Verbose = true
+			cmd.Verbose = Verbose
 
 			init, err := virtrun.InitFor(kernel.Arch)
 			require.NoError(t, err)

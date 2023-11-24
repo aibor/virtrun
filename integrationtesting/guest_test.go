@@ -44,7 +44,9 @@ func TestGuestSysinit(t *testing.T) {
 					execArgs := []string{
 						filepath.Join(goBinDir, "virtrun"),
 						"-kernel", kernel.Path(absKernelDir),
-						"-verbose",
+					}
+					if Verbose {
+						execArgs = append(execArgs, "-verbose")
 					}
 					testTags := []string{
 						"integration_guest",

@@ -9,7 +9,10 @@ import (
 	"testing"
 )
 
-var KernelCacheDir = "./kernels"
+var (
+	KernelCacheDir = "./kernels"
+	Verbose        bool
+)
 
 func TestMain(m *testing.M) {
 	flag.StringVar(
@@ -17,6 +20,12 @@ func TestMain(m *testing.M) {
 		"kernelDir",
 		KernelCacheDir,
 		"directory to store kernels in",
+	)
+	flag.BoolVar(
+		&Verbose,
+		"verbose",
+		Verbose,
+		"show complete guest output",
 	)
 	flag.Parse()
 

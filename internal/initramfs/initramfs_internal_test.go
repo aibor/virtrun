@@ -7,26 +7,23 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aibor/virtrun/internal/archive"
-	"github.com/aibor/virtrun/internal/files"
 )
 
-func assertEntry(t *testing.T, i *Initramfs, p string, e files.Entry) {
+func assertNode(t *testing.T, i *Initramfs, p string, e TreeNode) {
 	t.Helper()
-	entry, err := i.fileTree.GetEntry(p)
+	node, err := i.fileTree.GetNode(p)
 	require.NoError(t, err)
-	assert.Equal(t, e, *entry)
+	assert.Equal(t, e, *node)
 }
 
 func TestInitramfsNew(t *testing.T) {
 	i := New("first")
 
-	expected := files.Entry{
-		Type:        files.TypeRegular,
+	expected := TreeNode{
+		Type:        FileTypeRegular,
 		RelatedPath: "first",
 	}
-	assertEntry(t, i, "/init", expected)
+	assertNode(t, i, "/init", expected)
 }
 
 func TestInitramfsNewWithInitFor(t *testing.T) {
@@ -43,17 +40,17 @@ func TestInitramfsNewWithInitFor(t *testing.T) {
 			expectedSource, err := initFor(arch)
 			require.NoError(t, err, "must get expected init")
 
-			expectedInit := files.Entry{
-				Type:   files.TypeVirtual,
+			expectedInit := TreeNode{
+				Type:   FileTypeVirtual,
 				Source: expectedSource,
 			}
-			assertEntry(t, i, "/init", expectedInit)
+			assertNode(t, i, "/init", expectedInit)
 
-			expectedMain := files.Entry{
-				Type:        files.TypeRegular,
+			expectedMain := TreeNode{
+				Type:        FileTypeRegular,
 				RelatedPath: "first",
 			}
-			assertEntry(t, i, "/main", expectedMain)
+			assertNode(t, i, "/main", expectedMain)
 		})
 	}
 }
@@ -71,9 +68,9 @@ func TestInitramfsAddFile(t *testing.T) {
 
 	for file, relPath := range expected {
 		path := filepath.Join("dir", file)
-		e, err := archive.fileTree.GetEntry(path)
+		e, err := archive.fileTree.GetNode(path)
 		require.NoError(t, err, path)
-		assert.Equal(t, files.TypeRegular, e.Type)
+		assert.Equal(t, FileTypeRegular, e.Type)
 		assert.Equal(t, relPath, e.RelatedPath)
 	}
 }
@@ -94,9 +91,9 @@ func TestInitramfsAddFiles(t *testing.T) {
 
 	for file, relPath := range expected {
 		path := filepath.Join("dir", file)
-		e, err := archive.fileTree.GetEntry(path)
+		e, err := archive.fileTree.GetNode(path)
 		require.NoError(t, err, path)
-		assert.Equal(t, files.TypeRegular, e.Type)
+		assert.Equal(t, FileTypeRegular, e.Type)
 		assert.Equal(t, relPath, e.RelatedPath)
 	}
 }
@@ -108,40 +105,40 @@ func TestInitramfsWriteTo(t *testing.T) {
 	testFile, err := testFS.Open("input")
 	require.NoError(t, err)
 
-	test := func(entry *files.Entry, w *archive.MockWriter) error {
+	test := func(node *TreeNode, w *MockWriter) error {
 		i := Initramfs{}
-		_, err := i.fileTree.GetRoot().AddEntry("init", entry)
+		_, err := i.fileTree.GetRoot().AddNode("init", node)
 		require.NoError(t, err)
 		return i.writeTo(w, testFS)
 	}
 
 	t.Run("unknown file type", func(t *testing.T) {
-		err := test(&files.Entry{Type: files.Type(99)}, &archive.MockWriter{})
+		err := test(&TreeNode{Type: FileType(99)}, &MockWriter{})
 		assert.ErrorContains(t, err, "unknown file type 99")
 	})
 
 	t.Run("nonexisting source", func(t *testing.T) {
-		entry := &files.Entry{
-			Type:        files.TypeRegular,
+		node := &TreeNode{
+			Type:        FileTypeRegular,
 			RelatedPath: "nonexisting",
 		}
-		err := test(entry, &archive.MockWriter{})
+		err := test(node, &MockWriter{})
 		assert.ErrorContains(t, err, "open nonexisting: file does not exist")
 	})
 
 	t.Run("existing files", func(t *testing.T) {
 		tests := []struct {
-			name  string
-			entry files.Entry
-			mock  archive.MockWriter
+			name string
+			node TreeNode
+			mock MockWriter
 		}{
 			{
 				name: "regular",
-				entry: files.Entry{
-					Type:        files.TypeRegular,
+				node: TreeNode{
+					Type:        FileTypeRegular,
 					RelatedPath: "/input",
 				},
-				mock: archive.MockWriter{
+				mock: MockWriter{
 					Path:   "/init",
 					Source: testFile,
 					Mode:   0755,
@@ -149,31 +146,31 @@ func TestInitramfsWriteTo(t *testing.T) {
 			},
 			{
 				name: "directory",
-				entry: files.Entry{
-					Type: files.TypeDirectory,
+				node: TreeNode{
+					Type: FileTypeDirectory,
 				},
-				mock: archive.MockWriter{
+				mock: MockWriter{
 					Path: "/init",
 				},
 			},
 			{
 				name: "link",
-				entry: files.Entry{
-					Type:        files.TypeLink,
+				node: TreeNode{
+					Type:        FileTypeLink,
 					RelatedPath: "/lib",
 				},
-				mock: archive.MockWriter{
+				mock: MockWriter{
 					Path:        "/init",
 					RelatedPath: "/lib",
 				},
 			},
 			{
 				name: "virtual",
-				entry: files.Entry{
-					Type:   files.TypeVirtual,
+				node: TreeNode{
+					Type:   FileTypeVirtual,
 					Source: testFile,
 				},
-				mock: archive.MockWriter{
+				mock: MockWriter{
 					Path:   "/init",
 					Source: testFile,
 					Mode:   0755,
@@ -186,18 +183,18 @@ func TestInitramfsWriteTo(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Run("works", func(t *testing.T) {
 					i := Initramfs{}
-					_, err := i.fileTree.GetRoot().AddEntry("init", &tt.entry)
+					_, err := i.fileTree.GetRoot().AddNode("init", &tt.node)
 					require.NoError(t, err)
-					mock := archive.MockWriter{}
+					mock := MockWriter{}
 					err = i.writeTo(&mock, testFS)
 					require.NoError(t, err)
 					assert.Equal(t, tt.mock, mock)
 				})
 				t.Run("fails", func(t *testing.T) {
 					i := Initramfs{}
-					_, err := i.fileTree.GetRoot().AddEntry("init", &tt.entry)
+					_, err := i.fileTree.GetRoot().AddNode("init", &tt.node)
 					require.NoError(t, err)
-					mock := archive.MockWriter{Err: assert.AnError}
+					mock := MockWriter{Err: assert.AnError}
 					err = i.writeTo(&mock, testFS)
 					assert.Error(t, err, assert.AnError)
 				})
@@ -207,37 +204,37 @@ func TestInitramfsWriteTo(t *testing.T) {
 }
 
 func TestInitramfsResolveLinkedLibs(t *testing.T) {
-	t.Setenv("LD_LIBRARY_PATH", "../internal/files/testdata/lib")
-	irfs := New("../internal/files/testdata/bin/main")
+	t.Setenv("LD_LIBRARY_PATH", "testdata/lib")
+	irfs := New("testdata/bin/main")
 	err := irfs.AddRequiredSharedObjects("")
 	require.NoError(t, err)
 
-	expectedFiles := map[string]files.Entry{
+	expectedFiles := map[string]TreeNode{
 		"/lib": {
-			Type: files.TypeDirectory,
+			Type: FileTypeDirectory,
 		},
 		"/lib/libfunc2.so": {
-			Type:        files.TypeRegular,
-			RelatedPath: "../internal/files/testdata/lib/libfunc2.so",
+			Type:        FileTypeRegular,
+			RelatedPath: "testdata/lib/libfunc2.so",
 		},
 		"/lib/libfunc3.so": {
-			Type:        files.TypeRegular,
-			RelatedPath: "../internal/files/testdata/lib/libfunc3.so",
+			Type:        FileTypeRegular,
+			RelatedPath: "testdata/lib/libfunc3.so",
 		},
 		"/lib/libfunc1.so": {
-			Type:        files.TypeRegular,
-			RelatedPath: "../internal/files/testdata/lib/libfunc1.so",
+			Type:        FileTypeRegular,
+			RelatedPath: "testdata/lib/libfunc1.so",
 		},
 	}
 
 	for f, e := range expectedFiles {
-		entry, err := irfs.fileTree.GetEntry(f)
+		node, err := irfs.fileTree.GetNode(f)
 		if assert.NoError(t, err, f) {
-			assert.Equal(t, e.Type, entry.Type, f)
+			assert.Equal(t, e.Type, node.Type, f)
 			if e.RelatedPath != "" {
 				expectedPath, err := filepath.Abs(e.RelatedPath)
 				require.NoError(t, err)
-				assert.Equal(t, expectedPath, entry.RelatedPath, f)
+				assert.Equal(t, expectedPath, node.RelatedPath, f)
 			}
 		}
 	}

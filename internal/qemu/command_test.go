@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aibor/virtrun/qemu"
+	"github.com/aibor/virtrun/internal/qemu"
 )
 
 func TestCommmandConsoleDeviceName(t *testing.T) {

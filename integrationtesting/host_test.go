@@ -13,14 +13,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aibor/virtrun/initramfs"
-	"github.com/aibor/virtrun/qemu"
+	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/aibor/virtrun/internal/qemu"
 )
 
 func TestHostVirtrunCmd(t *testing.T) {
-	t.Setenv("LD_LIBRARY_PATH", "../internal/files/testdata/lib")
+	t.Setenv("LD_LIBRARY_PATH", "../internal/initramfs/testdata/lib")
 
-	binary, err := filepath.Abs("../internal/files/testdata/bin/main")
+	binary, err := filepath.Abs("../internal/initramfs/testdata/bin/main")
 	require.NoError(t, err)
 
 	for _, kernel := range TestKernels {

@@ -6,13 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
-)
 
-// RCFmt is the format string for communicating the test results
-//
-// It is parsed in the qemu wrapper. Not present in the output if the test
-// binary panicked.
-const RCFmt = "INIT_RC: %d\n"
+	"github.com/aibor/virtrun/internal/constants"
+)
 
 // ErrNotPidOne may be returned if the process is expected to be run as PID 1
 // but is not.
@@ -21,7 +17,7 @@ var ErrNotPidOne = errors.New("process does not have ID 1")
 // PrintRC prints the magic string communicating the return code of
 // the tests.
 func PrintRC(ret int) {
-	fmt.Printf(RCFmt, ret)
+	fmt.Printf(constants.RCFmt, ret)
 }
 
 // IsPidOne returns true if the running process has PID 1.

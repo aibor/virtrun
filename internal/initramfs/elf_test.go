@@ -1,11 +1,11 @@
-package files_test
+package initramfs_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aibor/virtrun/internal/files"
+	"github.com/aibor/virtrun/internal/initramfs"
 )
 
 func TestFilesLdd(t *testing.T) {
@@ -41,7 +41,7 @@ func TestFilesLdd(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("LD_LIBRARY_PATH", tt.searchPath)
-			paths, err := files.Ldd(tt.file)
+			paths, err := initramfs.Ldd(tt.file)
 			if tt.errMsg == "" {
 				assert.NoErrorf(t, err, "must resolve")
 			} else {

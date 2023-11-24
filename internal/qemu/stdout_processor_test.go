@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aibor/virtrun/qemu"
-	"github.com/aibor/virtrun/sysinit"
+	"github.com/aibor/virtrun/internal/constants"
+	"github.com/aibor/virtrun/internal/qemu"
 )
 
 func TestStdoutProcessor(t *testing.T) {
@@ -54,7 +54,7 @@ func TestStdoutProcessor(t *testing.T) {
 			input: []string{
 				"something out",
 				"more out",
-				fmt.Sprintf(sysinit.RCFmt, 4),
+				fmt.Sprintf(constants.RCFmt, 4),
 			},
 			output: []string{
 				"something out",

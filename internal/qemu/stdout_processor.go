@@ -7,7 +7,7 @@ import (
 	"io"
 	"regexp"
 
-	"github.com/aibor/virtrun/sysinit"
+	"github.com/aibor/virtrun/internal/constants"
 )
 
 var panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
@@ -27,7 +27,7 @@ func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
 			if rcErr != nil {
 				rc = 125
 			}
-		} else if _, err := fmt.Sscanf(line, sysinit.RCFmt, &rc); err == nil {
+		} else if _, err := fmt.Sscanf(line, constants.RCFmt, &rc); err == nil {
 			rcErr = nil
 		}
 		if rcErr != nil || verbose {

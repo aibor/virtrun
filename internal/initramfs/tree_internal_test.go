@@ -1,4 +1,4 @@
-package files
+package initramfs
 
 import (
 	"path/filepath"
@@ -21,41 +21,41 @@ func TestTreeGetRoot(t *testing.T) {
 	tree := Tree{}
 	r := tree.GetRoot()
 	assert.NotNil(t, tree.root)
-	assert.Equal(t, TypeDirectory, tree.root.Type)
+	assert.Equal(t, FileTypeDirectory, tree.root.Type)
 	assert.Equal(t, tree.root, r)
 }
 
-func TestTreeGetEntry(t *testing.T) {
-	leafEntry := Entry{
-		Type:        TypeRegular,
+func TestTreeGetNode(t *testing.T) {
+	leafNode := TreeNode{
+		Type:        FileTypeRegular,
 		RelatedPath: "yo",
 	}
-	dirEntry := Entry{
-		Type: TypeDirectory,
-		children: map[string]*Entry{
-			"leaf": &leafEntry,
+	dirNode := TreeNode{
+		Type: FileTypeDirectory,
+		children: map[string]*TreeNode{
+			"leaf": &leafNode,
 		},
 	}
 	tree := Tree{
-		root: &Entry{
-			Type: TypeDirectory,
-			children: map[string]*Entry{
-				"dir": &dirEntry,
+		root: &TreeNode{
+			Type: FileTypeDirectory,
+			children: map[string]*TreeNode{
+				"dir": &dirNode,
 			},
 		},
 	}
 
-	r, err := tree.GetEntry("")
+	r, err := tree.GetNode("")
 	require.NoError(t, err)
 	assert.Equal(t, tree.root, r)
 
-	l, err := tree.GetEntry(filepath.Join("dir", "leaf"))
+	l, err := tree.GetNode(filepath.Join("dir", "leaf"))
 	require.NoError(t, err)
-	assert.Equal(t, &leafEntry, l)
+	assert.Equal(t, &leafNode, l)
 
-	d, err := tree.GetEntry("/dir")
+	d, err := tree.GetNode("/dir")
 	require.NoError(t, err)
-	assert.Equal(t, &dirEntry, d)
+	assert.Equal(t, &dirNode, d)
 }
 
 func TestTreeMkdir(t *testing.T) {
@@ -64,7 +64,7 @@ func TestTreeMkdir(t *testing.T) {
 		e, err := tree.Mkdir("dir")
 		require.NoError(t, err)
 		assert.Equal(t, e, tree.GetRoot().children["dir"])
-		assert.Equal(t, TypeDirectory, e.Type)
+		assert.Equal(t, FileTypeDirectory, e.Type)
 		assert.Equal(t, "", e.RelatedPath)
 	})
 
@@ -72,13 +72,13 @@ func TestTreeMkdir(t *testing.T) {
 		tree := Tree{}
 		e, err := tree.Mkdir("sub/dir")
 		require.NoError(t, err)
-		assert.Equal(t, TypeDirectory, e.Type)
+		assert.Equal(t, FileTypeDirectory, e.Type)
 		assert.Equal(t, "", e.RelatedPath)
 		assert.Empty(t, e.children)
-		s, err := tree.GetEntry("sub")
+		s, err := tree.GetNode("sub")
 		require.NoError(t, err)
 		assert.Equal(t, s, tree.GetRoot().children["sub"])
-		assert.Equal(t, TypeDirectory, s.Type)
+		assert.Equal(t, FileTypeDirectory, s.Type)
 		assert.Equal(t, "", s.RelatedPath)
 		assert.Equal(t, e, s.children["dir"])
 	})
@@ -113,10 +113,10 @@ func TestTreeLn(t *testing.T) {
 		tree := Tree{}
 		err := tree.Ln("target", "link")
 		require.NoError(t, err)
-		e, err := tree.GetEntry("link")
+		e, err := tree.GetNode("link")
 		require.NoError(t, err)
 		assert.Equal(t, e, tree.GetRoot().children["link"])
-		assert.Equal(t, TypeLink, e.Type)
+		assert.Equal(t, FileTypeLink, e.Type)
 		assert.Equal(t, "target", e.RelatedPath)
 		assert.Empty(t, e.children)
 	})
@@ -125,14 +125,14 @@ func TestTreeLn(t *testing.T) {
 		tree := Tree{}
 		err := tree.Ln("target", "dir/link")
 		require.NoError(t, err)
-		e, err := tree.GetEntry("dir/link")
+		e, err := tree.GetNode("dir/link")
 		require.NoError(t, err)
-		assert.Equal(t, TypeLink, e.Type)
+		assert.Equal(t, FileTypeLink, e.Type)
 		assert.Equal(t, "target", e.RelatedPath)
 		assert.Empty(t, e.children)
-		s, err := tree.GetEntry("dir")
+		s, err := tree.GetNode("dir")
 		require.NoError(t, err)
-		assert.Equal(t, TypeDirectory, s.Type)
+		assert.Equal(t, FileTypeDirectory, s.Type)
 		assert.Equal(t, "", s.RelatedPath)
 		assert.Equal(t, e, s.children["link"])
 	})

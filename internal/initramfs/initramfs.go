@@ -7,9 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/aibor/virtrun/internal/archive"
-	"github.com/aibor/virtrun/internal/files"
 )
 
 // Initramfs represents a file tree that can be used as an initramfs for the
@@ -21,7 +18,7 @@ import (
 // [Initramfs.AddRequiredSharedObjects]. Once ready, write the [Initramfs] with
 // [Initramfs.WriteInto].
 type Initramfs struct {
-	fileTree files.Tree
+	fileTree Tree
 }
 
 // New creates a new [Initramfs] with "/init" copied from the given file path.
@@ -29,7 +26,7 @@ func New(path string) *Initramfs {
 	i := &Initramfs{}
 	rootDir := i.fileTree.GetRoot()
 	// Never fails on a new tree.
-	_, _ = rootDir.AddFile("init", path)
+	_, _ = rootDir.AddRegular("init", path)
 	return i
 }
 
@@ -45,8 +42,8 @@ func NewWithInitFor(arch, main string) (*Initramfs, error) {
 	i := &Initramfs{}
 	rootDir := i.fileTree.GetRoot()
 	// Never fails on a new tree.
-	_, _ = rootDir.AddVirtualFile("init", init)
-	_, _ = rootDir.AddFile("main", main)
+	_, _ = rootDir.AddVirtual("init", init)
+	_, _ = rootDir.AddRegular("main", main)
 	return i, nil
 }
 
@@ -57,17 +54,17 @@ func (i *Initramfs) AddFile(dir, name, path string) error {
 	if name == "" {
 		name = filepath.Base(path)
 	}
-	return i.withDirEntry(dir, func(dirEntry *files.Entry) error {
-		return addFile(dirEntry, name, path)
+	return i.withDirNode(dir, func(dirNode *TreeNode) error {
+		return addFile(dirNode, name, path)
 	})
 }
 
 // AddFiles creates [Initramfs.filesDir] and adds the given files to it.
 // The file paths must be absolute or relative to "/".
 func (i *Initramfs) AddFiles(dir string, paths ...string) error {
-	return i.withDirEntry(dir, func(dirEntry *files.Entry) error {
+	return i.withDirNode(dir, func(dirNode *TreeNode) error {
 		for _, file := range paths {
-			if err := addFile(dirEntry, filepath.Base(file), file); err != nil {
+			if err := addFile(dirNode, filepath.Base(file), file); err != nil {
 				return err
 			}
 		}
@@ -93,13 +90,13 @@ func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
 	// interpreter). Collect the absolute paths of the found shared objects
 	// deduplicated in a set.
 	pathSet := make(map[string]bool)
-	if err := i.fileTree.Walk(func(path string, entry *files.Entry) error {
-		if entry.Type != files.TypeRegular {
+	if err := i.fileTree.Walk(func(path string, node *TreeNode) error {
+		if node.Type != FileTypeRegular {
 			return nil
 		}
-		paths, err := files.Ldd(entry.RelatedPath)
+		paths, err := Ldd(node.RelatedPath)
 		if err != nil {
-			if err == files.ErrNotELFFile || err == files.ErrNoInterpreter {
+			if err == ErrNotELFFile || err == ErrNoInterpreter {
 				return nil
 			}
 			return fmt.Errorf("resolve %s: %v", path, err)
@@ -121,7 +118,7 @@ func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
 			return nil
 		}
 		err := i.fileTree.Ln(libsDir, dir)
-		if err != nil && err != files.ErrEntryExists {
+		if err != nil && err != ErrNodeExists {
 			return fmt.Errorf("add link for %s: %v", dir, err)
 		}
 		return nil
@@ -131,10 +128,10 @@ func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
 	// In order to keep any references and search paths of the dynamic linker
 	// working, add symbolic links for all other directories where libs are
 	// copied from to the central lib dir.
-	if err := i.withDirEntry(libsDir, func(dirEntry *files.Entry) error {
+	if err := i.withDirNode(libsDir, func(dirNode *TreeNode) error {
 		for path := range pathSet {
 			dir, name := filepath.Split(path)
-			if _, err := dirEntry.AddFile(name, path); err != nil {
+			if _, err := dirNode.AddRegular(name, path); err != nil {
 				return fmt.Errorf("add file %s: %v", name, err)
 			}
 			if err := addLinkToLibDir(dir); err != nil {
@@ -181,47 +178,47 @@ func (i *Initramfs) WriteToTempFile(tmpDir string) (string, error) {
 
 // WriteInto writes the [Initramfs] as CPIO archive to the given writer.
 func (i *Initramfs) WriteInto(writer io.Writer) error {
-	w := archive.NewCPIOWriter(writer)
+	w := NewCPIOWriter(writer)
 	defer w.Close()
 	return i.writeTo(w, os.DirFS("/"))
 }
 
 // writeTo writes all collected files into the given writer. Regular files are
 // copied from the given sourceFS.
-func (i *Initramfs) writeTo(writer archive.Writer, sourceFS fs.FS) error {
-	return i.fileTree.Walk(func(path string, entry *files.Entry) error {
-		switch entry.Type {
-		case files.TypeRegular:
+func (i *Initramfs) writeTo(writer Writer, sourceFS fs.FS) error {
+	return i.fileTree.Walk(func(path string, node *TreeNode) error {
+		switch node.Type {
+		case FileTypeRegular:
 			// Cut leading / since fs.FS considers it invalid.
-			relPath := strings.TrimPrefix(entry.RelatedPath, "/")
+			relPath := strings.TrimPrefix(node.RelatedPath, "/")
 			source, err := sourceFS.Open(relPath)
 			if err != nil {
 				return err
 			}
 			defer source.Close()
 			return writer.WriteRegular(path, source, 0755)
-		case files.TypeDirectory:
+		case FileTypeDirectory:
 			return writer.WriteDirectory(path)
-		case files.TypeLink:
-			return writer.WriteLink(path, entry.RelatedPath)
-		case files.TypeVirtual:
-			return writer.WriteRegular(path, entry.Source, 0755)
+		case FileTypeLink:
+			return writer.WriteLink(path, node.RelatedPath)
+		case FileTypeVirtual:
+			return writer.WriteRegular(path, node.Source, 0755)
 		default:
-			return fmt.Errorf("unknown file type %d", entry.Type)
+			return fmt.Errorf("unknown file type %d", node.Type)
 		}
 	})
 }
 
-func (i *Initramfs) withDirEntry(dir string, fn func(*files.Entry) error) error {
-	dirEntry, err := i.fileTree.Mkdir(dir)
+func (i *Initramfs) withDirNode(dir string, fn func(*TreeNode) error) error {
+	dirNode, err := i.fileTree.Mkdir(dir)
 	if err != nil {
 		return fmt.Errorf("add dir %s: %v", dir, err)
 	}
-	return fn(dirEntry)
+	return fn(dirNode)
 }
 
-func addFile(dirEntry *files.Entry, name, path string) error {
-	if _, err := dirEntry.AddFile(name, path); err != nil {
+func addFile(dirNode *TreeNode, name, path string) error {
+	if _, err := dirNode.AddRegular(name, path); err != nil {
 		return fmt.Errorf("add file %s: %v", path, err)
 	}
 	return nil

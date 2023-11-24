@@ -11,8 +11,8 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/aibor/virtrun/initramfs"
-	"github.com/aibor/virtrun/qemu"
+	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/aibor/virtrun/internal/qemu"
 )
 
 func run() (int, error) {

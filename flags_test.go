@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aibor/virtrun/qemu"
+	"github.com/aibor/virtrun/internal/qemu"
 )
 
 func TestParseArgs(t *testing.T) {

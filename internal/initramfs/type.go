@@ -1,17 +1,17 @@
-package files
+package initramfs
 
-// Type defines the type of an [Entry].
-type Type int
+// FileType defines the type of a [TreeNode].
+type FileType int
 
 const (
 	// A regular file is copied completely into the archive.
-	TypeRegular Type = iota
+	FileTypeRegular FileType = iota
 	// A directory is created in the archive. Parent directories are not created
 	// automatically. Ensure to create the complete file tree yourself.
-	TypeDirectory
+	FileTypeDirectory
 	// A symbolic link in the archive.
-	TypeLink
+	FileTypeLink
 	// A file with its content written from an io.Reader instead of being
 	// copied from the fs.
-	TypeVirtual
+	FileTypeVirtual
 )

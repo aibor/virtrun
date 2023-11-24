@@ -1,9 +1,8 @@
-package virtrun
+package qemu
 
 import (
 	"testing"
 
-	"github.com/aibor/virtrun/qemu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -12,7 +11,7 @@ func TestCommmandArgs(t *testing.T) {
 	t.Run("yes-kvm", func(t *testing.T) {
 		cmd := Command{}
 		args := cmd.Args()
-		assert.Contains(t, args, qemu.UniqueArg("enable-kvm"))
+		assert.Contains(t, args, UniqueArg("enable-kvm"))
 	})
 
 	t.Run("no-kvm", func(t *testing.T) {
@@ -20,7 +19,7 @@ func TestCommmandArgs(t *testing.T) {
 			NoKVM: true,
 		}
 		args := cmd.Args()
-		assert.NotContains(t, args, qemu.UniqueArg("enable-kvm"))
+		assert.NotContains(t, args, UniqueArg("enable-kvm"))
 	})
 
 	t.Run("yes-verbose", func(t *testing.T) {
@@ -43,13 +42,13 @@ func TestCommmandArgs(t *testing.T) {
 				"/output/file1",
 				"/output/file2",
 			},
-			TransportType: qemu.TransportTypeMMIO,
+			TransportType: TransportTypeMMIO,
 		}
 
-		expected := qemu.Arguments{
-			qemu.ArgChardev("file,id=vcon1,path=/dev/fd/1"),
-			qemu.ArgChardev("file,id=vcon3,path=/dev/fd/3"),
-			qemu.ArgChardev("file,id=vcon4,path=/dev/fd/4"),
+		expected := Arguments{
+			ArgChardev("file,id=vcon1,path=/dev/fd/1"),
+			ArgChardev("file,id=vcon3,path=/dev/fd/3"),
+			ArgChardev("file,id=vcon4,path=/dev/fd/4"),
 		}
 
 		found := 0
@@ -71,13 +70,13 @@ func TestCommmandArgs(t *testing.T) {
 				"/output/file1",
 				"/output/file2",
 			},
-			TransportType: qemu.TransportTypeISA,
+			TransportType: TransportTypeISA,
 		}
 
-		expected := qemu.Arguments{
-			qemu.ArgSerial("file:/dev/fd/1"),
-			qemu.ArgSerial("file:/dev/fd/3"),
-			qemu.ArgSerial("file:/dev/fd/4"),
+		expected := Arguments{
+			ArgSerial("file:/dev/fd/1"),
+			ArgSerial("file:/dev/fd/3"),
+			ArgSerial("file:/dev/fd/4"),
 		}
 
 		found := 0

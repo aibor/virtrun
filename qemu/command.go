@@ -1,4 +1,4 @@
-package virtrun
+package qemu
 
 import (
 	"context"
@@ -6,11 +6,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
+	"strings"
 
 	"golang.org/x/sync/errgroup"
-
-	"github.com/aibor/virtrun/qemu"
 )
 
 // Command defines the parameters for a single virtualized run.
@@ -37,11 +37,11 @@ type Command struct {
 	// Transport type for IO. This depends on machine type and the kernel.
 	// TransportTypeIsa should always work, but will give only one slot for
 	// microvm machine type. ARM type virt does not support ISA type at all.
-	TransportType qemu.TransportType
+	TransportType TransportType
 	// ExtraArgs are  extra arguments that are passed to the QEMU command.
 	// They may not interfere with the essential arguments set by the command
 	// itself or an error will be returned on [Command.Run].
-	ExtraArgs qemu.Arguments
+	ExtraArgs Arguments
 	// Additional files attached to consoles besides the default one used for
 	// stdout. They will be present in the guest system as "/dev/ttySx" or
 	// "/dev/hvcx" where x is the index of the slice + 1.
@@ -63,23 +63,23 @@ func NewCommand(arch string) (*Command, error) {
 		Memory: 256,
 		SMP:    1,
 		NoKVM:  !KVMAvailableFor(arch),
-		ExtraArgs: qemu.Arguments{
-			qemu.ArgDisplay("none"),
-			qemu.ArgMonitor("none"),
-			qemu.UniqueArg("no-reboot"),
-			qemu.UniqueArg("nodefaults"),
-			qemu.UniqueArg("no-user-config"),
+		ExtraArgs: Arguments{
+			ArgDisplay("none"),
+			ArgMonitor("none"),
+			UniqueArg("no-reboot"),
+			UniqueArg("nodefaults"),
+			UniqueArg("no-user-config"),
 		},
 	}
 	switch arch {
 	case "amd64":
 		cmd.Executable = "qemu-system-x86_64"
 		cmd.Machine = "q35"
-		cmd.TransportType = qemu.TransportTypePCI
+		cmd.TransportType = TransportTypePCI
 	case "arm64":
 		cmd.Executable = "qemu-system-aarch64"
 		cmd.Machine = "virt"
-		cmd.TransportType = qemu.TransportTypeMMIO
+		cmd.TransportType = TransportTypeMMIO
 	default:
 		return nil, fmt.Errorf("arch not supported: %s", arch)
 	}
@@ -100,18 +100,18 @@ func (c *Command) Validate() error {
 	switch c.Machine {
 	case "microvm":
 		switch {
-		case c.TransportType == qemu.TransportTypePCI:
+		case c.TransportType == TransportTypePCI:
 			return fmt.Errorf("microvm does not support pci transport.")
-		case c.TransportType == qemu.TransportTypeISA && len(c.AdditionalConsoles) > 0:
+		case c.TransportType == TransportTypeISA && len(c.AdditionalConsoles) > 0:
 			msg := "microvm supports only one isa serial port, used for stdio."
 			return fmt.Errorf(msg)
 		}
 	case "virt":
-		if c.TransportType == qemu.TransportTypeISA {
+		if c.TransportType == TransportTypeISA {
 			return fmt.Errorf("virt requires virtio-mmio")
 		}
 	case "q35", "pc":
-		if c.TransportType == qemu.TransportTypeMMIO {
+		if c.TransportType == TransportTypeMMIO {
 			return fmt.Errorf("%s does not work with virtio-mmio", c.Machine)
 		}
 
@@ -119,26 +119,77 @@ func (c *Command) Validate() error {
 	return nil
 }
 
+// ProcessGoTestFlags processes file related go test flags in
+// [Command.InitArgs] and changes them, so the guest system's writes end up in
+// the host systems file paths.
+//
+// It scans [Command.InitArgs] for coverage and profile related paths and
+// replaces them with console path. The original paths are added as additional
+// file descriptors to the [Command].
+//
+// It is required that the flags are prefixed with "test" and value is
+// separated form the flag by "=". This is the format the "go test" tool
+// invokes the test binary with.
+func (cmd *Command) ProcessGoTestFlags() {
+	// Only coverprofile has a relative path to the test pwd and can be
+	// replaced immediately. All other profile files are relative to the actual
+	// test running and need to be prefixed with -test.outputdir. So, collect
+	// them and process them afterwards when "outputdir" is found.
+	needsOutputDirPrefix := make([]int, 0)
+	outputDir := ""
+
+	for idx, posArg := range cmd.InitArgs {
+		splits := strings.Split(posArg, "=")
+		switch splits[0] {
+		case "-test.coverprofile":
+			splits[1] = "/dev/" + cmd.AddConsole(splits[1])
+			cmd.InitArgs[idx] = strings.Join(splits, "=")
+		case "-test.blockprofile",
+			"-test.cpuprofile",
+			"-test.memprofile",
+			"-test.mutexprofile",
+			"-test.trace":
+			needsOutputDirPrefix = append(needsOutputDirPrefix, idx)
+			continue
+		case "-test.outputdir":
+			outputDir = splits[1]
+			fallthrough
+		case "-test.gocoverdir":
+			splits[1] = "/tmp"
+			cmd.InitArgs[idx] = strings.Join(splits, "=")
+		}
+	}
+
+	if outputDir != "" {
+		for _, argsIdx := range needsOutputDirPrefix {
+			splits := strings.Split(cmd.InitArgs[argsIdx], "=")
+			path := filepath.Join(outputDir, splits[1])
+			splits[1] = "/dev/" + cmd.AddConsole(path)
+			cmd.InitArgs[argsIdx] = strings.Join(splits, "=")
+		}
+	}
+}
+
 // Args compiles the argument list for the QEMU command.
-func (c *Command) Args() qemu.Arguments {
-	a := qemu.Arguments{
-		qemu.ArgKernel(c.Kernel),
-		qemu.ArgInitrd(c.Initramfs),
+func (c *Command) Args() Arguments {
+	a := Arguments{
+		ArgKernel(c.Kernel),
+		ArgInitrd(c.Initramfs),
 	}
 	if c.Machine != "" {
-		a.Add(qemu.ArgMachine(c.Machine))
+		a.Add(ArgMachine(c.Machine))
 	}
 	if c.CPU != "" {
-		a.Add(qemu.ArgCPU(c.CPU))
+		a.Add(ArgCPU(c.CPU))
 	}
 	if c.SMP != 0 {
-		a.Add(qemu.ArgSMP(int(c.SMP)))
+		a.Add(ArgSMP(int(c.SMP)))
 	}
 	if c.Memory != 0 {
-		a.Add(qemu.ArgMemory(int(c.Memory)))
+		a.Add(ArgMemory(int(c.Memory)))
 	}
 	if !c.NoKVM {
-		a.Add(qemu.UniqueArg("enable-kvm"))
+		a.Add(UniqueArg("enable-kvm"))
 	}
 
 	fdpath := func(i int) string {
@@ -147,26 +198,26 @@ func (c *Command) Args() qemu.Arguments {
 
 	var addConsoleArgs func(int)
 	switch c.TransportType {
-	case qemu.TransportTypeISA:
+	case TransportTypeISA:
 		addConsoleArgs = func(fd int) {
-			a.Add(qemu.ArgSerial("file:" + fdpath(fd)))
+			a.Add(ArgSerial("file:" + fdpath(fd)))
 		}
-	case qemu.TransportTypePCI:
-		a.Add(qemu.ArgDevice("virtio-serial-pci", "max_ports=8"))
+	case TransportTypePCI:
+		a.Add(ArgDevice("virtio-serial-pci", "max_ports=8"))
 		addConsoleArgs = func(fd int) {
 			vcon := fmt.Sprintf("vcon%d", fd)
 			a.Add(
-				qemu.ArgChardev("file", "id="+vcon, "path="+fdpath(fd)),
-				qemu.ArgDevice("virtconsole", "chardev="+vcon),
+				ArgChardev("file", "id="+vcon, "path="+fdpath(fd)),
+				ArgDevice("virtconsole", "chardev="+vcon),
 			)
 		}
-	case qemu.TransportTypeMMIO:
-		a.Add(qemu.ArgDevice("virtio-serial-device", "max_ports=8"))
+	case TransportTypeMMIO:
+		a.Add(ArgDevice("virtio-serial-device", "max_ports=8"))
 		addConsoleArgs = func(fd int) {
 			vcon := fmt.Sprintf("vcon%d", fd)
 			a.Add(
-				qemu.ArgChardev("file", "id="+vcon, "path="+fdpath(fd)),
-				qemu.ArgDevice("virtconsole", "chardev="+vcon),
+				ArgChardev("file", "id="+vcon, "path="+fdpath(fd)),
+				ArgDevice("virtconsole", "chardev="+vcon),
 			)
 		}
 	}
@@ -182,7 +233,7 @@ func (c *Command) Args() qemu.Arguments {
 	}
 
 	a.Add(c.ExtraArgs...)
-	a.Add(qemu.ArgAppend(c.kernelCmdlineArgs()...))
+	a.Add(ArgAppend(c.kernelCmdlineArgs()...))
 
 	return a
 }

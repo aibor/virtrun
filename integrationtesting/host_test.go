@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/initramfs"
+	"github.com/aibor/virtrun/qemu"
 )
 
 func TestHostVirtrunCmd(t *testing.T) {
@@ -26,7 +26,7 @@ func TestHostVirtrunCmd(t *testing.T) {
 	for _, kernel := range TestKernels {
 		kernel := kernel
 		t.Run(kernel.String(), func(t *testing.T) {
-			cmd, err := virtrun.NewCommand(kernel.Arch)
+			cmd, err := qemu.NewCommand(kernel.Arch)
 			require.NoError(t, err)
 
 			cmd.Kernel = kernel.Path(KernelCacheDir)

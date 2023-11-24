@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/qemu"
 )
 
@@ -46,7 +45,7 @@ func TestParseArgs(t *testing.T) {
 			},
 			expected: config{
 				binary: absBinPath,
-				cmd: &virtrun.Command{
+				cmd: &qemu.Command{
 					Kernel: "/boot/this",
 					InitArgs: []string{
 						"-test.paniconexit0",
@@ -77,7 +76,7 @@ func TestParseArgs(t *testing.T) {
 			},
 			expected: config{
 				binary: absBinPath,
-				cmd: &virtrun.Command{
+				cmd: &qemu.Command{
 					Kernel:        "/boot/this",
 					CPU:           "host",
 					Machine:       "pc",
@@ -109,7 +108,7 @@ func TestParseArgs(t *testing.T) {
 			},
 			expected: config{
 				binary: absBinPath,
-				cmd: &virtrun.Command{
+				cmd: &qemu.Command{
 					Kernel: "/boot/this",
 					InitArgs: []string{
 						"-test.paniconexit0",
@@ -126,7 +125,7 @@ func TestParseArgs(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := config{
-				cmd: &virtrun.Command{},
+				cmd: &qemu.Command{},
 			}
 
 			execArgs := append([]string{"self"}, tt.args...)

@@ -7,12 +7,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/qemu"
 )
 
 type config struct {
-	cmd                 *virtrun.Command
+	cmd                 *qemu.Command
 	arch                string
 	binary              string
 	files               []string

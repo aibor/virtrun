@@ -11,8 +11,8 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/aibor/virtrun"
 	"github.com/aibor/virtrun/initramfs"
+	"github.com/aibor/virtrun/qemu"
 )
 
 func run() (int, error) {
@@ -25,7 +25,7 @@ func run() (int, error) {
 		cfg.arch = runtime.GOARCH
 	}
 
-	cfg.cmd, err = virtrun.NewCommand(cfg.arch)
+	cfg.cmd, err = qemu.NewCommand(cfg.arch)
 	if err != nil {
 		return 1, err
 	}
@@ -60,7 +60,7 @@ func run() (int, error) {
 	// In order to be useful with "go test -exec", rewrite the file based flags
 	// so the output can be passed from guest to kernel via consoles.
 	if !cfg.noGoTestFlagRewrite {
-		virtrun.ProcessGoTestFlags(cfg.cmd)
+		cfg.cmd.ProcessGoTestFlags()
 	}
 
 	// Build initramfs for the run.

@@ -1,4 +1,4 @@
-package virtrun
+package qemu
 
 import (
 	"bufio"

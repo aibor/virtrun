@@ -13,22 +13,22 @@ import (
 )
 
 // InitFile defines how the file used as init program at "/init" is created.
-type InitFile func(*files.Entry) (*files.Entry, error)
+type InitFile func(*files.Entry)
 
 // InitFilePath creates the "/init" file copied from a real path. With this
 // required shared libraries can be resolved and added to the Initramfs.
 func InitFilePath(path string) InitFile {
-	return func(rootDir *files.Entry) (*files.Entry, error) {
-		return rootDir.AddFile("init", path)
+	return func(rootDir *files.Entry) {
+		rootDir.AddFile("init", path)
 	}
 }
 
 // InitFileVirtual creates the "/init" file from an [fs.File]. This must be
 // a statically linked binary or it will not start correctly unless the required
 // shared libraries are added manually.
-func InitFileVirtual(file fs.File) InitFile {
-	return func(rootDir *files.Entry) (*files.Entry, error) {
-		return rootDir.AddVirtualFile("init", file)
+func InitFileVirtual(init fs.File) InitFile {
+	return func(rootDir *files.Entry) {
+		rootDir.AddVirtualFile("init", init)
 	}
 }
 
@@ -49,8 +49,8 @@ type Initramfs struct {
 // The init file is created from the given [InitFile] function.
 func New(initFile InitFile) *Initramfs {
 	i := &Initramfs{}
-	// This can never fail on a new tree.
-	_, _ = initFile(i.fileTree.GetRoot())
+	// The ops inside the functions are supposed to never fail on a new tree.
+	initFile(i.fileTree.GetRoot())
 	return i
 }
 

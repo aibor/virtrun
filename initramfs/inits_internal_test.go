@@ -1,11 +1,10 @@
-package virtrun_test
+package initramfs
 
 import (
 	"debug/elf"
 	"io"
 	"testing"
 
-	"github.com/aibor/virtrun"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +32,7 @@ func TestInits(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.arch, func(t *testing.T) {
-			file, err := virtrun.InitFor(tt.arch)
+			file, err := initFor(tt.arch)
 			if tt.errMsg != "" {
 				assert.ErrorContains(t, err, tt.errMsg)
 				return

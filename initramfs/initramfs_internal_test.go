@@ -12,67 +12,54 @@ import (
 	"github.com/aibor/virtrun/internal/files"
 )
 
-func TestInitramfsNew(t *testing.T) {
-	testFS := fstest.MapFS{
-		"input": &fstest.MapFile{},
-	}
-	testFile, err := testFS.Open("input")
+func assertEntry(t *testing.T, i *Initramfs, p string, e files.Entry) {
+	t.Helper()
+	entry, err := i.fileTree.GetEntry(p)
 	require.NoError(t, err)
+	assert.Equal(t, e, *entry)
+}
 
-	verifyEntry := func(path string, expected files.Entry) func(*testing.T, *Initramfs) {
-		return func(t *testing.T, i *Initramfs) {
-			entry, err := i.fileTree.GetEntry(path)
-			require.NoError(t, err, "must get init entry")
-			assert.Equal(t, expected, *entry)
-		}
+func TestInitramfsNew(t *testing.T) {
+	i := New("first")
+
+	expected := files.Entry{
+		Type:        files.TypeRegular,
+		RelatedPath: "first",
 	}
+	assertEntry(t, i, "/init", expected)
+}
 
-	type verifyFunc func(*testing.T, *Initramfs)
+func TestInitramfsNewWithInitFor(t *testing.T) {
+	t.Run("unsupported arch", func(t *testing.T) {
+		_, err := NewWithInitFor("unsupported", "first")
+		assert.Error(t, err)
+	})
 
-	tests := []struct {
-		name     string
-		initFile InitFile
-		verify   []verifyFunc
-	}{
-		{
-			name:     "init from real path",
-			initFile: InitFilePath("first"),
-			verify: []verifyFunc{
-				verifyEntry("/init", files.Entry{
-					Type:        files.TypeRegular,
-					RelatedPath: "first",
-				}),
-			},
-		},
-		{
-			name:     "init from embedded file",
-			initFile: InitFileVirtual(testFile, "main"),
-			verify: []verifyFunc{
-				verifyEntry("/init", files.Entry{
-					Type:   files.TypeVirtual,
-					Source: testFile,
-				}),
-				verifyEntry("/main", files.Entry{
-					Type:        files.TypeRegular,
-					RelatedPath: "main",
-				}),
-			},
-		},
-	}
+	for _, arch := range []string{"amd64", "arm64"} {
+		t.Run(arch, func(t *testing.T) {
+			i, err := NewWithInitFor(arch, "first")
+			require.NoError(t, err, "must construct")
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			i := New(tt.initFile)
-			for _, verify := range tt.verify {
-				verify(t, i)
+			expectedSource, err := initFor(arch)
+			require.NoError(t, err, "must get expected init")
+
+			expectedInit := files.Entry{
+				Type:   files.TypeVirtual,
+				Source: expectedSource,
 			}
+			assertEntry(t, i, "/init", expectedInit)
+
+			expectedMain := files.Entry{
+				Type:        files.TypeRegular,
+				RelatedPath: "first",
+			}
+			assertEntry(t, i, "/main", expectedMain)
 		})
 	}
 }
 
 func TestInitramfsAddFile(t *testing.T) {
-	archive := New(InitFilePath("first"))
+	archive := New("first")
 
 	require.NoError(t, archive.AddFile("dir", "second", "rel/third"))
 	require.NoError(t, archive.AddFile("dir", "", "/abs/fourth"))
@@ -92,7 +79,7 @@ func TestInitramfsAddFile(t *testing.T) {
 }
 
 func TestInitramfsAddFiles(t *testing.T) {
-	archive := New(InitFilePath("first"))
+	archive := New("first")
 
 	require.NoError(t, archive.AddFiles("dir", "second", "rel/third", "/abs/fourth"))
 	require.NoError(t, archive.AddFiles("dir", "fifth"))
@@ -221,7 +208,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 
 func TestInitramfsResolveLinkedLibs(t *testing.T) {
 	t.Setenv("LD_LIBRARY_PATH", "../internal/files/testdata/lib")
-	irfs := New(InitFilePath("../internal/files/testdata/bin/main"))
+	irfs := New("../internal/files/testdata/bin/main")
 	err := irfs.AddRequiredSharedObjects("")
 	require.NoError(t, err)
 

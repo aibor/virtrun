@@ -12,29 +12,6 @@ import (
 	"github.com/aibor/virtrun/internal/files"
 )
 
-// InitFile defines how the file used as init program at "/init" is created.
-type InitFile func(*files.Entry)
-
-// InitFilePath creates the "/init" file copied from a real path. With this
-// required shared libraries can be resolved and added to the Initramfs.
-func InitFilePath(path string) InitFile {
-	return func(rootDir *files.Entry) {
-		_, _ = rootDir.AddFile("init", path)
-	}
-}
-
-// InitFileVirtual creates the "/init" file from the given init [fs.File]. This
-// must be a statically linked binary or it will not start correctly unless the
-// required shared libraries are added manually. The given main file is added
-// as regular file and supposed to be called by the given "init". Since it is a
-// regular file, it may be dynamically linked.
-func InitFileVirtual(init fs.File, main string) InitFile {
-	return func(rootDir *files.Entry) {
-		_, _ = rootDir.AddVirtualFile("init", init)
-		_, _ = rootDir.AddFile("main", main)
-	}
-}
-
 // Initramfs represents a file tree that can be used as an initramfs for the
 // Linux kernel.
 //
@@ -47,14 +24,30 @@ type Initramfs struct {
 	fileTree files.Tree
 }
 
-// New creates a new [Initramfs].
-//
-// The init file is created from the given [InitFile] function.
-func New(initFile InitFile) *Initramfs {
+// New creates a new [Initramfs] with "/init" copied from the given file path.
+func New(path string) *Initramfs {
 	i := &Initramfs{}
-	// The ops inside the functions are supposed to never fail on a new tree.
-	initFile(i.fileTree.GetRoot())
+	rootDir := i.fileTree.GetRoot()
+	// Never fails on a new tree.
+	_, _ = rootDir.AddFile("init", path)
 	return i
+}
+
+// NewWithInitFor creates a new [Initramfs] with "/init" copied from a
+// pre-built, statically linked binary. This binary sets up the system as
+// required by an init and then executes "/main". The "/main" file is copied
+// from the given path for main.
+func NewWithInitFor(arch, main string) (*Initramfs, error) {
+	init, err := initFor(arch)
+	if err != nil {
+		return nil, err
+	}
+	i := &Initramfs{}
+	rootDir := i.fileTree.GetRoot()
+	// Never fails on a new tree.
+	_, _ = rootDir.AddVirtualFile("init", init)
+	_, _ = rootDir.AddFile("main", main)
+	return i, nil
 }
 
 // AddFile creates [Initramfs.filesDir] and adds the given file to it. If name

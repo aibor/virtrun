@@ -68,15 +68,14 @@ func run() (int, error) {
 	if cfg.standalone {
 		// In standalone mode, the first file (which might be the only one)
 		// is supposed to work as an init matching our requirements.
-		irfs = initramfs.New(initramfs.InitFilePath(cfg.binary))
+		irfs = initramfs.New(cfg.binary)
 	} else {
 		// In the default wrapped mode a pre-compiled init is used that just
 		// executes "/main".
-		init, err := virtrun.InitFor(cfg.arch)
+		irfs, err = initramfs.NewWithInitFor(cfg.arch, cfg.binary)
 		if err != nil {
-			return 1, err
+			return 1, fmt.Errorf("initramfs: %v", err)
 		}
-		irfs = initramfs.New(initramfs.InitFileVirtual(init, cfg.binary))
 	}
 	if err := irfs.AddFiles("data", cfg.files...); err != nil {
 		return 1, fmt.Errorf("add files: %v", err)

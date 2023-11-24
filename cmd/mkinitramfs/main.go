@@ -27,8 +27,8 @@ func run(args []string) error {
 		additionalFiles = append(additionalFiles, path)
 	}
 
-	initRamFS := initramfs.New(initramfs.InitFilePath(initFile))
-	if err := initRamFS.AddFiles("bin", additionalFiles...); err != nil {
+	initRamFS := initramfs.New(initFile)
+	if err := initRamFS.AddFiles("data", additionalFiles...); err != nil {
 		return fmt.Errorf("add files: %v", err)
 	}
 	if err := initRamFS.AddRequiredSharedObjects(""); err != nil {

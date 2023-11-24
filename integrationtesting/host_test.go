@@ -32,10 +32,8 @@ func TestHostVirtrunCmd(t *testing.T) {
 			cmd.Kernel = kernel.Path(KernelCacheDir)
 			cmd.Verbose = Verbose
 
-			init, err := virtrun.InitFor(kernel.Arch)
+			irfs, err := initramfs.NewWithInitFor(kernel.Arch, binary)
 			require.NoError(t, err)
-
-			irfs := initramfs.New(initramfs.InitFileVirtual(init, binary))
 
 			err = irfs.AddRequiredSharedObjects("")
 			require.NoError(t, err)

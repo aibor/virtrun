@@ -1,4 +1,4 @@
-package virtrun
+package initramfs
 
 import (
 	"embed"
@@ -17,7 +17,9 @@ import (
 //go:embed inits/amd64 inits/arm64
 var _inits embed.FS
 
-func InitFor(arch string) (fs.File, error) {
+// initFor returns the pre-built init binary for the arch. The init binary is
+// supposed to set up the system and execute the file "/main".
+func initFor(arch string) (fs.File, error) {
 	switch arch {
 	case "amd64":
 		return _inits.Open("inits/amd64")

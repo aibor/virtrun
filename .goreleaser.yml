@@ -1,0 +1,40 @@
+builds:
+  - binary: virtrun
+    ldflags:
+      - >
+        -s -w
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+
+archives:
+  - name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
+
+release:
+  header: |
+    ## {{ .TagSubject }} ({{ .Now.Format "2006-01-02" }})
+    {{ .TagBody }}
+
+snapshot:
+  name_template: "{{ .Tag }}"
+
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+
+nfpms:
+  - vendor: Virtrun
+    homepage: https://github.com/aibor/virtrun
+    maintainer: Tobias Böhm <code@aibor.de>
+    description: Run commands in a minimal QEMU guest. Bring your own kernel.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+      - apk
+      - archlinux
+    file_name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"

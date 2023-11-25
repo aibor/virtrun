@@ -21,8 +21,6 @@ const URLFmt = "https://github.com/aibor/ci-kernels/raw/master/linux-%s-%s.tgz"
 var (
 	Kernel515amd64 = Kernel{"5.15", "amd64"}
 	Kernel515arm64 = Kernel{"5.15", "arm64"}
-	Kernel61amd64  = Kernel{"6.1", "amd64"}
-	Kernel61arm64  = Kernel{"6.1", "arm64"}
 	Kernel66amd64  = Kernel{"6.6", "amd64"}
 	Kernel66arm64  = Kernel{"6.6", "arm64"}
 )
@@ -30,8 +28,6 @@ var (
 var TestKernels = []Kernel{
 	Kernel515amd64,
 	Kernel515arm64,
-	Kernel61amd64,
-	Kernel61arm64,
 	Kernel66amd64,
 	Kernel66arm64,
 }

@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/aibor/virtrun/internal/constants"
+	"github.com/aibor/virtrun/internal/qemu"
 )
 
 // ErrNotPidOne may be returned if the process is expected to be run as PID 1
@@ -17,7 +17,7 @@ var ErrNotPidOne = errors.New("process does not have ID 1")
 // PrintRC prints the magic string communicating the return code of
 // the tests.
 func PrintRC(ret int) {
-	fmt.Printf(constants.RCFmt, ret)
+	fmt.Printf(qemu.RCFmt, ret)
 }
 
 // IsPidOne returns true if the running process has PID 1.

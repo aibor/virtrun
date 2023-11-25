@@ -6,9 +6,13 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-
-	"github.com/aibor/virtrun/internal/constants"
 )
+
+// RCFmt is the format string for communicating the test results
+//
+// It is parsed in the qemu wrapper. Not present in the output if the test
+// binary panicked.
+const RCFmt = "INIT_RC: %d\n"
 
 var panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
 
@@ -27,7 +31,7 @@ func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
 			if rcErr != nil {
 				rc = 125
 			}
-		} else if _, err := fmt.Sscanf(line, constants.RCFmt, &rc); err == nil {
+		} else if _, err := fmt.Sscanf(line, RCFmt, &rc); err == nil {
 			rcErr = nil
 		}
 		if rcErr != nil || verbose {

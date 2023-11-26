@@ -18,21 +18,6 @@ func TestGuestSysinit(t *testing.T) {
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
 
-	goBinDir := filepath.Join(cwd, "gobin")
-
-	cmd := exec.Command("go", "install", "-buildvcs=false", "..")
-	cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("GOBIN=%s", goBinDir),
-		"GOARCH=",
-	)
-
-	out, err := cmd.CombinedOutput()
-	if len(out) > 0 {
-		t.Log(string(out))
-	}
-	require.NoError(t, err)
-
 	absKernelDir, err := filepath.Abs(KernelCacheDir)
 	require.NoError(t, err)
 
@@ -42,7 +27,12 @@ func TestGuestSysinit(t *testing.T) {
 				kernel := kernel
 				t.Run(kernel.String(), func(t *testing.T) {
 					execArgs := []string{
-						filepath.Join(goBinDir, "virtrun"),
+						"env",
+						"GOARCH=",
+						fmt.Sprintf("QEMU_ARCH=%s", kernel.Arch),
+						"go",
+						"run",
+						filepath.Join(cwd, ".."),
 						"-kernel", kernel.Path(absKernelDir),
 					}
 					if Verbose {
@@ -68,12 +58,12 @@ func TestGuestSysinit(t *testing.T) {
 						"./guest/...",
 					}
 
-					cmd = exec.Command("go", args...)
+					cmd := exec.Command("go", args...)
 					cmd.Env = append(
 						os.Environ(),
 						fmt.Sprintf("GOARCH=%s", kernel.Arch),
 					)
-					out, err = cmd.CombinedOutput()
+					out, err := cmd.CombinedOutput()
 					if len(out) > 0 {
 						t.Log(string(out))
 					}

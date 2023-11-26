@@ -39,7 +39,7 @@ via stdout back to virtrun. It is intended to run simple binaries like
 go test binaries. Virtrun tries to provide all required linked libraries of the
 binaries in the QEMU guest.
 
-Depending on the presence of GOARCH or the runtime arch, the correct
+Depending on the presence of QEMU_ARCH, GOARCH or the runtime arch, the correct
 qemu-system binary and machine type is used. KVM is enabled if present and
 accessible. Those things can be overridden by flags. See "virtrun -help"
 for all flags.

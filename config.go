@@ -1,9 +1,13 @@
 package main
 
 import (
+	"debug/elf"
 	"flag"
 	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -18,6 +22,42 @@ type config struct {
 	standalone          bool
 	noGoTestFlagRewrite bool
 	keepInitramfs       bool
+}
+
+func newConfig() (*config, error) {
+	var arch string
+
+	// Allow user to specify architecture by dedicated env var QEMU_ARCH. It
+	// can be empty, to suppress the GOARCH lookup and enforce the fallback to
+	// the runtime architecture. If QEMU_ARCH is not present, GOARCH will be
+	// used. This is handy in case of cross-architecture go test invocations.
+	for _, name := range []string{"QEMU_ARCH", "GOARCH"} {
+		if v, exists := os.LookupEnv(name); exists {
+			arch = v
+			break
+		}
+	}
+	// Fallback to runtime architecture.
+	if arch == "" {
+		arch = runtime.GOARCH
+	}
+
+	// Provision defaults for the requested architecture.
+	cmd, err := qemu.NewCommand(arch)
+	if err != nil {
+		return nil, err
+	}
+
+	// Preset kernel from environment. Must be a kernel with the same
+	// architecture QEMU is supposed to run and the binary that is given.
+	cmd.Kernel = os.Getenv("QEMU_KERNEL")
+
+	cfg := &config{
+		arch: arch,
+		cmd:  cmd,
+	}
+
+	return cfg, nil
 }
 
 func (cfg *config) parseArgs(args []string) error {
@@ -193,6 +233,64 @@ func (cfg *config) parseArgs(args []string) error {
 			}
 			cfg.files = append(cfg.files, path)
 		}
+	}
+
+	return nil
+}
+
+func (cfg *config) validate() error {
+	// Do some simple input validation to catch most obvious issues.
+	if err := cfg.cmd.Validate(); err != nil {
+		return fmt.Errorf("validate qemu command: %v", err)
+	}
+
+	// Check files are actually present.
+	if _, err := exec.LookPath(cfg.cmd.Executable); err != nil {
+		return fmt.Errorf("check qemu binary: %v", err)
+	}
+	if _, err := os.Stat(cfg.cmd.Kernel); err != nil {
+		return fmt.Errorf("check kernel file: %v", err)
+	}
+	for _, file := range cfg.files {
+		if _, err := os.Stat(file); err != nil {
+			return fmt.Errorf("check file: %v", err)
+		}
+	}
+
+	// Do some deeper validation for the main binary.
+	elfFile, err := elf.Open(cfg.binary)
+	if err != nil {
+		return fmt.Errorf("check main binary: %v", err)
+	}
+	defer elfFile.Close()
+
+	if err := validateELF(elfFile.FileHeader, cfg.arch); err != nil {
+		return fmt.Errorf("check main binary: %v", err)
+	}
+
+	return nil
+}
+
+// validateELF validates that ELF attributes match the requested architecture.
+func validateELF(hdr elf.FileHeader, arch string) error {
+	switch hdr.OSABI {
+	case elf.ELFOSABI_NONE, elf.ELFOSABI_LINUX:
+		// supported, pass
+	default:
+		return fmt.Errorf("OSABI not supported: %s", hdr.OSABI)
+	}
+
+	var archReq string
+	switch hdr.Machine {
+	case elf.EM_X86_64:
+		archReq = "amd64"
+	case elf.EM_AARCH64:
+		archReq = "arm64"
+	default:
+		return fmt.Errorf("machine type not supported: %s", hdr.Machine)
+	}
+	if archReq != arch {
+		return fmt.Errorf("machine %s not supported for %s", hdr.Machine, arch)
 	}
 
 	return nil

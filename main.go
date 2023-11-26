@@ -2,59 +2,38 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
-	"runtime"
 	"syscall"
 
 	"github.com/aibor/virtrun/internal/initramfs"
-	"github.com/aibor/virtrun/internal/qemu"
 )
 
 func run() (int, error) {
-	var err error
+	var (
+		// Default to non 0 exit code, so 0 must be explicitly set for
+		// successful execution.
+		rc  int = 1
+		err error
+	)
 
-	cfg := config{
-		arch: os.Getenv("GOARCH"),
-	}
-	if cfg.arch == "" {
-		cfg.arch = runtime.GOARCH
-	}
-
-	cfg.cmd, err = qemu.NewCommand(cfg.arch)
+	cfg, err := newConfig()
 	if err != nil {
-		return 1, err
+		return rc, err
 	}
-
-	// Preset kernel from environment.
-	cfg.cmd.Kernel = os.Getenv("QEMU_KERNEL")
 
 	// ParseArgs already prints errors, so we just exit.
 	if err := cfg.parseArgs(os.Args); err != nil {
 		if err == flag.ErrHelp {
 			return 0, nil
 		}
-		return 1, nil
+		return rc, nil
 	}
 
-	// Do some simple input validation to catch most obvious issues.
-	if err := cfg.cmd.Validate(); err != nil {
-		return 1, fmt.Errorf("validate qemu command: %v", err)
-	}
-	if _, err := exec.LookPath(cfg.cmd.Executable); errors.Is(err, os.ErrNotExist) {
-		return 1, fmt.Errorf("qemu binary %s: %v", cfg.cmd.Executable, err)
-	}
-	if _, err := os.Stat(cfg.cmd.Kernel); errors.Is(err, os.ErrNotExist) {
-		return 1, fmt.Errorf("kernel file %s doesn't exist.", cfg.cmd.Kernel)
-	}
-	for _, file := range cfg.files {
-		if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
-			return 1, fmt.Errorf("file %s doesn't exist.", file)
-		}
+	if err := cfg.validate(); err != nil {
+		return rc, err
 	}
 
 	// In order to be useful with "go test -exec", rewrite the file based flags
@@ -74,19 +53,18 @@ func run() (int, error) {
 		// executes "/main".
 		irfs, err = initramfs.NewWithInitFor(cfg.arch, cfg.binary)
 		if err != nil {
-			return 1, fmt.Errorf("initramfs: %v", err)
+			return rc, fmt.Errorf("initramfs: %v", err)
 		}
 	}
 	if err := irfs.AddFiles("data", cfg.files...); err != nil {
-		return 1, fmt.Errorf("add files: %v", err)
+		return rc, fmt.Errorf("add files: %v", err)
 	}
 	if err := irfs.AddRequiredSharedObjects(""); err != nil {
-		return 1, fmt.Errorf("add libs: %v", err)
+		return rc, fmt.Errorf("add libs: %v", err)
 	}
 
-	cfg.cmd.Initramfs, err = irfs.WriteToTempFile("")
-	if err != nil {
-		return 1, fmt.Errorf("write initramfs: %v", err)
+	if cfg.cmd.Initramfs, err = irfs.WriteToTempFile(""); err != nil {
+		return rc, fmt.Errorf("write initramfs: %v", err)
 	}
 	defer func() {
 		if cfg.keepInitramfs {
@@ -106,8 +84,7 @@ func run() (int, error) {
 	)
 	defer cancel()
 
-	rc, err := cfg.cmd.Run(ctx, os.Stdout, os.Stderr)
-	if err != nil {
+	if rc, err = cfg.cmd.Run(ctx, os.Stdout, os.Stderr); err != nil {
 		return rc, fmt.Errorf("run: %v", err)
 	}
 

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
-
-	"golang.org/x/exp/maps"
 )
 
 // TreeNode is a single file tree node.
@@ -27,7 +25,11 @@ func (e *TreeNode) String() string {
 	case FileTypeRegular:
 		return "File from: " + e.RelatedPath
 	case FileTypeDirectory:
-		return fmt.Sprintf("Dir with entries: % s", maps.Keys(e.children))
+		keys := make([]string, 0, len(e.children))
+		for key := range e.children {
+			keys = append(keys, key)
+		}
+		return fmt.Sprintf("Dir with entries: % s", keys)
 	case FileTypeLink:
 		return "Link to: " + e.RelatedPath
 	case FileTypeVirtual:

@@ -6,7 +6,6 @@ require (
 	github.com/cavaliergopher/cpio v1.0.1
 	github.com/stretchr/testify v1.8.4
 	github.com/vishvananda/netlink v1.1.0
-	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
 	golang.org/x/sync v0.5.0
 	golang.org/x/sys v0.14.0
 )

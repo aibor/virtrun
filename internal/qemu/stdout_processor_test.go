@@ -15,25 +15,33 @@ func TestStdoutProcessor(t *testing.T) {
 	tests := []struct {
 		name    string
 		verbose bool
-		found   bool
 		rc      int
 		input   []string
 		output  []string
+		err     error
 	}{
 		{
 			name: "panic",
-			rc:   126,
 			input: []string{
 				"[    0.578502] Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000100",
 				"[    0.579013] CPU: 0 PID: 76 Comm: init Not tainted 6.4.3-arch1-1 #1 13c144d261447e0acbf2632534d4009bddc4c3ab",
 				"[    0.579512] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS Arch Linux 1.16.2-1-1 04/01/2014",
 			},
 			output: []string{""},
+			err:    qemu.GuestPanicErr,
+		},
+		{
+			name: "oom",
+			input: []string{
+				"[    0.378012] oom-kill:constraint=CONSTRAINT_NONE,nodemask=(null),cpuset=/,mems_allowed=0,global_oom,task_memcg=/,task=main,pid=116,uid=0",
+				"[    0.378083] Out of memory: Killed process 116 (main) total-vm:48156kB, anon-rss:43884kB, file-rss:4kB, shmem-rss:2924kB, UID:0 pgtables:140kB oom_score_adj:0",
+			},
+			output: []string{""},
+			err:    qemu.GuestOomErr,
 		},
 		{
 			name:    "panic verbose",
 			verbose: true,
-			rc:      126,
 			input: []string{
 				"[    0.578502] Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000100",
 				"[    0.579013] CPU: 0 PID: 76 Comm: init Not tainted 6.4.3-arch1-1 #1 13c144d261447e0acbf2632534d4009bddc4c3ab",
@@ -45,11 +53,11 @@ func TestStdoutProcessor(t *testing.T) {
 				"[    0.579512] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS Arch Linux 1.16.2-1-1 04/01/2014",
 				"",
 			},
+			err: qemu.GuestPanicErr,
 		},
 		{
-			name:  "rc",
-			found: true,
-			rc:    4,
+			name: "rc",
+			rc:   4,
 			input: []string{
 				"something out",
 				"more out",
@@ -72,6 +80,7 @@ func TestStdoutProcessor(t *testing.T) {
 				"more out",
 				"",
 			},
+			err: qemu.GuestNoRCFoundErr,
 		},
 	}
 
@@ -82,11 +91,11 @@ func TestStdoutProcessor(t *testing.T) {
 			stdOut := bytes.NewBuffer(make([]byte, 0, 512))
 
 			rc, err := qemu.ParseStdout(cmdOut, stdOut, tt.verbose)
-			if tt.found {
+			if tt.err != nil {
+				assert.ErrorIs(t, err, tt.err)
+			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.rc, rc)
-			} else {
-				assert.ErrorIs(t, err, qemu.RCNotFoundErr)
 			}
 
 		})

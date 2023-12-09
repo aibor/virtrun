@@ -14,25 +14,41 @@ import (
 // binary panicked.
 const RCFmt = "INIT_RC: %d\n"
 
-var panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
+var (
+	// GuestNoRCFoundErr is returned if no return code matching the [RCFmt] is
+	// found and no other error is found.
+	GuestNoRCFoundErr = errors.New("guest did not print init return code")
+	// GuestPanicErr is returned if a kernel panic occurred in the guest
+	// system.
+	GuestPanicErr = errors.New("guest system panicked")
+	// GuestOomErr is returned if the guest system ran out of memory.
+	GuestOomErr = errors.New("guest system ran out of memory")
+)
 
-var RCNotFoundErr = errors.New("no return code found in stdout")
+var (
+	panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
+	oomRE   = regexp.MustCompile(`^\[[0-9. ]+\] Out of memory: `)
+)
 
 // ParseStdout processes the input until the underlying writer is closed.
 func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
-	rc := 126
+	var rc int
+
 	// rcErr is unset once a return code is found.
-	rcErr := RCNotFoundErr
+	rcErr := GuestNoRCFoundErr
 
 	scanner := bufio.NewScanner(input)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if panicRE.MatchString(line) {
-			if rcErr != nil {
-				rc = 125
+		switch {
+		case oomRE.MatchString(line):
+			rcErr = GuestOomErr
+		case panicRE.MatchString(line):
+			rcErr = GuestPanicErr
+		case rcErr == GuestNoRCFoundErr:
+			if _, err := fmt.Sscanf(line, RCFmt, &rc); err == nil {
+				rcErr = nil
 			}
-		} else if _, err := fmt.Sscanf(line, RCFmt, &rc); err == nil {
-			rcErr = nil
 		}
 		if rcErr != nil || verbose {
 			if _, err := fmt.Fprintln(output, line); err != nil {

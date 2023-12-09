@@ -2,6 +2,7 @@ package qemu
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -35,18 +36,13 @@ func (p *consoleProcessor) create() (*os.File, error) {
 
 // Close closes the file descriptors.
 func (p *consoleProcessor) Close() error {
-	var errs [3]error
-	errs[0] = p.writePipe.Close()
+	var errs []error
+	errs = append(errs, p.writePipe.Close())
 	if !p.ran {
-		errs[1] = p.readPipe.Close()
-		errs[2] = p.output.Close()
+		errs = append(errs, p.readPipe.Close())
+		errs = append(errs, p.output.Close())
 	}
-	for _, err := range errs {
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // run process the input. It blocks and returns once [io.EOF] is received,

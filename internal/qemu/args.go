@@ -2,11 +2,9 @@ package qemu
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
-
-	// TODO: Replace with stdlib slices with go 1.21.
-	"golang.org/x/exp/slices"
 )
 
 // Argument is a QEMU argument with or without value.

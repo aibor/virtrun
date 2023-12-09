@@ -10,11 +10,10 @@ import (
 	"io"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
-	// TODO: Replace with stdlib slices with go 1.21.
-	"golang.org/x/exp/slices"
 	"golang.org/x/sys/unix"
 )
 

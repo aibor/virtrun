@@ -14,15 +14,14 @@ jobs:
   lint-and-test:
     name: Go lint and test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ["~1.21", "~1.18"]
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-go@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
         with:
-          go-version: "${{ matrix.go-version }}"
+          go-version: "1.21.x"
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
@@ -39,7 +38,8 @@ jobs:
     name: Run integration tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Ensure kernel dir exists
         run: mkdir -p ./integrationtesting/kernels

@@ -1,6 +1,6 @@
 module github.com/aibor/virtrun
 
-go 1.18
+go 1.21
 
 require (
 	github.com/cavaliergopher/cpio v1.0.1

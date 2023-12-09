@@ -2,7 +2,7 @@ FROM docker.io/library/ubuntu:22.04
 
 ENV GOTOOLCHAIN=local
 ENV GOPATH /go
-ENV PATH $GOPATH/bin:/usr/lib/go-1.18/bin:$PATH
+ENV PATH $GOPATH/bin:/usr/lib/go-1.21/bin:$PATH
 
 RUN mkdir -p /go /virtrun
 
@@ -14,7 +14,7 @@ RUN apt-get update \
 		curl \
 		ca-certificates \
 		git \
-		golang-1.18-go \
+		golang-1.21-go \
 		gcc \
 		libc6-dev \
 		pkg-config \

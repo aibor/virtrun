@@ -56,6 +56,7 @@ func (a *Argument) Equal(b Argument) bool {
 // value passed to the constructor function.
 func (a Argument) WithValue() func(string) Argument {
 	return func(s string) Argument {
+		a := a
 		a.value = s
 		return a
 	}

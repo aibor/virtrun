@@ -27,13 +27,13 @@ func TestCommmandArgs(t *testing.T) {
 			Verbose: true,
 		}
 		args := cmd.Args()
-		assert.NotContains(t, args[len(args)-1].Value(), "loglevel=0")
+		assert.NotContains(t, args[len(args)-1].Value(), "quiet")
 	})
 
 	t.Run("no-verbose", func(t *testing.T) {
 		cmd := Command{}
 		args := cmd.Args()
-		assert.Contains(t, args[len(args)-1].Value(), "loglevel=0")
+		assert.Contains(t, args[len(args)-1].Value(), "quiet")
 	})
 
 	t.Run("serial files virtio-mmio", func(t *testing.T) {

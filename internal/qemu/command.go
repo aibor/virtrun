@@ -245,7 +245,7 @@ func (c *Command) kernelCmdlineArgs() []string {
 		"panic=-1",
 	}
 	if !c.Verbose {
-		cmdline = append(cmdline, "loglevel=0")
+		cmdline = append(cmdline, "quiet")
 	}
 	if len(c.InitArgs) > 0 {
 		cmdline = append(cmdline, "--")

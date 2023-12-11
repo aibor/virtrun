@@ -17,7 +17,7 @@ import (
 	"github.com/aibor/virtrun/internal/qemu"
 )
 
-func TestHostVirtrunCmd(t *testing.T) {
+func TestHostWithLibsNonZeroRC(t *testing.T) {
 	t.Setenv("LD_LIBRARY_PATH", "../internal/initramfs/testdata/lib")
 
 	binary, err := filepath.Abs("../internal/initramfs/testdata/bin/main")
@@ -53,6 +53,75 @@ func TestHostVirtrunCmd(t *testing.T) {
 				expectedRC = 127
 			}
 			assert.Equal(t, expectedRC, rc)
+		})
+	}
+}
+
+func TestHostRCParsing(t *testing.T) {
+	tests := []struct {
+		name string
+		bin  string
+		args []string
+		err  error
+	}{
+		{
+			name: "return 0",
+			bin:  "return",
+			args: []string{"0"},
+		},
+		{
+			name: "panic",
+			bin:  "panic",
+			err:  qemu.GuestPanicErr,
+		},
+		{
+			name: "oom",
+			bin:  "oom",
+			args: []string{"128"},
+			err:  qemu.GuestOomErr,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			binary, err := filepath.Abs("testdata/bin/" + tt.bin)
+			require.NoError(t, err)
+			for _, kernel := range TestKernels {
+				kernel := kernel
+				t.Run(kernel.String(), func(t *testing.T) {
+					t.Parallel()
+					if kernel.Arch != runtime.GOARCH {
+						t.Skipf("non matching architecture")
+					}
+					cmd, err := qemu.NewCommand(kernel.Arch)
+					require.NoError(t, err)
+
+					cmd.Kernel = kernel.Path(KernelCacheDir)
+					cmd.Verbose = Verbose
+					cmd.Memory = 128
+					cmd.InitArgs = tt.args
+
+					irfs, err := initramfs.NewWithInitFor(kernel.Arch, binary)
+					require.NoError(t, err)
+
+					cmd.Initramfs, err = irfs.WriteToTempFile(t.TempDir())
+					require.NoError(t, err)
+
+					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+					t.Cleanup(cancel)
+
+					rc, err := cmd.Run(ctx, os.Stdout, os.Stderr)
+
+					if tt.err != nil {
+						require.ErrorIs(t, err, tt.err)
+						return
+					}
+
+					require.NoError(t, err)
+					assert.Equal(t, 0, rc)
+				})
+			}
 		})
 	}
 }

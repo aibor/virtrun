@@ -26,6 +26,7 @@ func TestGuestSysinit(t *testing.T) {
 			for _, kernel := range TestKernels {
 				kernel := kernel
 				t.Run(kernel.String(), func(t *testing.T) {
+					t.Parallel()
 					execArgs := []string{
 						"env",
 						"GOARCH=",

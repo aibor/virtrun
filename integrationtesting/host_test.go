@@ -26,6 +26,7 @@ func TestHostVirtrunCmd(t *testing.T) {
 	for _, kernel := range TestKernels {
 		kernel := kernel
 		t.Run(kernel.String(), func(t *testing.T) {
+			t.Parallel()
 			cmd, err := qemu.NewCommand(kernel.Arch)
 			require.NoError(t, err)
 

@@ -313,7 +313,9 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 	}
 
 	// Process output until the outPipe closes which happens automatically
-	// at program termination.
+	// at program termination. Error should be reported, but should not
+	// terminate immediately. There might be more severe errors that following,
+	// like process execution or persistent IO errors.
 	rc, rcErr := ParseStdout(outPipe, stdout, c.Verbose)
 
 	// Collect process information.
@@ -329,7 +331,11 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 		return 1, fmt.Errorf("processor error: %v", err)
 	}
 
-	return rc, rcErr
+	if rcErr != nil {
+		return 1, rcErr
+	}
+
+	return rc, nil
 }
 
 // KVMAvailableFor checks if KVM support is available for the given

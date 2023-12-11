@@ -12,16 +12,13 @@ import (
 )
 
 func run() (int, error) {
-	var (
-		// Default to non 0 exit code, so 0 must be explicitly set for
-		// successful execution.
-		rc  int = 1
-		err error
-	)
+	// Our init programs may return 127 and 126, so use 125 for indicating
+	// issues.
+	const errRC int = 125
 
 	cfg, err := newConfig()
 	if err != nil {
-		return rc, err
+		return errRC, err
 	}
 
 	// ParseArgs already prints errors, so we just exit.
@@ -29,11 +26,11 @@ func run() (int, error) {
 		if err == flag.ErrHelp {
 			return 0, nil
 		}
-		return rc, nil
+		return errRC, nil
 	}
 
 	if err := cfg.validate(); err != nil {
-		return rc, err
+		return errRC, err
 	}
 
 	// In order to be useful with "go test -exec", rewrite the file based flags
@@ -53,18 +50,18 @@ func run() (int, error) {
 		// executes "/main".
 		irfs, err = initramfs.NewWithInitFor(cfg.arch, cfg.binary)
 		if err != nil {
-			return rc, fmt.Errorf("initramfs: %v", err)
+			return errRC, fmt.Errorf("initramfs: %v", err)
 		}
 	}
 	if err := irfs.AddFiles("data", cfg.files...); err != nil {
-		return rc, fmt.Errorf("add files: %v", err)
+		return errRC, fmt.Errorf("add files: %v", err)
 	}
 	if err := irfs.AddRequiredSharedObjects(""); err != nil {
-		return rc, fmt.Errorf("add libs: %v", err)
+		return errRC, fmt.Errorf("add libs: %v", err)
 	}
 
 	if cfg.cmd.Initramfs, err = irfs.WriteToTempFile(""); err != nil {
-		return rc, fmt.Errorf("write initramfs: %v", err)
+		return errRC, fmt.Errorf("write initramfs: %v", err)
 	}
 	defer func() {
 		if cfg.keepInitramfs {
@@ -84,11 +81,12 @@ func run() (int, error) {
 	)
 	defer cancel()
 
-	if rc, err = cfg.cmd.Run(ctx, os.Stdout, os.Stderr); err != nil {
-		return rc, fmt.Errorf("run: %v", err)
+	guestRC, err := cfg.cmd.Run(ctx, os.Stdout, os.Stderr)
+	if err != nil {
+		return errRC, fmt.Errorf("run: %v", err)
 	}
 
-	return rc, nil
+	return guestRC, nil
 }
 
 func main() {

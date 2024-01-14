@@ -1,32 +1,17 @@
-#!/bin/bash
+#!/bin/sh
 #
-# Fetch pre-built kernel. See https://github.com/aibor/ci-kernels for
-# available versions and architectures.
-set -eEuo pipefail
+# Fetch kernel from https://github.com/cilium/ci-kernels container registry.
+# They build tests kernels for amd64 and arm64 since linux 6.7. The images
+# are tagged with major version like "6.7", but also with minor versions like
+# "6.7.1". The kernel file is always "/boot/vmlinuz".
 
-: ${KERNEL_DIR:=kernel}
+: ${CONTAINERBIN:=podman}
 
-version=${1:-${KERNEL_VER:-6.1}}
-arch=${2:-${KERNEL_ARCH:-${GOARCH:-amd64}}}
-file_name="vmlinuz-${version}-${arch}"
+kernel_version=${1:?kernel version missing}
+kernel_arch=${2:?kernel arch missing}
+dest=${3:?destination path missing}
 
-if [[ ! -e "$KERNEL_DIR/$file_name" ]]; then
-	mkdir -p "$KERNEL_DIR"
+container_id=$($CONTAINERBIN create --platform="linux/$kernel_arch" "ghcr.io/cilium/ci-kernels:$kernel_version" sh)
+trap "$CONTAINERBIN rm $container_id" EXIT
 
-	tar \
-		--file <(
-			curl \
-				--no-progress-meter \
-				--location \
-				--fail \
-				"https://github.com/aibor/ci-kernels/raw/master/linux-${version}-${arch}.tgz"
-		) \
-		--extract \
-		--ignore-failed-read \
-		--ignore-command-error \
-		--warning=none \
-		--transform="s@.*@$KERNEL_DIR/$file_name@" \
-		./boot/vmlinuz
-fi
-
-echo "$(realpath "$KERNEL_DIR/$file_name")"
+$CONTAINERBIN cp "$container_id:/boot/vmlinuz" "$dest"

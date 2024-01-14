@@ -4,22 +4,31 @@ package integrationtesting
 
 import (
 	"flag"
-	//	"fmt"
+	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 )
 
 var (
-	KernelCacheDir = "/kernels"
-	Verbose        bool
+	KernelPath = "/kernels/vmlinuz"
+	KernelArch = runtime.GOARCH
+	Verbose    bool
 )
 
 func TestMain(m *testing.M) {
 	flag.StringVar(
-		&KernelCacheDir,
-		"kernelDir",
-		KernelCacheDir,
-		"directory to store kernels in",
+		&KernelPath,
+		"kernel.path",
+		KernelPath,
+		"absolute path of the test kernel",
+	)
+	flag.StringVar(
+		&KernelArch,
+		"kernel.arch",
+		KernelArch,
+		"architecture of the kernel",
 	)
 	flag.BoolVar(
 		&Verbose,
@@ -29,13 +38,10 @@ func TestMain(m *testing.M) {
 	)
 	flag.Parse()
 
-	//	os.MkdirAll(KernelCacheDir, 0755)
-	//
-	//	// Pre-fetch kernels in parallel, to speed up this process
-	//	if err := FetchKernels(KernelCacheDir, TestKernels...); err != nil {
-	//		fmt.Fprintf(os.Stderr, "Failed to pre-fetch kernels: %v", err)
-	//		os.Exit(1)
-	//	}
+	if !filepath.IsAbs(KernelPath) {
+		fmt.Fprintf(os.Stderr, "KernelPath must be absolute: %v", KernelPath)
+		os.Exit(1)
+	}
 
 	os.Exit(m.Run())
 }

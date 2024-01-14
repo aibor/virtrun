@@ -37,12 +37,38 @@ jobs:
   integration-tests:
     name: Run integration tests
     runs-on: ubuntu-latest
-    needs: lint-and-test
+    needs:
+      - lint-and-test
+    strategy:
+      matrix:
+        kernel_version:
+          - "6.7"
+          - "6.6"
+          - "6.1"
+          - "5.15"
+          - "5.4"
+        kernel_arch:
+          - "amd64"
+        include:
+          - kernel_version: "6.7"
+            kernel_arch: "arm64"
+    env:
+      KERNELVERSION: "${{ matrix.kernel_version }}"
+      KERNELARCH: "${{ matrix.kernel_arch }}"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Fetch kernel
+        env:
+          CONTAINERBIN: docker
+        run: |
+          ./integrationtesting/fetch_kernel.sh ${{ env.KERNELVERSION }} ${{ env.KERNELARCH }} "${{ github.workspace }}/vmlinuz"
+
       - name: Run tests
         uses: ./integrationtesting
         with:
-          cmd: go test -race -v -tags integration ./integrationtesting/ 
+          cmd: |
+            go test -race -v -tags integration ./integrationtesting/ \
+              -kernel.path "/github/workspace/vmlinuz" \
+              -kernel.arch ${{ env.KERNELARCH }}

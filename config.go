@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 
 	"github.com/aibor/virtrun/internal/qemu"
 )
@@ -61,7 +60,7 @@ func newConfig() (*config, error) {
 }
 
 func (cfg *config) parseArgs(args []string) error {
-	fsName := fmt.Sprintf("%s [flags...] binary [files...] [initflags...]", args[0])
+	fsName := fmt.Sprintf("%s [flags...] binary [initargs...]", args[0])
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 
 	fs.StringVar(
@@ -149,9 +148,7 @@ func (cfg *config) parseArgs(args []string) error {
 			if mem < 1 {
 				return fmt.Errorf("must not be less than 1")
 			}
-
 			cfg.cmd.SMP = uint(mem)
-
 			return nil
 		},
 	)
@@ -178,6 +175,22 @@ func (cfg *config) parseArgs(args []string) error {
 			"The path to the file is printed on stderr",
 	)
 
+	fs.Func(
+		"addFile",
+		"file to add to guest's /data dir. Flag may be used more than once.",
+		func(s string) error {
+			if s == "" {
+				return fmt.Errorf("file path must not be empty")
+			}
+			path, err := filepath.Abs(s)
+			if err != nil {
+				return err
+			}
+			cfg.files = append(cfg.files, path)
+			return nil
+		},
+	)
+
 	// Parses arguments up to the first one that is not prefixed with a "-" or
 	// is "--".
 	if err := fs.Parse(args[1:]); err != nil {
@@ -192,48 +205,23 @@ func (cfg *config) parseArgs(args []string) error {
 		return fmt.Errorf(msg)
 	}
 
-	absPath := func(path string) (string, error) {
-		p, err := filepath.Abs(path)
-		if err != nil {
-			return "", failf("absolute path for %s: %v", path, err)
-		}
-		return p, nil
-	}
-
 	if cfg.cmd.Kernel == "" {
 		return failf("no kernel given (use env var QEMU_KERNEL or flag -kernel)")
 	}
 
-	// First positional argument is  supposed to be a binary file.
+	// First positional argument is supposed to be a binary file.
 	if len(fs.Args()) < 1 {
 		return failf("no binary given")
 	}
 	var err error
-	cfg.binary, err = absPath(fs.Args()[0])
+	cfg.binary, err = filepath.Abs(fs.Args()[0])
 	if err != nil {
-		return err
+		return failf("absolute path for %s: %v", fs.Args()[0], err)
 	}
 
-	// Until one begins with "-" consider all further positional arguments
-	// files that should be added to the initramfs. All further arguments
-	// are added as [qemu.Command.InitArgs] that will be passed to the guest
-	// system's init program.
-	var filesDone bool
-	for _, arg := range fs.Args()[1:] {
-		switch {
-		case strings.HasPrefix(arg, "-"):
-			filesDone = true
-			fallthrough
-		case filesDone:
-			cfg.cmd.InitArgs = append(cfg.cmd.InitArgs, arg)
-		default:
-			path, err := absPath(arg)
-			if err != nil {
-				return err
-			}
-			cfg.files = append(cfg.files, path)
-		}
-	}
+	// All further positional arguments after the binary file will be passed to
+	// the guest system's init program.
+	cfg.cmd.InitArgs = fs.Args()[1:]
 
 	return nil
 }

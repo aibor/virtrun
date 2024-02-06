@@ -32,6 +32,10 @@ $ go test -exec "go run github.com/aibor/virtrun" .
 Other architectures work as well. You need a kernel for the target
 architecture. Currently supported are "amd64" and "arm64".
 
+If additional files are required in the guest, specify them using the flag
+`-addFile`. They will be present in the guest's /data directory and required
+libraries will be resolved for ELF binaries.
+
 ## How it works
 
 Virtrun wraps QEMU running an init that runs and communicates its exit code
@@ -48,14 +52,14 @@ Virtrun supports different QEMU IO transport types. Which is needed depends on
 the kernel and machine type used. If you don't get any output, try different
 transport types with flag `-transport`
 
-All flags that are given after the binaries will be passed to the guest's
+All flags that are given after the binary will be passed to the guest's
 `/init` program. There is special handling for file related gotestflags. Those
 are rewritten to virtual consoles before they are passed. So, gotestflags like
 coverprofile can be used.
 
 ## Standalone mode
 
-In Standalone mode, the first given binary is required to be able to act as a
+In Standalone mode, the given binary is required to be able to act as a
 system init binary. The only essential required functions are to communicate
 the exit code on stdout and shutdown the system.
 

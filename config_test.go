@@ -21,18 +21,27 @@ func TestParseArgs(t *testing.T) {
 		errMsg   string
 	}{
 		{
-			name: "requires kernel",
+			name: "no kernel",
 			args: []string{
 				"bin.test",
 			},
 			errMsg: "no kernel given",
 		},
 		{
-			name: "requires binary",
+			name: "no binary",
 			args: []string{
 				"-kernel=/boot/this",
 			},
 			errMsg: "no binary given",
+		},
+		{
+			name: "additional file is empty",
+			args: []string{
+				"-kernel=/boot/this",
+				"-addFile=",
+				"bin.test",
+			},
+			errMsg: "file path must not be empty",
 		},
 		{
 			name: "simple go test invocation",
@@ -69,6 +78,8 @@ func TestParseArgs(t *testing.T) {
 				"-standalone",
 				"-noGoTestFlagRewrite",
 				"-keepInitramfs",
+				"-addFile", "/file2",
+				"-addFile", "/dir/file3",
 				"bin.test",
 				"-test.paniconexit0",
 				"-test.v=true",
@@ -76,6 +87,10 @@ func TestParseArgs(t *testing.T) {
 			},
 			expected: config{
 				binary: absBinPath,
+				files: []string{
+					"/file2",
+					"/dir/file3",
+				},
 				cmd: &qemu.Command{
 					Kernel:        "/boot/this",
 					CPU:           "host",
@@ -97,7 +112,7 @@ func TestParseArgs(t *testing.T) {
 			},
 		},
 		{
-			name: "flag parsing stops at flags after positional arguments",
+			name: "flag parsing stops at flags after binary file",
 			args: []string{
 				"-kernel=/boot/this",
 				"bin.test",

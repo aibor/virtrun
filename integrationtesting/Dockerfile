@@ -1,4 +1,4 @@
-FROM docker.io/library/golang:1.21-bookworm
+FROM docker.io/library/golang:1.21.5-bookworm
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \

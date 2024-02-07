@@ -61,3 +61,13 @@ func TestLoopbackInterface(t *testing.T) {
 	assert.Equal(t, addrs[0].String(), "127.0.0.1/8")
 	assert.Equal(t, addrs[1].String(), "::1/128")
 }
+
+func TestEnv(t *testing.T) {
+	if os.Getpid() == 1 {
+		t.Skip("env only tested when called by default init")
+	}
+	envPath, envPathExists := os.LookupEnv("PATH")
+	if assert.True(t, envPathExists, "PATH env var should be present") {
+		assert.Equal(t, "/data", envPath, "PATH env var should be correct")
+	}
+}

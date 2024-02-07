@@ -1,4 +1,4 @@
-FROM docker.io/library/golang:1.21.5-bookworm AS build-stage
+FROM docker.io/library/golang:1.22.0-bookworm AS build-stage
 
 WORKDIR /virtrun
 

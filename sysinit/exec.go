@@ -12,15 +12,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Exec executes the given file wit the given arguments. Output and errors are
-// written to the given writers immediately. Might return [exec.ExitError].
-func Exec(path string, args []string, outWriter, errWriter io.Writer) error {
-	cmd := exec.Command(path, args...)
-	cmd.Stdout = outWriter
-	cmd.Stderr = errWriter
-	return cmd.Run()
-}
-
 // ExecParallel executes the given files in parallel. Each is called with the
 // given args. Output of the commands is written to the given out and err
 // writers once the command exited. If there is only a single path given,
@@ -32,7 +23,10 @@ func ExecParallel(paths []string, args []string, outW, errW io.Writer) error {
 	case 0:
 		return nil
 	case 1:
-		return Exec(paths[0], args, os.Stdout, os.Stderr)
+		cmd := exec.Command(paths[0], args...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd.Run()
 	}
 
 	var (
@@ -59,7 +53,10 @@ func ExecParallel(paths []string, args []string, outW, errW io.Writer) error {
 		path := path
 		eg.Go(func() error {
 			var outBuf, errBuf bytes.Buffer
-			err := Exec(path, args, &outBuf, &errBuf)
+			cmd := exec.Command(path, args...)
+			cmd.Stdout = &outBuf
+			cmd.Stderr = &errBuf
+			err := cmd.Run()
 			outStream <- outBuf.Bytes()
 			errStream <- errBuf.Bytes()
 			return err

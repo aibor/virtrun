@@ -84,6 +84,10 @@ func Run(fn func() (int, error)) error {
 		return err
 	}
 
+	if err = CreateCommonSymlinks(); err != nil {
+		return err
+	}
+
 	rc, err := fn()
 	var eerr *exec.ExitError
 	if err != nil {

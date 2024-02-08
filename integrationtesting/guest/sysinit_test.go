@@ -71,3 +71,20 @@ func TestEnv(t *testing.T) {
 		assert.Equal(t, "/data", envPath, "PATH env var should be correct")
 	}
 }
+
+func TestCommonSymlinks(t *testing.T) {
+	symlinks := map[string]string{
+		"/dev/fd":     "/proc/self/fd/",
+		"/dev/stdin":  "/proc/self/fd/0",
+		"/dev/stdout": "/proc/self/fd/1",
+		"/dev/stderr": "/proc/self/fd/2",
+	}
+
+	for link, expectedTarget := range symlinks {
+		t.Run(link, func(t *testing.T) {
+			target, err := os.Readlink(link)
+			require.NoError(t, err, "link must be readable")
+			assert.Equal(t, expectedTarget, target, "link target should be as expected")
+		})
+	}
+}

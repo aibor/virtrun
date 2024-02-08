@@ -50,6 +50,14 @@ var MountPointPresets = map[string]MountPoints{
 	},
 }
 
+// CommonSymlinks defines symbolic links usually set by init systems.
+var CommonSymlinks = map[string]string{
+	"/dev/fd":     "/proc/self/fd/",
+	"/dev/stdin":  "/proc/self/fd/0",
+	"/dev/stdout": "/proc/self/fd/1",
+	"/dev/stderr": "/proc/self/fd/2",
+}
+
 // MountFs mounts the special file system with type FsType at the given path.
 //
 // If path does not exist, it is created. An error is returned if this or the
@@ -80,6 +88,19 @@ func MountAll() error {
 	for _, mp := range mounts {
 		if err := MountFs(mp.Path, mp.FSType); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+// CreateCommonSymlinks creates common symbolic links in the file system.
+//
+// This must be run after all file systems have been mounted.
+func CreateCommonSymlinks() error {
+	for link, target := range CommonSymlinks {
+		if err := os.Symlink(target, link); err != nil {
+			return fmt.Errorf("create common symlink %s: %v", link, err)
 		}
 	}
 

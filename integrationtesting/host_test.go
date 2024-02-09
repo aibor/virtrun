@@ -46,7 +46,7 @@ func TestHostWithLibsNonZeroRC(t *testing.T) {
 
 	expectedRC := 73
 	if KernelArch != runtime.GOARCH {
-		expectedRC = 127
+		expectedRC = 126
 	}
 	assert.Equal(t, expectedRC, rc)
 }

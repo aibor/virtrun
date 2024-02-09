@@ -20,6 +20,20 @@ func PrintRC(ret int) {
 	fmt.Printf(qemu.RCFmt, ret)
 }
 
+// PrintErrorAndRC examines the given error, prints it and sets the return code
+// to the given errRC. If there is no error, the given rc is printed.
+func PrintErrorAndRC(err error, errRC, rc int) {
+	// Always print the error before printing the RC, since output
+	// processing stops once RC line is found and we want to make sure the
+	// error can be seen by the user.
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		// Always return a non zero return code in case of error.
+		rc = errRC
+	}
+	PrintRC(rc)
+}
+
 // IsPidOne returns true if the running process has PID 1.
 func IsPidOne() bool {
 	return os.Getpid() == 1
@@ -34,13 +48,8 @@ func IsPidOneChild() bool {
 // Poweroff shuts down the system.
 //
 // Call when done, or deferred right at the beginning of your `TestMain`
-// function. If the given error pointer and error are not nil, print it before
-// shutting down.
-func Poweroff(err *error) {
-	if err != nil && *err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", *err)
-	}
-
+// function.
+func Poweroff() {
 	// Silence the kernel so it does not show up in our test output.
 	_ = os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0755)
 
@@ -64,41 +73,51 @@ func Poweroff(err *error) {
 // After that, a return code is sent to stdout for consumption by the host
 // process. The return code returned by the function is used, unless it
 // returned with an error. If the error is an [exec.ExitError], it is
-// parsed and its return code is used. Otherwise the return code is 99.
+// parsed and its return code is used. Otherwise the return code is 127 in case
+// it was never set or 126 in case there was an error.
 func Run(fn func() (int, error)) error {
 	if !IsPidOne() {
 		return ErrNotPidOne
 	}
 
-	// From here on we can assume we are a systems's init program. termination
+	// From here on we can assume we are a systems's init program. Termination
 	// will lead to system shutdown, or kernel panic, if we do not shutdown
 	// correctly.
-	var err error
-	defer Poweroff(&err)
+	defer Poweroff()
 
+	var (
+		// Set fallthrough rc to non zero value, so it must be set to zero
+		// explicitly by the callers function later.
+		rc      = 127 // Fallthrough return code.
+		errRC   = 126 // Return code that is used in case of errors.
+		err     error
+		exitErr *exec.ExitError
+	)
+
+	// Setup the error and return code printing so it is always printed. In
+	// case of setup errors, the failure is communicated properly as well.
+	defer func() {
+		PrintErrorAndRC(err, errRC, rc)
+	}()
+
+	// Setup the system.
 	if err = ConfigureLoopbackInterface(); err != nil {
 		return err
 	}
-
 	if err = MountAll(); err != nil {
 		return err
 	}
-
 	if err = CreateCommonSymlinks(); err != nil {
 		return err
 	}
 
-	rc, err := fn()
-	var eerr *exec.ExitError
-	if err != nil {
-		if errors.As(err, &eerr) {
-			rc = eerr.ExitCode()
-			err = nil
-		} else {
-			rc = 127
-		}
+	// Run callers function. The returned rc is irrelevant if any error is
+	// returned, because the deferred error handling will override it.
+	rc, err = fn()
+	if errors.As(err, &exitErr) {
+		rc = exitErr.ExitCode()
+		err = nil
 	}
-	PrintRC(rc)
 
-	return nil
+	return err
 }

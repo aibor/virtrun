@@ -17,46 +17,46 @@ func assertNode(t *testing.T, i *Initramfs, p string, e TreeNode) {
 }
 
 func TestInitramfsNew(t *testing.T) {
-	i := New("first")
-
-	expected := TreeNode{
-		Type:        FileTypeRegular,
-		RelatedPath: "first",
+	testFS := fstest.MapFS{
+		"init": &fstest.MapFile{Data: []byte{5, 5}},
 	}
-	assertNode(t, i, "/init", expected)
-}
+	initFile, err := testFS.Open("init")
+	require.NoError(t, err, "must open test file")
 
-func TestInitramfsNewWithInitFor(t *testing.T) {
-	t.Run("unsupported arch", func(t *testing.T) {
-		_, err := NewWithInitFor("unsupported", "first")
-		assert.Error(t, err)
-	})
-
-	for _, arch := range []string{"amd64", "arm64"} {
-		t.Run(arch, func(t *testing.T) {
-			i, err := NewWithInitFor(arch, "first")
-			require.NoError(t, err, "must construct")
-
-			expectedSource, err := initFor(arch)
-			require.NoError(t, err, "must get expected init")
-
-			expectedInit := TreeNode{
-				Type:   FileTypeVirtual,
-				Source: expectedSource,
-			}
-			assertNode(t, i, "/init", expectedInit)
-
-			expectedMain := TreeNode{
+	tests := []struct {
+		name     string
+		initFunc func(*TreeNode)
+		expected TreeNode
+	}{
+		{
+			name:     "real file",
+			initFunc: WithRealInitFile("first"),
+			expected: TreeNode{
 				Type:        FileTypeRegular,
 				RelatedPath: "first",
-			}
-			assertNode(t, i, "/main", expectedMain)
+			},
+		},
+		{
+			name:     "virtual file",
+			initFunc: WithVirtualInitFile(initFile),
+			expected: TreeNode{
+				Type:   FileTypeVirtual,
+				Source: initFile,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			i := New(tt.initFunc)
+			assertNode(t, i, "/init", tt.expected)
 		})
 	}
 }
 
 func TestInitramfsAddFile(t *testing.T) {
-	archive := New("first")
+	archive := New(WithRealInitFile("first"))
 
 	require.NoError(t, archive.AddFile("dir", "second", "rel/third"))
 	require.NoError(t, archive.AddFile("dir", "", "/abs/fourth"))
@@ -76,7 +76,7 @@ func TestInitramfsAddFile(t *testing.T) {
 }
 
 func TestInitramfsAddFiles(t *testing.T) {
-	archive := New("first")
+	archive := New(WithRealInitFile("first"))
 
 	require.NoError(t, archive.AddFiles("dir", "second", "rel/third", "/abs/fourth"))
 	require.NoError(t, archive.AddFiles("dir", "fifth"))
@@ -205,7 +205,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 
 func TestInitramfsResolveLinkedLibs(t *testing.T) {
 	t.Setenv("LD_LIBRARY_PATH", "testdata/lib")
-	irfs := New("testdata/bin/main")
+	irfs := New(WithRealInitFile("testdata/bin/main"))
 	err := irfs.AddRequiredSharedObjects("")
 	require.NoError(t, err)
 

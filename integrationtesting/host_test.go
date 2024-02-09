@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aibor/virtrun/internal/initprog"
 	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/aibor/virtrun/internal/qemu"
 )
@@ -29,7 +30,11 @@ func TestHostWithLibsNonZeroRC(t *testing.T) {
 	cmd.Kernel = KernelPath
 	cmd.Verbose = Verbose
 
-	irfs, err := initramfs.NewWithInitFor(KernelArch, binary)
+	init, err := initprog.For(KernelArch)
+	require.NoError(t, err)
+
+	irfs := initramfs.New(initramfs.WithVirtualInitFile(init))
+	err = irfs.AddFile("/", "main", binary)
 	require.NoError(t, err)
 
 	err = irfs.AddRequiredSharedObjects("")
@@ -92,7 +97,11 @@ func TestHostRCParsing(t *testing.T) {
 			cmd.Memory = 128
 			cmd.InitArgs = tt.args
 
-			irfs, err := initramfs.NewWithInitFor(KernelArch, binary)
+			init, err := initprog.For(KernelArch)
+			require.NoError(t, err)
+
+			irfs := initramfs.New(initramfs.WithVirtualInitFile(init))
+			err = irfs.AddFile("/", "main", binary)
 			require.NoError(t, err)
 
 			cmd.Initramfs, err = irfs.WriteToTempFile(t.TempDir())

@@ -21,30 +21,26 @@ type Initramfs struct {
 	fileTree Tree
 }
 
-// New creates a new [Initramfs] with "/init" copied from the given file path.
-func New(path string) *Initramfs {
-	i := &Initramfs{}
-	rootDir := i.fileTree.GetRoot()
-	// Never fails on a new tree.
-	_, _ = rootDir.AddRegular("init", path)
-	return i
+func WithRealInitFile(path string) func(*TreeNode) {
+	return func(rootDir *TreeNode) {
+		// Never fails on a new tree.
+		_, _ = rootDir.AddRegular("init", path)
+	}
 }
 
-// NewWithInitFor creates a new [Initramfs] with "/init" copied from a
-// pre-built, statically linked binary. This binary sets up the system as
-// required by an init and then executes "/main". The "/main" file is copied
-// from the given path for main.
-func NewWithInitFor(arch, main string) (*Initramfs, error) {
-	init, err := initFor(arch)
-	if err != nil {
-		return nil, err
+func WithVirtualInitFile(file fs.File) func(*TreeNode) {
+	return func(rootDir *TreeNode) {
+		// Never fails on a new tree.
+		_, _ = rootDir.AddVirtual("init", file)
 	}
-	i := &Initramfs{}
-	rootDir := i.fileTree.GetRoot()
-	// Never fails on a new tree.
-	_, _ = rootDir.AddVirtual("init", init)
-	_, _ = rootDir.AddRegular("main", main)
-	return i, nil
+}
+
+// New creates a new [Initramfs] with "/init" copied from the given file path.
+func New(fn func(*TreeNode)) *Initramfs {
+	initramfs := &Initramfs{}
+	rootDir := initramfs.fileTree.GetRoot()
+	fn(rootDir)
+	return initramfs
 }
 
 // AddFile creates [Initramfs.filesDir] and adds the given file to it. If name

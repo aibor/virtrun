@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/aibor/virtrun/internal/initprog"
 	"github.com/aibor/virtrun/internal/initramfs"
 )
 
@@ -44,24 +45,29 @@ func run() (int, error) {
 	if cfg.standalone {
 		// In standalone mode, the first file (which might be the only one)
 		// is supposed to work as an init matching our requirements.
-		irfs = initramfs.New(cfg.binary)
+		irfs = initramfs.New(initramfs.WithRealInitFile(cfg.binary))
 	} else {
 		// In the default wrapped mode a pre-compiled init is used that just
 		// executes "/main".
-		irfs, err = initramfs.NewWithInitFor(cfg.arch, cfg.binary)
+		init, err := initprog.For(cfg.arch)
 		if err != nil {
-			return errRC, fmt.Errorf("initramfs: %v", err)
+			return errRC, fmt.Errorf("embedded init: %v", err)
+		}
+		irfs = initramfs.New(initramfs.WithVirtualInitFile(init))
+		if err := irfs.AddFile("/", "main", cfg.binary); err != nil {
+			return errRC, fmt.Errorf("initramfs: add main file: %v", err)
 		}
 	}
 	if err := irfs.AddFiles("data", cfg.files...); err != nil {
-		return errRC, fmt.Errorf("add files: %v", err)
+		return errRC, fmt.Errorf("initramfs: add files: %v", err)
 	}
 	if err := irfs.AddRequiredSharedObjects(""); err != nil {
-		return errRC, fmt.Errorf("add libs: %v", err)
+		return errRC, fmt.Errorf("initramfs: add libs: %v", err)
 	}
 
-	if cfg.cmd.Initramfs, err = irfs.WriteToTempFile(""); err != nil {
-		return errRC, fmt.Errorf("write initramfs: %v", err)
+	cfg.cmd.Initramfs, err = irfs.WriteToTempFile("")
+	if err != nil {
+		return errRC, fmt.Errorf("initramfs: write to temp file: %v", err)
 	}
 	defer func() {
 		if cfg.keepInitramfs {

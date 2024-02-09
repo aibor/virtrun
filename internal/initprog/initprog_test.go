@@ -1,4 +1,4 @@
-package initramfs
+package initprog_test
 
 import (
 	"debug/elf"
@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aibor/virtrun/internal/initprog"
 )
 
 func TestInits(t *testing.T) {
@@ -32,7 +34,7 @@ func TestInits(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.arch, func(t *testing.T) {
-			file, err := initFor(tt.arch)
+			file, err := initprog.For(tt.arch)
 			if tt.errMsg != "" {
 				assert.ErrorContains(t, err, tt.errMsg)
 				return

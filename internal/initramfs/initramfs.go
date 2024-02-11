@@ -151,8 +151,8 @@ func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
 	return nil
 }
 
-// WriteToTempFile writes the complete CPIO archive into a new file nthe given
-// directory and returns its filename. If tmpDir is the empty string the
+// WriteToTempFile writes the complete CPIO archive into a new file in the
+// given directory and returns its filename. If tmpDir is the empty string the
 // default directory is used as returned by [os.TempDir].
 // The caller is responsible for removing the file once it is not needed
 // anymore.

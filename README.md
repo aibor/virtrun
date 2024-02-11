@@ -2,12 +2,12 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/aibor/virtrun)](https://pkg.go.dev/github.com/aibor/virtrun)
 virtrun is a library and binary QEMU wrapper for running binaries in an
-isolated system as PID 1.
+isolated system.
 
 The package uses itself for testing, so see
 [integrationtesting](integrationtesting/) for real life examples.
 
-## Quick start
+## Usage
 
 The easiest way to use virtrun is to use the embedded init programs. With this,
 no init binary needs to be provided.

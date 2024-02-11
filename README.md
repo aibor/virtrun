@@ -1,75 +1,176 @@
 # virtrun
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/aibor/virtrun)](https://pkg.go.dev/github.com/aibor/virtrun)
+
 virtrun is a library and binary QEMU wrapper for running binaries in an
 isolated system.
 
-The package uses itself for testing, so see
+The package uses itself for testing, so see the guest tests in
 [integrationtesting](integrationtesting/) for real life examples.
+
+
+## Requirements
+
+### QEMU
+
+The binaries for running QEMU for the architecture matching the kernel and
+binary you want to use, either `qemu-system-x86_64` or `qemu-system-aarch64`.
+If not in `$PATH`, you can specify the path to the binary with the flag
+`-qemu-bin`.
+
+### Linux Kernel
+
+The kernel must be compiled to work with some support for working in QEMU.
+Especially some kind of serial console or virtual console must be present. All
+of this must be compiled into the kernel directly, ass there is no way to load
+kernel modules, unless your given binary does that.
+
+The absolute path to the kernel must be given, either by flag `-kernel` or by
+the environment variable `QEMU_KERNEL`. Make sure the kernel matches the
+architecture of your binaries and the QEMU binary.
+
+By default, the most likely correct IO transport is chosen automatically. It
+can be set manually with the flag `-transport`. With x86 `pci` is usually the
+right now. With arm64 it is `mmio`. `isa` can be tried as a fallback, in case
+there is no output ("Error: run: guest did not print init return code").
+
+The Ubuntu kernels work out of the box and have all necessary features compiled
+in.
 
 ## Usage
 
-The easiest way to use virtrun is to use the embedded init programs. With this,
-no init binary needs to be provided.
+### Direct use
 
-The path to the kernel must be given, either by flag `-kernel` or by the
-environment variable `QEMU_KERNEL`. Make sure the kernel matches the
-architecture of the binaries and the QEMU binary.
+By default, virtrun brings a simple init program, that sets up the guest system
+and then executes your binary. So, your binary will be a direct child of PID 1.
 
-If you have it installed in your PATH, run a go test like this:
+Usage: `virtrun [flags...] binary [args...]`
 
-```
-$ go test -exec "virtrun -kernel /boot/vmlinuz-linux" .
+All arguments after the binary will be passed to the guest's
+`/init` program. The default init program will pass them to the binary.
+
+The following examples assume you have virtrun installed in a directory that is
+in `$PATH`. Instead, you can can also use `go run github.com/aibor/virtrun`.
+
+Let's use `env` as our main binary to show simple invocation and default
+environment variables.
+
+```console
 $ virtrun -kernel /boot/vmlinuz-linux /usr/bin/env
+HOME=/
+TERM=linux
+PATH=/data
 ```
 
-Or use directly:
+Loopback interface is initialized by init:
+
+```console
+$ virtrun -kernel /boot/vmlinuz-linux /usr/bin/ip address
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host proto kernel_lo
+       valid_lft forever preferred_lft forever
+```
+
+Additional files can be added to the guest system with the flag `-addFile` that
+can be used multiple times. The files are added into the directory `/data`.
+`PATH` is set to this directory, so binaries can be invoked easily. Also,
+required shared libraries are added to the ELF interpreter's default library
+directory as well:
+
+```console
+$ virtrun -kernel /boot/vmlinuz-linux -addFile /usr/bin/bash /usr/bin/tree -x
+.
+|-- data
+|   `-- bash
+|-- dev
+|-- init
+|-- lib
+|   |-- ld-linux-x86-64.so.2
+|   |-- libc.so.6
+|   |-- libncursesw.so.6
+|   `-- libreadline.so.8
+|-- lib64 -> /lib
+|-- main
+|-- proc
+|-- root
+|-- run
+|-- sys
+|-- tmp
+`-- usr
+    `-- lib -> /lib
+```
+
+### With `go test -exec`
+
+Virtrun can be used to run go tests that require root privileges, have special
+system environment requirements, test for a different architecture or kernel
+version. It can be used to wrap go test binary execution by using it with the
+go test's `-exec` flag. Just pass the complete virtrun invocation as string to
+that flag. It will be invoked for each test binary.
+
+Since go test changes into the package directory for running the test, absolute
+paths must be used for any file path that is passed to virtrun by flag
+(`-kernel`, `-addFile`, `qemu-bin`, ...).
+
+Use without installation:
+
+```console
+$ go test -exec "go run github.com/aibor/virtrun -kernel /boot/vmlinuz-linux" .
+```
+
+Installed into `$PATH`:
+
+```console
+$ go test -exec "virtrun -kernel /boot/vmlinuz-linux" .
+```
+
+Setting kernel in environment variable:
+
+```console
+$ export QEMU_KERNEL=/boot/vmlinuz-linux
+$ go test -exec virtrun .
+```
+
+Use arm64 kernel on a amd64 host:
+
+```console
+$ export QEMU_KERNEL=/absolute/path/to/vmlinuz-arm64
+$ GOARCH=arm64 go test -exec virtrun .
+```
+
+Virtrun supports go test flags that set output files, like coverage or resource
+profile files, and uses virtual consoles to send the content from the guest
+system back to the host:
 
 ```
-$ go test -exec "go run github.com/aibor/virtrun" .
+$ go test -exec 'virtrun' -cover -coverprofile cover.out .
 ```
 
-Other architectures work as well. You need a kernel for the target
-architecture. Currently supported are "amd64" and "arm64".
+For debugging, use virtrun's flag `-verbose` togehter with go test's flag `-v`:
 
-If additional files are required in the guest, specify them using the flag
-`-addFile`. They will be present in the guest's /data directory and required
-libraries will be resolved for ELF binaries.
+```console
+$ go test -exec "virtrun -verbose" -v .
+```
 
-## How it works
+### Standalone mode
 
-Virtrun wraps QEMU running an init that runs and communicates its exit code
-via stdout back to virtrun. It is intended to run simple binaries like
-go test binaries. Virtrun tries to provide all required linked libraries of the
-binaries in the QEMU guest.
+In Standalone mode, your given binary is executed as `/init` directly. For this
+to work, your binary must do system setup itself. The only essential required
+task it has is to communicate the exit code on stdout and shutdown the system.
 
-Depending on the presence of QEMU_ARCH, GOARCH or the runtime arch, the correct
-qemu-system binary and machine type is used. KVM is enabled if present and
-accessible. Those things can be overridden by flags. See "virtrun -help"
-for all flags.
-
-Virtrun supports different QEMU IO transport types. Which is needed depends on
-the kernel and machine type used. If you don't get any output, try different
-transport types with flag `-transport`
-
-All flags that are given after the binary will be passed to the guest's
-`/init` program. There is special handling for file related gotestflags. Those
-are rewritten to virtual consoles before they are passed. So, gotestflags like
-coverprofile can be used.
-
-## Standalone mode
-
-In Standalone mode, the given binary is required to be able to act as a
-system init binary. The only essential required functions are to communicate
-the exit code on stdout and shutdown the system.
+The sub-package [sysinit](https://pkg.go.dev/github.com/aibor/virtrun/sysinit)
+provides helper functions for necessary tasks.
 
 A simple init can be built using `sysinit.Run` which is a wrapper for those
-essential tasks.
+essential tasks. See the [simple init program](internal/initprog/init/main.go)
+that is used in the default wrapped mode, for inspiration.
 
-For go test binaries this can be done by using `sysinit.RunTests` in a custom
-`TestMain` function. It is is a wrapper for `testing.M.Run`. Before running the
-tests some special system file systems are mounted and handles communicating
-the return code.
+For go test binaries `sysinit.RunTests` can be used in a custom `TestMain`
+function if you need to do any additional set up for your test run. It is is a
+wrapper for `sysinit.Run` around `testing.M.Run`.
 
 So, in a test package, define your custom TestMain function and call
 `sysinit.RunTests`. You may keep this in a separate test file and use build
@@ -98,10 +199,26 @@ Instead of using `sysinit.RunTests` you can use call the various parts
 individually, of course, and just mount the file systems you need or additional
 ones. See `sysinit.RunTests` for the steps it does.
 
-With the `TestMain` function in place, run the test and specify the virtrun
-binary in one of the following ways:
+## Internals
 
-```
-$ go test -tags virtrun -exec 'virtrun -standalone' .
-$ go test -tags virtrun -exec 'virtrun -standalone' -cover -coverprofile cover.out .
-```
+### Return Code Communication
+
+Virtrun wraps QEMU and runs an init program that runs and communicates its exit
+code via a defined formatted string on stdout that is parsed by the virtrun.
+Everything else on stdout is printed directly as is.
+
+### File Output
+
+For writing into files on the host (like for go test profiles), a dedicated
+virtual console is set up for each file.
+
+### Architecture Detection
+
+Depending on the presence of the environment variables `QEMU_ARCH`, `GOARCH`, or
+with the runtime arch, the correct qemu-system binary and machine type is used.
+KVM is enabled if present and accessible. Those things can be overridden by
+flags. See `virtrun -help` for all flags.
+
+Virtrun supports different QEMU IO transport types. Which is needed depends on
+the kernel and machine type used. If you don't get any output, try different
+transport types with flag `-transport`

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+
+SPDX-License-Identifier: MIT
+-->
+
 # virtrun
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/aibor/virtrun)](https://pkg.go.dev/github.com/aibor/virtrun)

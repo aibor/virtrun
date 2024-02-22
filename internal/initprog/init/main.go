@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+//
+// SPDX-License-Identifier: MIT
+
 // Simple init program that can be pre-compiled for multiple architectures and
 // embedded into the main binary.
 package main

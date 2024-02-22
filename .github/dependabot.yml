@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+#
+# SPDX-License-Identifier: MIT
+
 version: 2
 updates:
   - package-ecosystem: "gomod"

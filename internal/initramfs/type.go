@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+//
+// SPDX-License-Identifier: MIT
+
 package initramfs
 
 // FileType defines the type of a [TreeNode].

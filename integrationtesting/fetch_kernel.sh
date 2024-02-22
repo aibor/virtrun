@@ -1,4 +1,9 @@
 #!/bin/sh
+
+# SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+#
+# SPDX-License-Identifier: MIT
+
 #
 # Fetch kernel from https://github.com/cilium/ci-kernels container registry.
 # They build tests kernels for amd64 and arm64 since linux 6.7. The images

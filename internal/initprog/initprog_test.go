@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+//
+// SPDX-License-Identifier: MIT
+
 package initprog_test
 
 import (

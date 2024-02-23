@@ -76,10 +76,24 @@ jobs:
               -kernel.path "/github/workspace/vmlinuz" \
               -kernel.arch ${{ env.KERNELARCH }}
 
-  reuseCheck:
+  reuse-lint:
     name: FSFE REUSE Compliance Check
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: REUSE Compliance Check
       uses: fsfe/reuse-action@v2
+
+  results:
+    if: always()
+    runs-on: ubuntu-latest
+    name: Test Results
+    needs:
+    - lint-and-test
+    - integration-tests
+    - reuse-lint
+    steps:
+    - run: exit 1
+      if: |
+        contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled')

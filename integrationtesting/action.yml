@@ -12,7 +12,7 @@ inputs:
 runs:
   using: "docker"
   image: "Dockerfile"
-  entrypoint: "bash"
+  entrypoint: "sh"
   args:
     - "-c"
     - ${{ inputs.cmd }}

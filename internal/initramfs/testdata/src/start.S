@@ -1,6 +1,6 @@
-;;; SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
-;;;
-;;; SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+//
+// SPDX-License-Identifier: MIT
 
 /*
  * Custom _start entry function for ELF files for x86_64 machines. Needed if we 

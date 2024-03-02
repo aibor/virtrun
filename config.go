@@ -194,8 +194,8 @@ func (cfg *config) parseArgs(args []string) error {
 
 	// Parses arguments up to the first one that is not prefixed with a "-" or
 	// is "--".
-	args = addArgsFromEnv(args[1:], "VIRTRUN_ARGS")
-	if err := fs.Parse(args); err != nil {
+	virtrunArgs := addArgsFromEnv(args[1:], "VIRTRUN_ARGS")
+	if err := fs.Parse(virtrunArgs); err != nil {
 		return err
 	}
 

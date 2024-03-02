@@ -25,6 +25,20 @@ func TestParseArgs(t *testing.T) {
 		errMsg   string
 	}{
 		{
+			name: "help",
+			args: []string{
+				"-help",
+			},
+			errMsg: "flag: help requested",
+		},
+		{
+			name: "version",
+			args: []string{
+				"-version",
+			},
+			errMsg: "flag: help requested",
+		},
+		{
 			name: "no kernel",
 			args: []string{
 				"bin.test",

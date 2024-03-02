@@ -52,10 +52,6 @@ func newConfig() (*config, error) {
 		return nil, err
 	}
 
-	// Preset kernel from environment. Must be a kernel with the same
-	// architecture QEMU is supposed to run and the binary that is given.
-	cmd.Kernel = os.Getenv("QEMU_KERNEL")
-
 	cfg := &config{
 		arch: arch,
 		cmd:  cmd,
@@ -212,7 +208,7 @@ func (cfg *config) parseArgs(args []string) error {
 	}
 
 	if cfg.cmd.Kernel == "" {
-		return failf("no kernel given (use env var QEMU_KERNEL or flag -kernel)")
+		return failf("no kernel given (use -kernel)")
 	}
 
 	// First positional argument is supposed to be a binary file.

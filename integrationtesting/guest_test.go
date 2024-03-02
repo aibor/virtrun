@@ -24,32 +24,33 @@ func TestGuestSysinit(t *testing.T) {
 
 	test := func(standalone bool) func(t *testing.T) {
 		return func(t *testing.T) {
-			execArgs := []string{
-				"env",
-				"GOARCH=",
-				fmt.Sprintf("QEMU_ARCH=%s", KernelArch),
-				"go",
-				"run",
-				filepath.Join(cwd, ".."),
+			virtrunArgs := []string{
 				"-kernel", KernelPath,
 			}
 			if Verbose {
-				execArgs = append(execArgs, "-verbose")
+				virtrunArgs = append(virtrunArgs, "-verbose")
 			}
 			testTags := []string{
 				"integration_guest",
 			}
 
 			if standalone {
-				execArgs = append(execArgs, "-standalone")
+				virtrunArgs = append(virtrunArgs, "-standalone")
 				testTags = append(testTags, "standalone")
 			}
+
+			virtrunArgString := strings.Join(virtrunArgs, " ")
+			// Unset GOARCH for the exec command as it needs to run as native
+			// arch of the test host.
+			execString := "env GOARCH= go run " + filepath.Join(cwd, "..")
+			tagString := strings.Join(testTags, ",")
+
 			args := []string{
 				"test",
 				"-v",
 				"-timeout", "2m",
-				"-exec", strings.Join(execArgs, " "),
-				"-tags", strings.Join(testTags, ","),
+				"-exec", execString,
+				"-tags", tagString,
 				"-cover",
 				"-coverprofile", "/tmp/cover.out",
 				"-coverpkg", "github.com/aibor/virtrun/sysinit",
@@ -60,6 +61,7 @@ func TestGuestSysinit(t *testing.T) {
 			cmd.Env = append(
 				os.Environ(),
 				fmt.Sprintf("GOARCH=%s", KernelArch),
+				fmt.Sprintf("VIRTRUN_ARGS=%s", virtrunArgString),
 			)
 			out, err := cmd.CombinedOutput()
 			if len(out) > 0 {

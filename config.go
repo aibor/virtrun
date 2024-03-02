@@ -18,6 +18,13 @@ import (
 	"github.com/aibor/virtrun/internal/qemu"
 )
 
+// Set on build.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 type config struct {
 	cmd                 *qemu.Command
 	arch                string
@@ -192,6 +199,14 @@ func (cfg *config) parseArgs(args []string) error {
 		},
 	)
 
+	var versionFlag bool
+	fs.BoolVar(
+		&versionFlag,
+		"version",
+		versionFlag,
+		"show version and exit",
+	)
+
 	// Parses arguments up to the first one that is not prefixed with a "-" or
 	// is "--".
 	virtrunArgs := addArgsFromEnv(args[1:], "VIRTRUN_ARGS")
@@ -199,12 +214,25 @@ func (cfg *config) parseArgs(args []string) error {
 		return err
 	}
 
-	// Fail like flag does.
-	failf := func(format string, a ...any) error {
+	printf := func(format string, a ...any) string {
 		msg := fmt.Sprintf(format, a...)
 		fmt.Fprintln(fs.Output(), msg)
+		return msg
+	}
+
+	// Fail like flag does.
+	failf := func(format string, a ...any) error {
+		msg := printf(format, a...)
 		fs.Usage()
 		return fmt.Errorf(msg)
+	}
+
+	// With version flag, just print the version and exit. Using [flag.ErrHelp]
+	// the main binary is supposed to return with a non error exit code.
+	if versionFlag {
+		msgFmt := "virtrun %s\n  commit %s\n  built at %s"
+		printf(msgFmt, version, commit, date)
+		return flag.ErrHelp
 	}
 
 	if cfg.cmd.Kernel == "" {

@@ -219,10 +219,10 @@ virtual console is set up for each file.
 
 ### Architecture Detection
 
-Depending on the presence of the environment variables `QEMU_ARCH`, `GOARCH`, or
-with the runtime arch, the correct qemu-system binary and machine type is used.
-KVM is enabled if present and accessible. Those things can be overridden by
-flags. See `virtrun -help` for all flags.
+Depending on the presence of the environment variables `VIRTRUN_ARCH`,
+`GOARCH`, or with the runtime arch, the correct qemu-system binary and machine
+type is used. KVM is enabled if present and accessible. Those things can be
+overridden by flags. See `virtrun -help` for all flags.
 
 Virtrun supports different QEMU IO transport types. Which is needed depends on
 the kernel and machine type used. If you don't get any output, try different

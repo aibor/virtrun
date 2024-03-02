@@ -31,11 +31,11 @@ type config struct {
 func newConfig() (*config, error) {
 	var arch string
 
-	// Allow user to specify architecture by dedicated env var QEMU_ARCH. It
+	// Allow user to specify architecture by dedicated env var VIRTRUN_ARCH. It
 	// can be empty, to suppress the GOARCH lookup and enforce the fallback to
-	// the runtime architecture. If QEMU_ARCH is not present, GOARCH will be
+	// the runtime architecture. If VIRTRUN_ARCH is not present, GOARCH will be
 	// used. This is handy in case of cross-architecture go test invocations.
-	for _, name := range []string{"QEMU_ARCH", "GOARCH"} {
+	for _, name := range []string{"VIRTRUN_ARCH", "GOARCH"} {
 		if v, exists := os.LookupEnv(name); exists {
 			arch = v
 			break

@@ -61,6 +61,7 @@ func TestGuestSysinit(t *testing.T) {
 			cmd.Env = append(
 				os.Environ(),
 				fmt.Sprintf("GOARCH=%s", KernelArch),
+				fmt.Sprintf("VIRTRUN_ARCH=%s", KernelArch),
 				fmt.Sprintf("VIRTRUN_ARGS=%s", virtrunArgString),
 			)
 			out, err := cmd.CombinedOutput()

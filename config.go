@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/aibor/virtrun/internal/qemu"
 )
@@ -197,7 +198,8 @@ func (cfg *config) parseArgs(args []string) error {
 
 	// Parses arguments up to the first one that is not prefixed with a "-" or
 	// is "--".
-	if err := fs.Parse(args[1:]); err != nil {
+	args = addArgsFromEnv(args[1:], "VIRTRUN_ARGS")
+	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
@@ -286,4 +288,11 @@ func validateELF(hdr elf.FileHeader, arch string) error {
 	}
 
 	return nil
+}
+
+func addArgsFromEnv(args []string, varName string) []string {
+	// Allow to pass args by environment variable. Args given directly with the
+	// command have precedence and override args from environment.
+	envArgs := strings.Fields(os.Getenv(varName))
+	return append(envArgs, args...)
 }

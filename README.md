@@ -31,9 +31,8 @@ Especially some kind of serial console or virtual console must be present. All
 of this must be compiled into the kernel directly, ass there is no way to load
 kernel modules, unless your given binary does that.
 
-The absolute path to the kernel must be given, either by flag `-kernel` or by
-the environment variable `QEMU_KERNEL`. Make sure the kernel matches the
-architecture of your binaries and the QEMU binary.
+The absolute path to the kernel must be given by flag `-kernel`. Make sure the
+kernel matches the architecture of your binaries and the QEMU binary.
 
 By default, the most likely correct IO transport is chosen automatically. It
 can be set manually with the flag `-transport`. With x86 `pci` is usually the
@@ -133,17 +132,17 @@ Installed into `$PATH`:
 $ go test -exec "virtrun -kernel /boot/vmlinuz-linux" .
 ```
 
-Setting kernel in environment variable:
+Setting flags by environment variable:
 
 ```console
-$ export QEMU_KERNEL=/boot/vmlinuz-linux
+$ export VIRTRUN_ARGS="-kernel /boot/vmlinuz-linux"
 $ go test -exec virtrun .
 ```
 
 Use arm64 kernel on a amd64 host:
 
 ```console
-$ export QEMU_KERNEL=/absolute/path/to/vmlinuz-arm64
+$ export VIRTRUN_ARGS="-kernel /absolute/path/to/vmlinuz-arm64"
 $ GOARCH=arm64 go test -exec virtrun .
 ```
 

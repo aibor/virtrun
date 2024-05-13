@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-FROM docker.io/library/golang:1.22.2-bookworm AS build-stage
+FROM docker.io/library/golang:1.22.3-bookworm AS build-stage
 
 WORKDIR /virtrun
 

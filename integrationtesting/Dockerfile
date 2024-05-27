@@ -4,7 +4,7 @@
 #
 # syntax=docker/dockerfile:1
 
-FROM alpine:3.19
+FROM alpine:3.20
 
  # link dynamic linker so the test with prebuilt testdata works
 RUN set -eux; \

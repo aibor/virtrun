@@ -133,7 +133,7 @@ func (c *Command) Validate() error {
 // It is required that the flags are prefixed with "test" and value is
 // separated form the flag by "=". This is the format the "go test" tool
 // invokes the test binary with.
-func (cmd *Command) ProcessGoTestFlags() {
+func (c *Command) ProcessGoTestFlags() {
 	// Only coverprofile has a relative path to the test pwd and can be
 	// replaced immediately. All other profile files are relative to the actual
 	// test running and need to be prefixed with -test.outputdir. So, collect
@@ -141,12 +141,12 @@ func (cmd *Command) ProcessGoTestFlags() {
 	needsOutputDirPrefix := make([]int, 0)
 	outputDir := ""
 
-	for idx, posArg := range cmd.InitArgs {
+	for idx, posArg := range c.InitArgs {
 		splits := strings.Split(posArg, "=")
 		switch splits[0] {
 		case "-test.coverprofile":
-			splits[1] = "/dev/" + cmd.AddConsole(splits[1])
-			cmd.InitArgs[idx] = strings.Join(splits, "=")
+			splits[1] = "/dev/" + c.AddConsole(splits[1])
+			c.InitArgs[idx] = strings.Join(splits, "=")
 		case "-test.blockprofile",
 			"-test.cpuprofile",
 			"-test.memprofile",
@@ -159,16 +159,16 @@ func (cmd *Command) ProcessGoTestFlags() {
 			fallthrough
 		case "-test.gocoverdir":
 			splits[1] = "/tmp"
-			cmd.InitArgs[idx] = strings.Join(splits, "=")
+			c.InitArgs[idx] = strings.Join(splits, "=")
 		}
 	}
 
 	if outputDir != "" {
 		for _, argsIdx := range needsOutputDirPrefix {
-			splits := strings.Split(cmd.InitArgs[argsIdx], "=")
+			splits := strings.Split(c.InitArgs[argsIdx], "=")
 			path := filepath.Join(outputDir, splits[1])
-			splits[1] = "/dev/" + cmd.AddConsole(path)
-			cmd.InitArgs[argsIdx] = strings.Join(splits, "=")
+			splits[1] = "/dev/" + c.AddConsole(path)
+			c.InitArgs[argsIdx] = strings.Join(splits, "=")
 		}
 	}
 }

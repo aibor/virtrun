@@ -92,6 +92,6 @@ type WalkFunc func(path string, node *TreeNode) error
 // Walk walks the tree recursively, starting at the root, and runs the given
 // function for each node. If the function returns an error, the recursion is
 // terminated immediately and the error is returned.
-func (f *Tree) Walk(fn WalkFunc) error {
-	return f.GetRoot().walk(string(filepath.Separator), fn)
+func (t *Tree) Walk(fn WalkFunc) error {
+	return t.GetRoot().walk(string(filepath.Separator), fn)
 }

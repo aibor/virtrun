@@ -19,6 +19,8 @@ import (
 	"github.com/aibor/virtrun/internal/qemu"
 )
 
+const minMemory = 128
+
 // Set on build.
 var (
 	version = "dev"
@@ -116,7 +118,7 @@ func (cfg *config) parseArgs(args []string) error {
 				return err
 			}
 
-			if t > 2 {
+			if t >= uint64(qemu.LenTransportType) {
 				return errors.New("unknown transport type")
 			}
 
@@ -142,7 +144,7 @@ func (cfg *config) parseArgs(args []string) error {
 				return err
 			}
 
-			if mem < 128 {
+			if mem < minMemory {
 				return errors.New("less than 128 MB is not sufficient")
 			}
 

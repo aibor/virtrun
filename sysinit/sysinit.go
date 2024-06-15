@@ -14,6 +14,8 @@ import (
 	"github.com/aibor/virtrun/internal/qemu"
 )
 
+const sysFileMode = 0o600
+
 // ErrNotPidOne may be returned if the process is expected to be run as PID 1
 // but is not.
 var ErrNotPidOne = errors.New("process does not have ID 1")
@@ -56,7 +58,7 @@ func IsPidOneChild() bool {
 // function.
 func Poweroff() {
 	// Silence the kernel so it does not show up in our test output.
-	_ = os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0o755)
+	_ = os.WriteFile("/proc/sys/kernel/printk", []byte("0"), sysFileMode)
 
 	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
 		fmt.Fprintf(os.Stderr, "error calling power off: %v\n", err)

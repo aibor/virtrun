@@ -21,6 +21,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const lddTimeoutSeconds = 5
+
 var (
 	// ErrNoInterpreter is returned if no interpreter is found in an ELF file.
 	ErrNoInterpreter = errors.New("no interpreter in ELF file")
@@ -118,10 +120,12 @@ func ldd(interpreter, path string) (ldInfos, error) {
 		return nil, ErrNoInterpreter
 	}
 
-	var stdoutBuf, stderrBuf bytes.Buffer
+	timeout := lddTimeoutSeconds * time.Second
 
-	ctx, stop := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, stop := context.WithTimeout(context.Background(), timeout)
 	defer stop()
+
+	var stdoutBuf, stderrBuf bytes.Buffer
 
 	cmd := exec.CommandContext(ctx, interpreter, "--list", path)
 	cmd.Stdout = &stdoutBuf

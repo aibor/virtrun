@@ -16,6 +16,8 @@ const (
 	TransportTypePCI
 	// Virtio MMIO transport. Requires kernel built with CONFIG_VIRTIO_MMIO.
 	TransportTypeMMIO
+
+	LenTransportType
 )
 
 // TransportType represents QEMU IO transport types.

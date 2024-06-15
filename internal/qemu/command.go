@@ -18,6 +18,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const minAdditionalFileDescriptor = 3
+
 // Command defines the parameters for a single virtualized run.
 type Command struct {
 	// Path to the qemu-system binary
@@ -65,7 +67,7 @@ type Command struct {
 func NewCommand(arch string) (*Command, error) {
 	cmd := Command{
 		CPU:    "max",
-		Memory: 256,
+		Memory: 256, //nolint:gomnd,mnd
 		SMP:    1,
 		NoKVM:  !KVMAvailableFor(arch),
 		ExtraArgs: Arguments{
@@ -234,6 +236,7 @@ func (c *Command) Args() Arguments {
 				ArgDevice("virtconsole", "chardev="+vcon),
 			)
 		}
+	default: // Ignore invalid transport types.
 	}
 
 	// Add stdout console.
@@ -243,7 +246,7 @@ func (c *Command) Args() Arguments {
 	// [exec.Cmd.ExtraFiles].
 	for idx := range c.AdditionalConsoles {
 		// FDs 0, 1, 2 are standard in, out, err, so start at 3.
-		addConsoleArgs(3 + idx)
+		addConsoleArgs(minAdditionalFileDescriptor + idx)
 	}
 
 	a.Add(c.ExtraArgs...)
@@ -293,7 +296,7 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 	}
 
 	// Collect processors so they can be easily closed.
-	processors := make([]*consoleProcessor, 0, 16)
+	processors := make([]*consoleProcessor, 0)
 
 	closeProcessors := func() {
 		for _, p := range processors {

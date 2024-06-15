@@ -14,6 +14,8 @@ import (
 	"strings"
 )
 
+const fileMode = 0o755
+
 // Initramfs represents a file tree that can be used as an initramfs for the
 // Linux kernel.
 //
@@ -210,13 +212,13 @@ func (i *Initramfs) writeTo(writer Writer, sourceFS fs.FS) error {
 			}
 			defer source.Close()
 
-			return writer.WriteRegular(path, source, 0o755)
+			return writer.WriteRegular(path, source, fileMode)
 		case FileTypeDirectory:
 			return writer.WriteDirectory(path)
 		case FileTypeLink:
 			return writer.WriteLink(path, node.RelatedPath)
 		case FileTypeVirtual:
-			return writer.WriteRegular(path, node.Source, 0o755)
+			return writer.WriteRegular(path, node.Source, fileMode)
 		default:
 			return fmt.Errorf("unknown file type %d", node.Type)
 		}

@@ -22,6 +22,8 @@ const (
 	FSTypeTmp     FSType = "tmpfs"
 	FSTypeBpf     FSType = "bpf"
 	FSTypeTracing FSType = "tracefs"
+
+	defaultDirMode = 0o755
 )
 
 // MountPoint is a single mount point for a virtual system FS.
@@ -67,7 +69,7 @@ var CommonSymlinks = map[string]string{
 // If path does not exist, it is created. An error is returned if this or the
 // mount syscall fails.
 func MountFs(path string, fstype FSType) error {
-	if err := os.MkdirAll(path, 0o755); err != nil {
+	if err := os.MkdirAll(path, defaultDirMode); err != nil {
 		return fmt.Errorf("mkdir %s: %v", path, err)
 	}
 

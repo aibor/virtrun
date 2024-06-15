@@ -32,10 +32,10 @@ func runInit() (int, error) {
 		return 0, cmd.Run()
 	})
 	if errors.Is(err, sysinit.ErrNotPidOne) {
-		return 127, err
+		return 127, err //nolint:gomnd,mnd
 	}
 
-	return 126, err
+	return 126, err //nolint:gomnd,mnd
 }
 
 func main() {

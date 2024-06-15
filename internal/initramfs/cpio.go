@@ -12,6 +12,8 @@ import (
 	"github.com/cavaliergopher/cpio"
 )
 
+const numLinks = 2
+
 // CPIOWriter implements [Writer] for [cpio.CPIOWriter].
 type CPIOWriter struct {
 	cpioWriter *cpio.Writer
@@ -46,7 +48,7 @@ func (w *CPIOWriter) WriteDirectory(path string) error {
 	header := &cpio.Header{
 		Name:  path,
 		Mode:  cpio.TypeDir | cpio.ModePerm,
-		Links: 2,
+		Links: numLinks,
 	}
 
 	return w.writeHeader(header)

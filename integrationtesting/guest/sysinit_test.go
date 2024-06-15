@@ -45,7 +45,8 @@ func TestNotPidOne(t *testing.T) {
 	t.Cleanup(cancel)
 	cmd := exec.CommandContext(ctx, "/init")
 	require.NoError(t, cmd.Start(), "command must start")
-	assert.Error(t, cmd.Wait(), "command should have exited with error")
+	require.Error(t, cmd.Wait(), "command should have exited with error")
+
 	if assert.NotNil(t, cmd.ProcessState, "process state should be present") {
 		assert.Equal(t, 127, cmd.ProcessState.ExitCode(), "exit code should be as expected")
 	}

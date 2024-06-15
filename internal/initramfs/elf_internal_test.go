@@ -63,11 +63,13 @@ func TestELFFileLdd(t *testing.T) {
 			require.NoError(t, err)
 
 			infos, err := ldd(interpreter, tt.file)
-			if tt.errMsg == "" {
-				assert.NoErrorf(t, err, "must resolve")
-			} else {
-				assert.ErrorContains(t, err, tt.errMsg)
+
+			if tt.errMsg != "" {
+				require.ErrorContains(t, err, tt.errMsg)
+				return
 			}
+
+			require.NoErrorf(t, err, "must resolve")
 			assert.Equal(t, tt.expectedLibs, infos.realPaths())
 		})
 	}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStdoutProcessor(t *testing.T) {
@@ -93,12 +94,14 @@ func TestStdoutProcessor(t *testing.T) {
 			stdOut := bytes.NewBuffer(make([]byte, 0, 512))
 
 			rc, err := qemu.ParseStdout(cmdOut, stdOut, tt.verbose)
+
 			if tt.err != nil {
 				assert.ErrorIs(t, err, tt.err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.rc, rc)
+				return
 			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.rc, rc)
 		})
 	}
 }

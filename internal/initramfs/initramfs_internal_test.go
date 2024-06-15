@@ -198,7 +198,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 					require.NoError(t, err)
 					mock := MockWriter{Err: assert.AnError}
 					err = i.writeTo(&mock, testFS)
-					assert.Error(t, err, assert.AnError)
+					require.ErrorIs(t, err, assert.AnError)
 				})
 			})
 		}

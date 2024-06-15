@@ -9,6 +9,7 @@ import (
 
 	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFilesLdd(t *testing.T) {
@@ -43,13 +44,15 @@ func TestFilesLdd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("LD_LIBRARY_PATH", tt.searchPath)
+
 			paths, err := initramfs.Ldd(tt.file)
-			if tt.errMsg == "" {
-				assert.NoErrorf(t, err, "must resolve")
-			} else {
-				assert.ErrorContains(t, err, tt.errMsg)
+
+			if tt.errMsg != "" {
+				require.ErrorContains(t, err, tt.errMsg)
+				return
 			}
 
+			require.NoErrorf(t, err, "must resolve")
 			assert.Equal(t, tt.expectedPaths, paths)
 		})
 	}

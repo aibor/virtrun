@@ -108,7 +108,7 @@ func TestAddNode(t *testing.T) {
 		_, err := p.AddNode("new", &n)
 		require.NoError(t, err)
 		e, err := p.AddNode("new", &n)
-		assert.ErrorIs(t, err, ErrNodeExists)
+		require.ErrorIs(t, err, ErrNodeExists)
 		assert.Equal(t, &n, e)
 	})
 

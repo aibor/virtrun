@@ -45,13 +45,13 @@ jobs:
     strategy:
       matrix:
         kernel_version:
-          - "6.7"
+          - "6.9"
           - "6.6"
           - "6.1"
         kernel_arch:
           - "amd64"
         include:
-          - kernel_version: "6.7"
+          - kernel_version: "6.9"
             kernel_arch: "arm64"
     env:
       KERNELVERSION: "${{ matrix.kernel_version }}"

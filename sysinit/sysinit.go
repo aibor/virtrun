@@ -21,7 +21,7 @@ var ErrNotPidOne = errors.New("process does not have ID 1")
 // PrintRC prints the magic string communicating the return code of
 // the tests.
 func PrintRC(ret int) {
-	fmt.Printf(qemu.RCFmt, ret)
+	fmt.Fprintf(os.Stdout, qemu.RCFmt, ret)
 }
 
 // PrintErrorAndRC examines the given error, prints it and sets the return code
@@ -58,7 +58,7 @@ func Poweroff() {
 	_ = os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0o755)
 
 	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
-		fmt.Printf("error calling power off: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error calling power off: %v\n", err)
 	}
 	// We just told the system to shutdown. There's no point in staying around.
 	os.Exit(0)

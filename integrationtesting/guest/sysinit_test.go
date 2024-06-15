@@ -64,8 +64,8 @@ func TestLoopbackInterface(t *testing.T) {
 
 	assert.Len(t, addrs, 2, "should have 2 addresses")
 
-	assert.Equal(t, addrs[0].String(), "127.0.0.1/8")
-	assert.Equal(t, addrs[1].String(), "::1/128")
+	assert.Equal(t, "127.0.0.1/8", addrs[0].String())
+	assert.Equal(t, "::1/128", addrs[1].String())
 }
 
 func TestEnv(t *testing.T) {

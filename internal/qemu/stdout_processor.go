@@ -49,7 +49,7 @@ func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
 			rcErr = ErrGuestOom
 		case panicRE.MatchString(line):
 			rcErr = ErrGuestPanic
-		case rcErr == ErrGuestNoRCFound:
+		case errors.Is(rcErr, ErrGuestNoRCFound):
 			if _, err := fmt.Sscanf(line, RCFmt, &rc); err == nil {
 				rcErr = nil
 			}

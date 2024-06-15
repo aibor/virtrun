@@ -5,6 +5,7 @@
 package initramfs
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 )
@@ -63,7 +64,7 @@ func (t *Tree) Mkdir(path string) (*TreeNode, error) {
 		return nil, fmt.Errorf("mkdir %s: %v", dir, err)
 	}
 	node, err := parent.AddDirectory(name)
-	if err == ErrNodeExists && node.IsDir() {
+	if errors.Is(err, ErrNodeExists) && node.IsDir() {
 		err = nil
 	}
 	return node, err
@@ -78,7 +79,7 @@ func (t *Tree) Ln(target string, path string) error {
 		return err
 	}
 	if l, err := dirNode.AddLink(name, target); err != nil {
-		if err != ErrNodeExists || !l.IsLink() {
+		if !errors.Is(err, ErrNodeExists) || !l.IsLink() {
 			return err
 		}
 	}

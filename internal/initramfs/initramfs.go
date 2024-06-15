@@ -5,6 +5,7 @@
 package initramfs
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -96,7 +97,7 @@ func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
 		}
 		paths, err := Ldd(node.RelatedPath)
 		if err != nil {
-			if err == ErrNotELFFile || err == ErrNoInterpreter {
+			if errors.Is(err, ErrNotELFFile) || errors.Is(err, ErrNoInterpreter) {
 				return nil
 			}
 			return fmt.Errorf("resolve %s: %v", path, err)
@@ -118,7 +119,7 @@ func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
 			return nil
 		}
 		err := i.fileTree.Ln(libsDir, dir)
-		if err != nil && err != ErrNodeExists {
+		if err != nil && !errors.Is(err, ErrNodeExists) {
 			return fmt.Errorf("add link for %s: %v", dir, err)
 		}
 		return nil

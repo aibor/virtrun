@@ -88,7 +88,7 @@ func readInterpreter(path string) (string, error) {
 		}
 		buf := make([]byte, prog.Filesz)
 		_, err := prog.Open().Read(buf)
-		if err != nil && err != io.EOF {
+		if err != nil && !errors.Is(err, io.EOF) {
 			return "", fmt.Errorf("read interpreter: %v", err)
 		}
 		// Only terminate if the found path is not empty. If there is no other

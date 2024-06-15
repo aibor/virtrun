@@ -5,6 +5,7 @@
 package sysinit
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -21,7 +22,7 @@ func RunTests(m *testing.M) {
 		return m.Run(), nil
 	})
 	rc := 1
-	if err == ErrNotPidOne {
+	if errors.Is(err, ErrNotPidOne) {
 		rc = 127
 	}
 	fmt.Fprintf(os.Stderr, "Error: %v\n", err)

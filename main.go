@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -28,7 +29,7 @@ func run() (int, error) {
 
 	// ParseArgs already prints errors, so we just exit.
 	if err := cfg.parseArgs(os.Args); err != nil {
-		if err == flag.ErrHelp {
+		if errors.Is(err, flag.ErrHelp) {
 			return 0, nil
 		}
 		return errRC, nil

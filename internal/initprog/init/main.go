@@ -7,6 +7,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -29,7 +30,7 @@ func runInit() (int, error) {
 		cmd.Env = append(cmd.Environ(), env...)
 		return 0, cmd.Run()
 	})
-	if err == sysinit.ErrNotPidOne {
+	if errors.Is(err, sysinit.ErrNotPidOne) {
 		return 127, err
 	}
 	return 126, err

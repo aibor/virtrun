@@ -105,9 +105,9 @@ func (c *Command) Validate() error {
 	case "microvm":
 		switch {
 		case c.TransportType == TransportTypePCI:
-			return fmt.Errorf("microvm does not support pci transport.")
+			return fmt.Errorf("microvm does not support pci transport")
 		case c.TransportType == TransportTypeISA && len(c.AdditionalConsoles) > 0:
-			msg := "microvm supports only one isa serial port, used for stdio."
+			msg := "microvm supports only one isa serial port, used for stdio"
 			return fmt.Errorf(msg)
 		}
 	case "virt":

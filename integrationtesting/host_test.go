@@ -74,13 +74,13 @@ func TestHostRCParsing(t *testing.T) {
 		{
 			name: "panic",
 			bin:  "panic",
-			err:  qemu.GuestPanicErr,
+			err:  qemu.ErrGuestPanic,
 		},
 		{
 			name: "oom",
 			bin:  "oom",
 			args: []string{"128"},
-			err:  qemu.GuestOomErr,
+			err:  qemu.ErrGuestOom,
 		},
 	}
 

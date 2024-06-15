@@ -31,7 +31,7 @@ func TestStdoutProcessor(t *testing.T) {
 				"[    0.579512] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS Arch Linux 1.16.2-1-1 04/01/2014",
 			},
 			output: []string{""},
-			err:    qemu.GuestPanicErr,
+			err:    qemu.ErrGuestPanic,
 		},
 		{
 			name: "oom",
@@ -40,7 +40,7 @@ func TestStdoutProcessor(t *testing.T) {
 				"[    0.378083] Out of memory: Killed process 116 (main) total-vm:48156kB, anon-rss:43884kB, file-rss:4kB, shmem-rss:2924kB, UID:0 pgtables:140kB oom_score_adj:0",
 			},
 			output: []string{""},
-			err:    qemu.GuestOomErr,
+			err:    qemu.ErrGuestOom,
 		},
 		{
 			name:    "panic verbose",
@@ -56,7 +56,7 @@ func TestStdoutProcessor(t *testing.T) {
 				"[    0.579512] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS Arch Linux 1.16.2-1-1 04/01/2014",
 				"",
 			},
-			err: qemu.GuestPanicErr,
+			err: qemu.ErrGuestPanic,
 		},
 		{
 			name: "rc",
@@ -83,7 +83,7 @@ func TestStdoutProcessor(t *testing.T) {
 				"more out",
 				"",
 			},
-			err: qemu.GuestNoRCFoundErr,
+			err: qemu.ErrGuestNoRCFound,
 		},
 	}
 

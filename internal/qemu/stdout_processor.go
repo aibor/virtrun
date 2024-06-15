@@ -19,14 +19,14 @@ import (
 const RCFmt = "INIT_RC: %d\n"
 
 var (
-	// GuestNoRCFoundErr is returned if no return code matching the [RCFmt] is
+	// ErrGuestNoRCFound is returned if no return code matching the [RCFmt] is
 	// found and no other error is found.
-	GuestNoRCFoundErr = errors.New("guest did not print init return code")
-	// GuestPanicErr is returned if a kernel panic occurred in the guest
+	ErrGuestNoRCFound = errors.New("guest did not print init return code")
+	// ErrGuestPanic is returned if a kernel panic occurred in the guest
 	// system.
-	GuestPanicErr = errors.New("guest system panicked")
-	// GuestOomErr is returned if the guest system ran out of memory.
-	GuestOomErr = errors.New("guest system ran out of memory")
+	ErrGuestPanic = errors.New("guest system panicked")
+	// ErrGuestOom is returned if the guest system ran out of memory.
+	ErrGuestOom = errors.New("guest system ran out of memory")
 )
 
 var (
@@ -39,17 +39,17 @@ func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
 	var rc int
 
 	// rcErr is unset once a return code is found.
-	rcErr := GuestNoRCFoundErr
+	rcErr := ErrGuestNoRCFound
 
 	scanner := bufio.NewScanner(input)
 	for scanner.Scan() {
 		line := scanner.Text()
 		switch {
 		case oomRE.MatchString(line):
-			rcErr = GuestOomErr
+			rcErr = ErrGuestOom
 		case panicRE.MatchString(line):
-			rcErr = GuestPanicErr
-		case rcErr == GuestNoRCFoundErr:
+			rcErr = ErrGuestPanic
+		case rcErr == ErrGuestNoRCFound:
 			if _, err := fmt.Sscanf(line, RCFmt, &rc); err == nil {
 				rcErr = nil
 			}

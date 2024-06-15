@@ -23,7 +23,10 @@ var ErrNotPidOne = errors.New("process does not have ID 1")
 // PrintRC prints the magic string communicating the return code of
 // the tests.
 func PrintRC(ret int) {
-	fmt.Fprintf(os.Stdout, qemu.RCFmt, ret)
+	// Ensure newlines before and after to avoid other writes messing up the
+	// rc communication as much as possible.
+	msgFmt := "\n" + qemu.RCFmt + "\n"
+	fmt.Fprintf(os.Stdout, msgFmt, ret)
 }
 
 // PrintErrorAndRC examines the given error, prints it and sets the return code

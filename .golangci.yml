@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+#
+# SPDX-License-Identifier: MIT
+
+linters:
+  enable-all: true
+  disable:
+    - depguard
+    - exhaustruct
+    - funlen
+    - gochecknoglobals
+    - err113
+    - paralleltest
+    - varnamelen
+    - wrapcheck
+
+linters-settings:
+  errorlint:
+    errorf: false
+
+  exhaustive:
+    default-signifies-exhaustive: true
+
+  gosec:
+    excludes:
+      - G204
+
+  mnd:
+    ignored-functions:
+      - '^cobra\..*NArgs$'

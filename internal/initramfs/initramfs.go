@@ -26,6 +26,7 @@ const fileMode = 0o755
 // [Initramfs.WriteInto].
 type Initramfs struct {
 	fileTree Tree
+	libDir   string
 }
 
 func WithRealInitFile(path string) func(*TreeNode) {
@@ -44,7 +45,9 @@ func WithVirtualInitFile(file fs.File) func(*TreeNode) {
 
 // New creates a new [Initramfs] with "/init" copied from the given file path.
 func New(fn func(*TreeNode)) *Initramfs {
-	initramfs := &Initramfs{}
+	initramfs := &Initramfs{
+		libDir: filepath.Join(string(filepath.Separator), "lib"),
+	}
 	rootDir := initramfs.fileTree.GetRoot()
 
 	fn(rootDir)
@@ -85,19 +88,51 @@ func (i *Initramfs) AddFiles(dir string, paths ...string) error {
 // The dynamic linker consumed LD_LIBRARY_PATH from the environment.
 // Resolved libraries are added to [Initramfs.libsDir]. For each search path a
 // symbolic link is added pointing to [Initramfs.libsDir].
-func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
-	if libsDir == "" {
-		libsDir = "lib"
+func (i *Initramfs) AddRequiredSharedObjects() error {
+	pathSet, err := i.collectLibs()
+	if err != nil {
+		return err
 	}
-	// Ensure libsDir is absolute.
-	libsDir = filepath.Join(string(filepath.Separator), libsDir)
 
-	// Walk file tree. For each regular file, try to get linked shared objects.
+	// Walk the found shared object paths and add all to the central lib dir.
+	// In order to keep any references and search paths of the dynamic linker
+	// working, add symbolic links for all other directories where libs are
+	// copied from to the central lib dir.
+	if err := i.withDirNode(i.libDir, func(dirNode *TreeNode) error {
+		for path := range pathSet {
+			dir, name := filepath.Split(path)
+			if _, err := dirNode.AddRegular(name, path); err != nil {
+				return fmt.Errorf("add file %s: %v", name, err)
+			}
+			if err := i.addLinkToLibDir(dir); err != nil {
+				return err
+			}
+			// Try if the directory has symbolic links and resolve them, so we
+			// get the real path that the dynamic linker needs.
+			canonicalDir, err := filepath.EvalSymlinks(dir)
+			if err != nil {
+				return err
+			}
+			if err := i.addLinkToLibDir(canonicalDir); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// collectLibs collects the libraries used by executables.
+func (i *Initramfs) collectLibs() (map[string]bool, error) {
+	pathSet := make(map[string]bool)
+
+	// For each regular file, try to get linked shared objects.
 	// Ignore if it is not an ELF file or if it is statically linked (has no
 	// interpreter). Collect the absolute paths of the found shared objects
 	// deduplicated in a set.
-	pathSet := make(map[string]bool)
-
 	if err := i.fileTree.Walk(func(path string, node *TreeNode) error {
 		if node.Type != FileTypeRegular {
 			return nil
@@ -121,48 +156,22 @@ func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
 
 		return nil
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
-	addLinkToLibDir := func(dir string) error {
-		if dir == "" || dir == libsDir {
-			return nil
-		}
+	return pathSet, nil
+}
 
-		err := i.fileTree.Ln(libsDir, dir)
-		if err != nil && !errors.Is(err, ErrNodeExists) {
-			return fmt.Errorf("add link for %s: %v", dir, err)
-		}
-
+// addLinkToLibDir adds a symbolic link for path to the central libraries
+// directory.
+func (i *Initramfs) addLinkToLibDir(path string) error {
+	if path == "" || path == i.libDir {
 		return nil
 	}
 
-	// Walk the found shared object paths and add all to the central lib dir.
-	// In order to keep any references and search paths of the dynamic linker
-	// working, add symbolic links for all other directories where libs are
-	// copied from to the central lib dir.
-	if err := i.withDirNode(libsDir, func(dirNode *TreeNode) error {
-		for path := range pathSet {
-			dir, name := filepath.Split(path)
-			if _, err := dirNode.AddRegular(name, path); err != nil {
-				return fmt.Errorf("add file %s: %v", name, err)
-			}
-			if err := addLinkToLibDir(dir); err != nil {
-				return err
-			}
-			// Try if the directory has symbolic links and resolve them, so we
-			// get the real path that the dynamic linker needs.
-			canonicalDir, err := filepath.EvalSymlinks(dir)
-			if err != nil {
-				return err
-			}
-			if err := addLinkToLibDir(canonicalDir); err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
-		return err
+	err := i.fileTree.Ln(i.libDir, path)
+	if err != nil && !errors.Is(err, ErrNodeExists) {
+		return fmt.Errorf("add link for %s: %v", path, err)
 	}
 
 	return nil

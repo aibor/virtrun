@@ -71,7 +71,7 @@ func run() (int, error) {
 		return errRC, fmt.Errorf("initramfs: add files: %v", err)
 	}
 
-	if err := irfs.AddRequiredSharedObjects(""); err != nil {
+	if err := irfs.AddRequiredSharedObjects(); err != nil {
 		return errRC, fmt.Errorf("initramfs: add libs: %v", err)
 	}
 

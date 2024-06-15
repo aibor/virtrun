@@ -40,7 +40,7 @@ func TestHostWithLibsNonZeroRC(t *testing.T) {
 	err = irfs.AddFile("/", "main", binary)
 	require.NoError(t, err)
 
-	err = irfs.AddRequiredSharedObjects("")
+	err = irfs.AddRequiredSharedObjects()
 	require.NoError(t, err)
 
 	cmd.Initramfs, err = irfs.WriteToTempFile(t.TempDir())

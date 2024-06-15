@@ -213,7 +213,7 @@ func TestInitramfsResolveLinkedLibs(t *testing.T) {
 	t.Setenv("LD_LIBRARY_PATH", "testdata/lib")
 
 	irfs := New(WithRealInitFile("testdata/bin/main"))
-	err := irfs.AddRequiredSharedObjects("")
+	err := irfs.AddRequiredSharedObjects()
 	require.NoError(t, err)
 
 	expectedFiles := map[string]TreeNode{

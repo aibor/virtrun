@@ -200,11 +200,9 @@ func (cfg *config) parseArgs(args []string) error {
 		},
 	)
 
-	var versionFlag bool
-	fs.BoolVar(
-		&versionFlag,
+	versionFlag := fs.Bool(
 		"version",
-		versionFlag,
+		false,
 		"show version and exit",
 	)
 
@@ -230,7 +228,7 @@ func (cfg *config) parseArgs(args []string) error {
 
 	// With version flag, just print the version and exit. Using [flag.ErrHelp]
 	// the main binary is supposed to return with a non error exit code.
-	if versionFlag {
+	if versionFlag != nil && *versionFlag {
 		msgFmt := "virtrun %s\n  commit %s\n  built at %s"
 		printf(msgFmt, version, commit, date)
 		return flag.ErrHelp
@@ -244,11 +242,13 @@ func (cfg *config) parseArgs(args []string) error {
 	if len(fs.Args()) < 1 {
 		return failf("no binary given")
 	}
-	var err error
-	cfg.binary, err = filepath.Abs(fs.Args()[0])
+
+	binary, err := filepath.Abs(fs.Args()[0])
 	if err != nil {
 		return failf("absolute path for %s: %v", fs.Args()[0], err)
 	}
+
+	cfg.binary = binary
 
 	// All further positional arguments after the binary file will be passed to
 	// the guest system's init program.

@@ -12,10 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var fileNode = TreeNode{Type: FileTypeRegular}
-var dirNode = TreeNode{Type: FileTypeDirectory}
-var linkNode = TreeNode{Type: FileTypeLink}
-var virtualNode = TreeNode{Type: FileTypeVirtual}
+var (
+	fileNode    = TreeNode{Type: FileTypeRegular}
+	dirNode     = TreeNode{Type: FileTypeDirectory}
+	linkNode    = TreeNode{Type: FileTypeLink}
+	virtualNode = TreeNode{Type: FileTypeVirtual}
+)
 
 func TestIsRegular(t *testing.T) {
 	assert.True(t, fileNode.IsRegular())

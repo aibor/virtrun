@@ -7,7 +7,6 @@
 package integrationtesting_test
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -60,9 +59,9 @@ func TestGuestSysinit(t *testing.T) {
 			cmd := exec.Command("go", args...)
 			cmd.Env = append(
 				os.Environ(),
-				fmt.Sprintf("GOARCH=%s", KernelArch),
-				fmt.Sprintf("VIRTRUN_ARCH=%s", KernelArch),
-				fmt.Sprintf("VIRTRUN_ARGS=%s", virtrunArgString),
+				"GOARCH="+KernelArch,
+				"VIRTRUN_ARCH="+KernelArch,
+				"VIRTRUN_ARGS="+virtrunArgString,
 			)
 			out, err := cmd.CombinedOutput()
 			if len(out) > 0 {

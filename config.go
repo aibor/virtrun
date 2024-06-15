@@ -6,6 +6,7 @@ package main
 
 import (
 	"debug/elf"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -68,7 +69,7 @@ func newConfig() (*config, error) {
 }
 
 func (cfg *config) parseArgs(args []string) error {
-	fsName := fmt.Sprintf("%s [flags...] binary [initargs...]", args[0])
+	fsName := args[0] + " [flags...] binary [initargs...]"
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 
 	fs.StringVar(
@@ -115,7 +116,7 @@ func (cfg *config) parseArgs(args []string) error {
 				return err
 			}
 			if t > 2 {
-				return fmt.Errorf("unknown transport type")
+				return errors.New("unknown transport type")
 			}
 			cfg.cmd.TransportType = qemu.TransportType(t)
 			return nil
@@ -138,7 +139,7 @@ func (cfg *config) parseArgs(args []string) error {
 				return err
 			}
 			if mem < 128 {
-				return fmt.Errorf("less than 128 MB is not sufficient")
+				return errors.New("less than 128 MB is not sufficient")
 			}
 			cfg.cmd.Memory = uint(mem)
 			return nil
@@ -154,7 +155,7 @@ func (cfg *config) parseArgs(args []string) error {
 				return err
 			}
 			if mem < 1 {
-				return fmt.Errorf("must not be less than 1")
+				return errors.New("must not be less than 1")
 			}
 			cfg.cmd.SMP = uint(mem)
 			return nil
@@ -188,7 +189,7 @@ func (cfg *config) parseArgs(args []string) error {
 		"file to add to guest's /data dir. Flag may be used more than once.",
 		func(s string) error {
 			if s == "" {
-				return fmt.Errorf("file path must not be empty")
+				return errors.New("file path must not be empty")
 			}
 			path, err := filepath.Abs(s)
 			if err != nil {
@@ -224,7 +225,7 @@ func (cfg *config) parseArgs(args []string) error {
 	failf := func(format string, a ...any) error {
 		msg := printf(format, a...)
 		fs.Usage()
-		return fmt.Errorf(msg)
+		return errors.New(msg)
 	}
 
 	// With version flag, just print the version and exit. Using [flag.ErrHelp]

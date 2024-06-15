@@ -8,15 +8,30 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      scope: "gomod"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      scope: "ci"
+
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      scope: "docker"
+
   - package-ecosystem: "docker"
     directory: "/integrationtesting/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      scope: "docker"

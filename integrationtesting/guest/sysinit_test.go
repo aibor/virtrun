@@ -4,7 +4,7 @@
 
 //go:build integration_guest
 
-package main
+package main_test
 
 import (
 	"context"

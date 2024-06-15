@@ -4,7 +4,7 @@
 
 //go:build standalone
 
-package main
+package main_test
 
 import (
 	"testing"

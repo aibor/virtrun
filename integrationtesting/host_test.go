@@ -4,7 +4,7 @@
 
 //go:build integration
 
-package integrationtesting
+package integrationtesting_test
 
 import (
 	"context"

@@ -30,6 +30,7 @@ func ExecParallel(paths []string, args []string, outW, errW io.Writer) error {
 		cmd := exec.Command(paths[0], args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+
 		return cmd.Run()
 	}
 
@@ -53,20 +54,25 @@ func ExecParallel(paths []string, args []string, outW, errW io.Writer) error {
 
 	eg := errgroup.Group{}
 	eg.SetLimit(runtime.GOMAXPROCS(0))
+
 	for _, path := range paths {
 		eg.Go(func() error {
 			var outBuf, errBuf bytes.Buffer
+
 			cmd := exec.Command(path, args...)
 			cmd.Stdout = &outBuf
 			cmd.Stderr = &errBuf
+
 			err := cmd.Run()
 			outStream <- outBuf.Bytes()
 			errStream <- errBuf.Bytes()
+
 			return err
 		})
 	}
 
 	err := eg.Wait()
+
 	close(outStream)
 	close(errStream)
 	writers.Wait()

@@ -84,6 +84,7 @@ func MountFs(path string, fstype FSType) error {
 // kernel variables, modifying kernel knobs or accessing devices are mounted.
 func MountAll() error {
 	arch := runtime.GOARCH
+
 	mounts, exists := MountPointPresets[arch]
 	if !exists {
 		return fmt.Errorf("no mount point preset found for arch %s", arch)

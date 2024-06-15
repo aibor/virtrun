@@ -28,11 +28,13 @@ func runInit() (int, error) {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Env = append(cmd.Environ(), env...)
+
 		return 0, cmd.Run()
 	})
 	if errors.Is(err, sysinit.ErrNotPidOne) {
 		return 127, err
 	}
+
 	return 126, err
 }
 
@@ -41,5 +43,6 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
+
 	os.Exit(rc)
 }

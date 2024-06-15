@@ -43,6 +43,7 @@ func TestGuestSysinit(t *testing.T) {
 			if Verbose {
 				virtrunArgs = append(virtrunArgs, "-verbose")
 			}
+
 			testTags := []string{
 				"integration_guest",
 			}
@@ -71,16 +72,19 @@ func TestGuestSysinit(t *testing.T) {
 			}
 
 			cmd := exec.Command("go", args...)
+
 			cmd.Env = append(
 				os.Environ(),
 				"GOARCH="+KernelArch,
 				"VIRTRUN_ARCH="+KernelArch,
 				"VIRTRUN_ARGS="+virtrunArgString,
 			)
+
 			out, err := cmd.CombinedOutput()
 			if len(out) > 0 {
 				t.Log(string(out))
 			}
+
 			assert.NoError(t, err)
 		})
 	}

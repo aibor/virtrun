@@ -45,6 +45,7 @@ func TestCommmandAddExtraFile(t *testing.T) {
 	s := qemu.Command{}
 	d1 := s.AddConsole("test")
 	d2 := s.AddConsole("real")
+
 	assert.Equal(t, "ttyS1", d1)
 	assert.Equal(t, "ttyS2", d2)
 	assert.Equal(t, []string{"test", "real"}, s.AdditionalConsoles)

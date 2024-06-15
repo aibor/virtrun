@@ -76,6 +76,7 @@ func NewCommand(arch string) (*Command, error) {
 			UniqueArg("no-user-config"),
 		},
 	}
+
 	switch arch {
 	case "amd64":
 		cmd.Executable = "qemu-system-x86_64"
@@ -120,6 +121,7 @@ func (c *Command) Validate() error {
 			return fmt.Errorf("%s does not work with virtio-mmio", c.Machine)
 		}
 	}
+
 	return nil
 }
 
@@ -180,18 +182,23 @@ func (c *Command) Args() Arguments {
 		ArgKernel(c.Kernel),
 		ArgInitrd(c.Initramfs),
 	}
+
 	if c.Machine != "" {
 		a.Add(ArgMachine(c.Machine))
 	}
+
 	if c.CPU != "" {
 		a.Add(ArgCPU(c.CPU))
 	}
+
 	if c.SMP != 0 {
 		a.Add(ArgSMP(int(c.SMP)))
 	}
+
 	if c.Memory != 0 {
 		a.Add(ArgMemory(int(c.Memory)))
 	}
+
 	if !c.NoKVM {
 		a.Add(UniqueArg("enable-kvm"))
 	}
@@ -201,6 +208,7 @@ func (c *Command) Args() Arguments {
 	}
 
 	var addConsoleArgs func(int)
+
 	switch c.TransportType {
 	case TransportTypeISA:
 		addConsoleArgs = func(fd int) {
@@ -208,6 +216,7 @@ func (c *Command) Args() Arguments {
 		}
 	case TransportTypePCI:
 		a.Add(ArgDevice("virtio-serial-pci", "max_ports=8"))
+
 		addConsoleArgs = func(fd int) {
 			vcon := fmt.Sprintf("vcon%d", fd)
 			a.Add(
@@ -217,6 +226,7 @@ func (c *Command) Args() Arguments {
 		}
 	case TransportTypeMMIO:
 		a.Add(ArgDevice("virtio-serial-device", "max_ports=8"))
+
 		addConsoleArgs = func(fd int) {
 			vcon := fmt.Sprintf("vcon%d", fd)
 			a.Add(
@@ -248,13 +258,16 @@ func (c *Command) kernelCmdlineArgs() []string {
 		"console=" + c.TransportType.ConsoleDeviceName(0),
 		"panic=-1",
 	}
+
 	if !c.Verbose {
 		cmdline = append(cmdline, "quiet")
 	}
+
 	if len(c.InitArgs) > 0 {
 		cmdline = append(cmdline, "--")
 		cmdline = append(cmdline, c.InitArgs...)
 	}
+
 	return cmdline
 }
 
@@ -281,6 +294,7 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 
 	// Collect processors so they can be easily closed.
 	processors := make([]*consoleProcessor, 0, 16)
+
 	closeProcessors := func() {
 		for _, p := range processors {
 			_ = p.Close()
@@ -295,12 +309,15 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 	// from the read end of the pipe, cleans the output and writes it into
 	// the actual target file on the host.
 	processorsGroup := errgroup.Group{}
+
 	for _, console := range c.AdditionalConsoles {
 		p := consoleProcessor{Path: console}
+
 		w, err := p.create()
 		if err != nil {
 			return 1, fmt.Errorf("create processor %s: %v", p.Path, err)
 		}
+
 		cmd.ExtraFiles = append(cmd.ExtraFiles, w)
 		processors = append(processors, &p)
 		processorsGroup.Go(p.run)
@@ -348,7 +365,9 @@ func KVMAvailableFor(arch string) bool {
 	if runtime.GOARCH != arch {
 		return false
 	}
+
 	f, err := os.OpenFile("/dev/kvm", os.O_WRONLY, 0)
 	_ = f.Close()
+
 	return err == nil
 }

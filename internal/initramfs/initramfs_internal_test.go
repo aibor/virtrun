@@ -15,6 +15,7 @@ import (
 
 func assertNode(t *testing.T, i *Initramfs, p string, e TreeNode) {
 	t.Helper()
+
 	node, err := i.fileTree.GetNode(p)
 	require.NoError(t, err)
 	assert.Equal(t, e, *node)
@@ -112,6 +113,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 		i := Initramfs{}
 		_, err := i.fileTree.GetRoot().AddNode("init", node)
 		require.NoError(t, err)
+
 		return i.writeTo(w, testFS)
 	}
 
@@ -187,6 +189,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 					i := Initramfs{}
 					_, err := i.fileTree.GetRoot().AddNode("init", &tt.node)
 					require.NoError(t, err)
+
 					mock := MockWriter{}
 					err = i.writeTo(&mock, testFS)
 					require.NoError(t, err)
@@ -196,6 +199,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 					i := Initramfs{}
 					_, err := i.fileTree.GetRoot().AddNode("init", &tt.node)
 					require.NoError(t, err)
+
 					mock := MockWriter{Err: assert.AnError}
 					err = i.writeTo(&mock, testFS)
 					require.ErrorIs(t, err, assert.AnError)
@@ -207,6 +211,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 
 func TestInitramfsResolveLinkedLibs(t *testing.T) {
 	t.Setenv("LD_LIBRARY_PATH", "testdata/lib")
+
 	irfs := New(WithRealInitFile("testdata/bin/main"))
 	err := irfs.AddRequiredSharedObjects("")
 	require.NoError(t, err)
@@ -233,6 +238,7 @@ func TestInitramfsResolveLinkedLibs(t *testing.T) {
 		node, err := irfs.fileTree.GetNode(f)
 		if assert.NoError(t, err, f) {
 			assert.Equal(t, e.Type, node.Type, f)
+
 			if e.RelatedPath != "" {
 				expectedPath, err := filepath.Abs(e.RelatedPath)
 				require.NoError(t, err)

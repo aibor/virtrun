@@ -44,6 +44,7 @@ func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
 	scanner := bufio.NewScanner(input)
 	for scanner.Scan() {
 		line := scanner.Text()
+
 		switch {
 		case oomRE.MatchString(line):
 			rcErr = ErrGuestOom
@@ -54,6 +55,7 @@ func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
 				rcErr = nil
 			}
 		}
+
 		if rcErr != nil || verbose {
 			if _, err := fmt.Fprintln(output, line); err != nil {
 				return rc, err

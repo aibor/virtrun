@@ -115,10 +115,13 @@ func (cfg *config) parseArgs(args []string) error {
 			if err != nil {
 				return err
 			}
+
 			if t > 2 {
 				return errors.New("unknown transport type")
 			}
+
 			cfg.cmd.TransportType = qemu.TransportType(t)
+
 			return nil
 		},
 	)
@@ -138,10 +141,13 @@ func (cfg *config) parseArgs(args []string) error {
 			if err != nil {
 				return err
 			}
+
 			if mem < 128 {
 				return errors.New("less than 128 MB is not sufficient")
 			}
+
 			cfg.cmd.Memory = uint(mem)
+
 			return nil
 		},
 	)
@@ -154,10 +160,13 @@ func (cfg *config) parseArgs(args []string) error {
 			if err != nil {
 				return err
 			}
+
 			if mem < 1 {
 				return errors.New("must not be less than 1")
 			}
+
 			cfg.cmd.SMP = uint(mem)
+
 			return nil
 		},
 	)
@@ -191,11 +200,14 @@ func (cfg *config) parseArgs(args []string) error {
 			if s == "" {
 				return errors.New("file path must not be empty")
 			}
+
 			path, err := filepath.Abs(s)
 			if err != nil {
 				return err
 			}
+
 			cfg.files = append(cfg.files, path)
+
 			return nil
 		},
 	)
@@ -216,13 +228,16 @@ func (cfg *config) parseArgs(args []string) error {
 	printf := func(format string, a ...any) string {
 		msg := fmt.Sprintf(format, a...)
 		fmt.Fprintln(fs.Output(), msg)
+
 		return msg
 	}
 
 	// Fail like flag does.
 	failf := func(format string, a ...any) error {
 		msg := printf(format, a...)
+
 		fs.Usage()
+
 		return errors.New(msg)
 	}
 
@@ -231,6 +246,7 @@ func (cfg *config) parseArgs(args []string) error {
 	if versionFlag != nil && *versionFlag {
 		msgFmt := "virtrun %s\n  commit %s\n  built at %s"
 		printf(msgFmt, version, commit, date)
+
 		return flag.ErrHelp
 	}
 
@@ -267,9 +283,11 @@ func (cfg *config) validate() error {
 	if _, err := exec.LookPath(cfg.cmd.Executable); err != nil {
 		return fmt.Errorf("check qemu binary: %v", err)
 	}
+
 	if _, err := os.Stat(cfg.cmd.Kernel); err != nil {
 		return fmt.Errorf("check kernel file: %v", err)
 	}
+
 	for _, file := range cfg.files {
 		if _, err := os.Stat(file); err != nil {
 			return fmt.Errorf("check file: %v", err)
@@ -300,6 +318,7 @@ func validateELF(hdr elf.FileHeader, arch string) error {
 	}
 
 	var archReq string
+
 	switch hdr.Machine {
 	case elf.EM_X86_64:
 		archReq = "amd64"
@@ -308,6 +327,7 @@ func validateELF(hdr elf.FileHeader, arch string) error {
 	default:
 		return fmt.Errorf("machine type not supported: %s", hdr.Machine)
 	}
+
 	if archReq != arch {
 		return fmt.Errorf("machine %s not supported for %s", hdr.Machine, arch)
 	}

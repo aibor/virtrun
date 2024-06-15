@@ -56,6 +56,7 @@ func TestHostWithLibsNonZeroRC(t *testing.T) {
 	if KernelArch != runtime.GOARCH {
 		expectedRC = 126
 	}
+
 	assert.Equal(t, expectedRC, rc)
 }
 
@@ -88,9 +89,11 @@ func TestHostRCParsing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			binary, err := filepath.Abs("testdata/bin/" + tt.bin)
 			require.NoError(t, err)
+
 			if KernelArch != runtime.GOARCH {
 				t.Skipf("non matching architecture")
 			}
+
 			cmd, err := qemu.NewCommand(KernelArch)
 			require.NoError(t, err)
 

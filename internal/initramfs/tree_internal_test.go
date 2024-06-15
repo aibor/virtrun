@@ -16,6 +16,7 @@ func TestTreeIsRoot(t *testing.T) {
 	for _, p := range []string{"", ".", "/", "//"} {
 		assert.True(t, isRoot(p), p)
 	}
+
 	for _, p := range []string{"-", "_", "\\", "a", "/dir", "/d/"} {
 		assert.False(t, isRoot(p), p)
 	}
@@ -79,6 +80,7 @@ func TestTreeMkdir(t *testing.T) {
 		assert.Equal(t, FileTypeDirectory, e.Type)
 		assert.Equal(t, "", e.RelatedPath)
 		assert.Empty(t, e.children)
+
 		s, err := tree.GetNode("sub")
 		require.NoError(t, err)
 		assert.Equal(t, s, tree.GetRoot().children["sub"])
@@ -134,6 +136,7 @@ func TestTreeLn(t *testing.T) {
 		assert.Equal(t, FileTypeLink, e.Type)
 		assert.Equal(t, "target", e.RelatedPath)
 		assert.Empty(t, e.children)
+
 		s, err := tree.GetNode("dir")
 		require.NoError(t, err)
 		assert.Equal(t, FileTypeDirectory, s.Type)

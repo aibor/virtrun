@@ -21,10 +21,13 @@ func RunTests(m *testing.M) {
 	err := Run(func() (int, error) {
 		return m.Run(), nil
 	})
+
 	rc := 1
 	if errors.Is(err, ErrNotPidOne) {
 		rc = 127
 	}
+
 	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+
 	os.Exit(rc)
 }

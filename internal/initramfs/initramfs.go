@@ -44,7 +44,9 @@ func WithVirtualInitFile(file fs.File) func(*TreeNode) {
 func New(fn func(*TreeNode)) *Initramfs {
 	initramfs := &Initramfs{}
 	rootDir := initramfs.fileTree.GetRoot()
+
 	fn(rootDir)
+
 	return initramfs
 }
 
@@ -55,6 +57,7 @@ func (i *Initramfs) AddFile(dir, name, path string) error {
 	if name == "" {
 		name = filepath.Base(path)
 	}
+
 	return i.withDirNode(dir, func(dirNode *TreeNode) error {
 		return addFile(dirNode, name, path)
 	})
@@ -69,6 +72,7 @@ func (i *Initramfs) AddFiles(dir string, paths ...string) error {
 				return err
 			}
 		}
+
 		return nil
 	})
 }
@@ -91,10 +95,12 @@ func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
 	// interpreter). Collect the absolute paths of the found shared objects
 	// deduplicated in a set.
 	pathSet := make(map[string]bool)
+
 	if err := i.fileTree.Walk(func(path string, node *TreeNode) error {
 		if node.Type != FileTypeRegular {
 			return nil
 		}
+
 		paths, err := Ldd(node.RelatedPath)
 		if err != nil {
 			if errors.Is(err, ErrNotELFFile) || errors.Is(err, ErrNoInterpreter) {
@@ -102,6 +108,7 @@ func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
 			}
 			return fmt.Errorf("resolve %s: %v", path, err)
 		}
+
 		for _, p := range paths {
 			absPath, err := filepath.Abs(p)
 			if err != nil {
@@ -109,6 +116,7 @@ func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
 			}
 			pathSet[absPath] = true
 		}
+
 		return nil
 	}); err != nil {
 		return err
@@ -118,10 +126,12 @@ func (i *Initramfs) AddRequiredSharedObjects(libsDir string) error {
 		if dir == "" || dir == libsDir {
 			return nil
 		}
+
 		err := i.fileTree.Ln(libsDir, dir)
 		if err != nil && !errors.Is(err, ErrNodeExists) {
 			return fmt.Errorf("add link for %s: %v", dir, err)
 		}
+
 		return nil
 	}
 
@@ -181,6 +191,7 @@ func (i *Initramfs) WriteToTempFile(tmpDir string) (string, error) {
 func (i *Initramfs) WriteInto(writer io.Writer) error {
 	w := NewCPIOWriter(writer)
 	defer w.Close()
+
 	return i.writeTo(w, os.DirFS("/"))
 }
 
@@ -192,11 +203,13 @@ func (i *Initramfs) writeTo(writer Writer, sourceFS fs.FS) error {
 		case FileTypeRegular:
 			// Cut leading / since fs.FS considers it invalid.
 			relPath := strings.TrimPrefix(node.RelatedPath, "/")
+
 			source, err := sourceFS.Open(relPath)
 			if err != nil {
 				return err
 			}
 			defer source.Close()
+
 			return writer.WriteRegular(path, source, 0o755)
 		case FileTypeDirectory:
 			return writer.WriteDirectory(path)
@@ -215,6 +228,7 @@ func (i *Initramfs) withDirNode(dir string, fn func(*TreeNode) error) error {
 	if err != nil {
 		return fmt.Errorf("add dir %s: %v", dir, err)
 	}
+
 	return fn(dirNode)
 }
 
@@ -222,5 +236,6 @@ func addFile(dirNode *TreeNode, name, path string) error {
 	if _, err := dirNode.AddRegular(name, path); err != nil {
 		return fmt.Errorf("add file %s: %v", path, err)
 	}
+
 	return nil
 }

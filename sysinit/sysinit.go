@@ -35,6 +35,7 @@ func PrintErrorAndRC(err error, errRC, rc int) {
 		// Always return a non zero return code in case of error.
 		rc = errRC
 	}
+
 	PrintRC(rc)
 }
 
@@ -108,9 +109,11 @@ func Run(fn func() (int, error)) error {
 	if err = ConfigureLoopbackInterface(); err != nil {
 		return err
 	}
+
 	if err = MountAll(); err != nil {
 		return err
 	}
+
 	if err = CreateCommonSymlinks(); err != nil {
 		return err
 	}

@@ -41,6 +41,7 @@ func TestInits(t *testing.T) {
 				assert.ErrorContains(t, err, tt.errMsg)
 				return
 			}
+
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = file.Close() })
 

@@ -32,6 +32,7 @@ func run() (int, error) {
 		if errors.Is(err, flag.ErrHelp) {
 			return 0, nil
 		}
+
 		return errRC, nil
 	}
 
@@ -58,14 +59,18 @@ func run() (int, error) {
 		if err != nil {
 			return errRC, fmt.Errorf("embedded init: %v", err)
 		}
+
 		irfs = initramfs.New(initramfs.WithVirtualInitFile(init))
+
 		if err := irfs.AddFile("/", "main", cfg.binary); err != nil {
 			return errRC, fmt.Errorf("initramfs: add main file: %v", err)
 		}
 	}
+
 	if err := irfs.AddFiles("data", cfg.files...); err != nil {
 		return errRC, fmt.Errorf("initramfs: add files: %v", err)
 	}
+
 	if err := irfs.AddRequiredSharedObjects(""); err != nil {
 		return errRC, fmt.Errorf("initramfs: add libs: %v", err)
 	}
@@ -74,6 +79,7 @@ func run() (int, error) {
 	if err != nil {
 		return errRC, fmt.Errorf("initramfs: write to temp file: %v", err)
 	}
+
 	defer func() {
 		if cfg.keepInitramfs {
 			fmt.Fprintf(os.Stderr, "initramfs kept at: %s\n", cfg.cmd.Initramfs)
@@ -105,5 +111,6 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
+
 	os.Exit(rc)
 }

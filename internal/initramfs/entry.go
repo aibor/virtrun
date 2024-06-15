@@ -33,6 +33,7 @@ func (e *TreeNode) String() string {
 		for key := range e.children {
 			keys = append(keys, key)
 		}
+
 		return fmt.Sprintf("Dir with entries: % s", keys)
 	case FileTypeLink:
 		return "Link to: " + e.RelatedPath
@@ -69,6 +70,7 @@ func (e *TreeNode) AddRegular(name, relatedPath string) (*TreeNode, error) {
 		Type:        FileTypeRegular,
 		RelatedPath: relatedPath,
 	}
+
 	return e.AddNode(name, node)
 }
 
@@ -77,6 +79,7 @@ func (e *TreeNode) AddDirectory(name string) (*TreeNode, error) {
 	node := &TreeNode{
 		Type: FileTypeDirectory,
 	}
+
 	return e.AddNode(name, node)
 }
 
@@ -86,6 +89,7 @@ func (e *TreeNode) AddLink(name, relatedPath string) (*TreeNode, error) {
 		Type:        FileTypeLink,
 		RelatedPath: relatedPath,
 	}
+
 	return e.AddNode(name, node)
 }
 
@@ -95,6 +99,7 @@ func (e *TreeNode) AddVirtual(name string, source fs.File) (*TreeNode, error) {
 		Type:   FileTypeVirtual,
 		Source: source,
 	}
+
 	return e.AddNode(name, node)
 }
 
@@ -104,13 +109,17 @@ func (e *TreeNode) AddNode(name string, node *TreeNode) (*TreeNode, error) {
 	if !e.IsDir() {
 		return nil, ErrNodeNotDir
 	}
+
 	if ee, exists := e.children[name]; exists {
 		return ee, ErrNodeExists
 	}
+
 	if e.children == nil {
 		e.children = make(map[string]*TreeNode)
 	}
+
 	e.children[name] = node
+
 	return node, nil
 }
 
@@ -120,10 +129,12 @@ func (e *TreeNode) GetNode(name string) (*TreeNode, error) {
 	if !e.IsDir() {
 		return nil, ErrNodeNotDir
 	}
+
 	node, exists := e.children[name]
 	if !exists {
 		return nil, ErrNodeNotExists
 	}
+
 	return node, nil
 }
 
@@ -133,11 +144,13 @@ func (e *TreeNode) walk(base string, fn WalkFunc) error {
 		if err := fn(path, node); err != nil {
 			return err
 		}
+
 		if node.IsDir() {
 			if err := node.walk(path, fn); err != nil {
 				return err
 			}
 		}
 	}
+
 	return nil
 }

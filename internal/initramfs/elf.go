@@ -78,6 +78,7 @@ func readInterpreter(path string) (string, error) {
 		if strings.Contains(err.Error(), "bad magic number") {
 			return "", ErrNotELFFile
 		}
+
 		return "", err
 	}
 	defer elfFile.Close()
@@ -86,8 +87,10 @@ func readInterpreter(path string) (string, error) {
 		if prog.Type != elf.PT_INTERP {
 			continue
 		}
+
 		buf := make([]byte, prog.Filesz)
 		_, err := prog.Open().Read(buf)
+
 		if err != nil && !errors.Is(err, io.EOF) {
 			return "", fmt.Errorf("read interpreter: %v", err)
 		}
@@ -98,6 +101,7 @@ func readInterpreter(path string) (string, error) {
 			return interpreter, nil
 		}
 	}
+
 	return "", ErrNoInterpreter
 }
 
@@ -128,7 +132,9 @@ func ldd(interpreter, path string) (ldInfos, error) {
 	}
 
 	var infos ldInfos
+
 	infos.parseFrom(&stdoutBuf)
+
 	return infos, nil
 }
 
@@ -146,7 +152,9 @@ func (l *ldInfos) parseFrom(buf *bytes.Buffer) {
 	scanner := bufio.NewScanner(buf)
 	for scanner.Scan() {
 		var info ldInfo
+
 		info.parseFrom(scanner.Text())
+
 		*l = append(*l, info)
 	}
 }
@@ -155,6 +163,7 @@ func (l *ldInfos) parseFrom(buf *bytes.Buffer) {
 // So, everything except vdso.
 func (l *ldInfos) realPaths() []string {
 	var paths []string
+
 	for _, i := range *l {
 		switch {
 		case i.path != "":
@@ -163,6 +172,7 @@ func (l *ldInfos) realPaths() []string {
 			paths = append(paths, i.name)
 		}
 	}
+
 	return paths
 }
 

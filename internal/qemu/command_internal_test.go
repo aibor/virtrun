@@ -56,15 +56,19 @@ func TestCommmandArgs(t *testing.T) {
 		}
 
 		found := 0
+
 		for _, a := range cmd.Args() {
 			if a.Name() != "chardev" {
 				continue
 			}
+
 			if assert.Less(t, found, len(expected), "expected serial files already consumed") {
 				assert.Equal(t, expected[found], a)
 			}
+
 			found++
 		}
+
 		assert.Equal(t, len(expected), found, "all expected serial files should have been found")
 	})
 
@@ -84,15 +88,19 @@ func TestCommmandArgs(t *testing.T) {
 		}
 
 		found := 0
+
 		for _, a := range cmd.Args() {
 			if a.Name() != "serial" {
 				continue
 			}
+
 			if assert.Less(t, found, len(expected), "expected serial files already consumed") {
 				assert.Equal(t, expected[found], a)
 			}
+
 			found++
 		}
+
 		assert.Equal(t, len(expected), found, "all expected serial files should have been found")
 	})
 
@@ -108,6 +116,7 @@ func TestCommmandArgs(t *testing.T) {
 		expected := " -- first second third"
 
 		var appendValue string
+
 		for _, a := range cmd.Args() {
 			if a.Name() == "append" {
 				appendValue = a.Value()

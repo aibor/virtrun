@@ -49,9 +49,11 @@ func (a *Argument) Equal(b Argument) bool {
 	if a.name != b.name {
 		return false
 	}
+
 	if a.nonUniqueName {
 		return a.value == b.value
 	}
+
 	return true
 }
 
@@ -62,6 +64,7 @@ func (a Argument) WithValue() func(string) Argument {
 	return func(s string) Argument {
 		a := a
 		a.value = s
+
 		return a
 	}
 }
@@ -144,14 +147,18 @@ func (a *Arguments) Add(e ...Argument) {
 // violated.
 func (a Arguments) Build() ([]string, error) {
 	s := make([]string, 0, len(a))
+
 	for idx, e := range a {
 		if slices.ContainsFunc(a[idx+1:], e.Equal) {
 			return nil, fmt.Errorf("colliding args: %s", e.name)
 		}
+
 		s = append(s, "-"+e.name)
+
 		if e.value != "" {
 			s = append(s, e.value)
 		}
 	}
+
 	return s, nil
 }

@@ -58,6 +58,7 @@ func TestCPIOWriterWriteRegular(t *testing.T) {
 	for idx := range fileBody {
 		fileBody[idx] = byte(idx)
 	}
+
 	testFS := fstest.MapFS{
 		"regular": &fstest.MapFile{Data: fileBody},
 		"dir":     &fstest.MapFile{Mode: fs.ModeDir},

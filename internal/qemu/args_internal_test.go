@@ -23,6 +23,7 @@ func TestArgsValue(t *testing.T) {
 func TestArgsUniqueName(t *testing.T) {
 	a := Argument{nonUniqueName: false}
 	b := Argument{nonUniqueName: true}
+
 	assert.True(t, a.UniqueName())
 	assert.False(t, b.UniqueName())
 }

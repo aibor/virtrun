@@ -27,5 +27,6 @@ func (t *TransportType) ConsoleDeviceName(num uint8) string {
 	if *t == TransportTypeISA {
 		f = "ttyS%d"
 	}
+
 	return fmt.Sprintf(f, num)
 }

@@ -118,7 +118,9 @@ func TestLdInfosParseFrom(t *testing.T) {
 				buf.WriteString(line)
 				buf.WriteRune('\n')
 			}
+
 			var infos ldInfos
+
 			infos.parseFrom(&buf)
 			assert.Equal(t, tt.paths, infos.realPaths())
 		})
@@ -145,6 +147,7 @@ func TestLdInfoParseFrom(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var info ldInfo
+
 			info.parseFrom(tt.line)
 			assert.Equal(t, tt.path, info.path)
 		})

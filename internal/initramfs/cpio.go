@@ -37,6 +37,7 @@ func (w *CPIOWriter) writeHeader(hdr *cpio.Header) error {
 	if err := w.cpioWriter.WriteHeader(hdr); err != nil {
 		return fmt.Errorf("write header for %s: %v", hdr.Name, err)
 	}
+
 	return nil
 }
 
@@ -47,6 +48,7 @@ func (w *CPIOWriter) WriteDirectory(path string) error {
 		Mode:  cpio.TypeDir | cpio.ModePerm,
 		Links: 2,
 	}
+
 	return w.writeHeader(header)
 }
 
@@ -76,6 +78,7 @@ func (w *CPIOWriter) WriteRegular(path string, source fs.File, mode fs.FileMode)
 	if err != nil {
 		return fmt.Errorf("read info: %v", err)
 	}
+
 	if !info.Mode().IsRegular() {
 		return fmt.Errorf("not a regular file: %s", source)
 	}

@@ -33,6 +33,7 @@ func (t *Tree) GetRoot() *TreeNode {
 			Type: FileTypeDirectory,
 		}
 	}
+
 	return t.root
 }
 
@@ -42,11 +43,14 @@ func (t *Tree) GetNode(path string) (*TreeNode, error) {
 	if isRoot(path) {
 		return t.GetRoot(), nil
 	}
+
 	dir, name := filepath.Split(filepath.Clean(path))
+
 	parent, err := t.GetNode(dir)
 	if err != nil {
 		return nil, err
 	}
+
 	return parent.GetNode(name)
 }
 
@@ -58,15 +62,19 @@ func (t *Tree) Mkdir(path string) (*TreeNode, error) {
 	if isRoot(cleaned) {
 		return t.GetRoot(), nil
 	}
+
 	dir, name := filepath.Split(cleaned)
+
 	parent, err := t.Mkdir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("mkdir %s: %v", dir, err)
 	}
+
 	node, err := parent.AddDirectory(name)
 	if errors.Is(err, ErrNodeExists) && node.IsDir() {
 		err = nil
 	}
+
 	return node, err
 }
 
@@ -74,15 +82,18 @@ func (t *Tree) Mkdir(path string) (*TreeNode, error) {
 func (t *Tree) Ln(target string, path string) error {
 	cleaned := filepath.Clean(path)
 	dir, name := filepath.Split(cleaned)
+
 	dirNode, err := t.Mkdir(dir)
 	if err != nil {
 		return err
 	}
+
 	if l, err := dirNode.AddLink(name, target); err != nil {
 		if !errors.Is(err, ErrNodeExists) || !l.IsLink() {
 			return err
 		}
 	}
+
 	return nil
 }
 

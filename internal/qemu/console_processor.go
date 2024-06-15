@@ -27,25 +27,30 @@ type consoleProcessor struct {
 // to clean up the file descriptors after use.
 func (p *consoleProcessor) create() (*os.File, error) {
 	var err error
+
 	p.readPipe, p.writePipe, err = os.Pipe()
 	if err != nil {
 		return nil, err
 	}
+
 	p.output, err = os.Create(p.Path)
 	if err != nil {
 		return nil, err
 	}
+
 	return p.writePipe, nil
 }
 
 // Close closes the file descriptors.
 func (p *consoleProcessor) Close() error {
 	var errs []error
+
 	errs = append(errs, p.writePipe.Close())
 	if !p.ran {
 		errs = append(errs, p.readPipe.Close())
 		errs = append(errs, p.output.Close())
 	}
+
 	return errors.Join(errs...)
 }
 
@@ -55,6 +60,7 @@ func (p *consoleProcessor) run() error {
 	defer p.output.Close()
 	defer p.readPipe.Close()
 	p.ran = true
+
 	scanner := bufio.NewScanner(p.readPipe)
 	for scanner.Scan() {
 		_, err := p.output.Write(append(scanner.Bytes(), byte('\n')))
@@ -62,5 +68,6 @@ func (p *consoleProcessor) run() error {
 			return fmt.Errorf("serial processor run %s: %v", p.Path, err)
 		}
 	}
+
 	return nil
 }

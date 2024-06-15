@@ -205,39 +205,7 @@ func (c *Command) Args() Arguments {
 		a.Add(UniqueArg("enable-kvm"))
 	}
 
-	fdpath := func(i int) string {
-		return fmt.Sprintf("/dev/fd/%d", i)
-	}
-
-	var addConsoleArgs func(int)
-
-	switch c.TransportType {
-	case TransportTypeISA:
-		addConsoleArgs = func(fd int) {
-			a.Add(ArgSerial("file:" + fdpath(fd)))
-		}
-	case TransportTypePCI:
-		a.Add(ArgDevice("virtio-serial-pci", "max_ports=8"))
-
-		addConsoleArgs = func(fd int) {
-			vcon := fmt.Sprintf("vcon%d", fd)
-			a.Add(
-				ArgChardev("file", "id="+vcon, "path="+fdpath(fd)),
-				ArgDevice("virtconsole", "chardev="+vcon),
-			)
-		}
-	case TransportTypeMMIO:
-		a.Add(ArgDevice("virtio-serial-device", "max_ports=8"))
-
-		addConsoleArgs = func(fd int) {
-			vcon := fmt.Sprintf("vcon%d", fd)
-			a.Add(
-				ArgChardev("file", "id="+vcon, "path="+fdpath(fd)),
-				ArgDevice("virtconsole", "chardev="+vcon),
-			)
-		}
-	default: // Ignore invalid transport types.
-	}
+	addConsoleArgs := a.addConsoleArgsFunc(c.TransportType)
 
 	// Add stdout console.
 	addConsoleArgs(1)
@@ -274,6 +242,35 @@ func (c *Command) kernelCmdlineArgs() []string {
 	return cmdline
 }
 
+func fdPath(fd int) string {
+	return fmt.Sprintf("/dev/fd/%d", fd)
+}
+
+func (a *Arguments) addConsoleArgsFunc(transportType TransportType) func(int) {
+	addVirtualConsoleFunc := func(fd int) {
+		vcon := fmt.Sprintf("vcon%d", fd)
+		a.Add(
+			ArgChardev("file", "id="+vcon, "path="+fdPath(fd)),
+			ArgDevice("virtconsole", "chardev="+vcon),
+		)
+	}
+
+	switch transportType {
+	case TransportTypeISA:
+		return func(fd int) {
+			a.Add(ArgSerial("file:" + fdPath(fd)))
+		}
+	case TransportTypePCI:
+		a.Add(ArgDevice("virtio-serial-pci", "max_ports=8"))
+		return addVirtualConsoleFunc
+	case TransportTypeMMIO:
+		a.Add(ArgDevice("virtio-serial-device", "max_ports=8"))
+		return addVirtualConsoleFunc
+	default: // Ignore invalid transport types.
+		return func(_ int) {}
+	}
+}
+
 // Run the QEMU command with the given context.
 //
 // The final QEMU command is constructed, console processors are setup and the
@@ -295,35 +292,23 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 		return 1, fmt.Errorf("get cmd stdout: %v", err)
 	}
 
-	// Collect processors so they can be easily closed.
-	processors := make([]*consoleProcessor, 0)
-
-	closeProcessors := func() {
-		for _, p := range processors {
-			_ = p.Close()
-		}
-	}
-	defer closeProcessors()
-
 	// Create console output processors that fix line endings by stripping "\r".
 	// Append the write end of the console processor pipe as extra file, so it
 	// is present as additional file descriptor which can be used with the
 	// "file" backend for QEMU console devices. [consoleProcessor.run] reads
 	// from the read end of the pipe, cleans the output and writes it into
 	// the actual target file on the host.
-	processorsGroup := errgroup.Group{}
+	processors, err := setupConsoleProcessors(c.AdditionalConsoles)
+	if err != nil {
+		return 1, err
+	}
+	defer processors.Close()
 
-	for _, console := range c.AdditionalConsoles {
-		p := consoleProcessor{Path: console}
+	var processorsGroup errgroup.Group
 
-		w, err := p.create()
-		if err != nil {
-			return 1, fmt.Errorf("create processor %s: %v", p.Path, err)
-		}
-
-		cmd.ExtraFiles = append(cmd.ExtraFiles, w)
-		processors = append(processors, &p)
-		processorsGroup.Go(p.run)
+	for _, processor := range processors {
+		cmd.ExtraFiles = append(cmd.ExtraFiles, processor.WritePipe)
+		processorsGroup.Go(processor.run)
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -349,7 +334,7 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 	}
 
 	// Close console processors, so possible errors can be collected.
-	closeProcessors()
+	processors.Close()
 
 	if err := processorsGroup.Wait(); err != nil {
 		return 1, fmt.Errorf("processor error: %v", err)

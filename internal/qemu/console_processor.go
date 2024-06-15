@@ -16,36 +16,57 @@ import (
 // write it into a file.
 type consoleProcessor struct {
 	Path      string
-	writePipe *os.File
+	WritePipe *os.File
 	readPipe  io.ReadCloser
 	output    io.WriteCloser
 	ran       bool
 }
 
-// create creates the [os.Pipe] and returns the writing end. It also opens and
-// truncates or creates the output file. Call [ConsoleProcessor.Close] in order
-// to clean up the file descriptors after use.
-func (p *consoleProcessor) create() (*os.File, error) {
-	var err error
+type consoleProcessors []*consoleProcessor
 
-	p.readPipe, p.writePipe, err = os.Pipe()
+// Close closes all running processors.
+func (p *consoleProcessors) Close() error {
+	errs := make([]error, 0)
+
+	for _, p := range *p {
+		errs = append(errs, p.Close())
+	}
+
+	return errors.Join(errs...)
+}
+
+// newConsoleProcessor creates a new consoleProcessor and its required pipes.
+// It also opens and truncates or creates the output file. Call
+// [ConsoleProcessor.Close] in order to clean up the file descriptors after use.
+func newConsoleProcessor(path string) (*consoleProcessor, error) {
+	readPipe, writePipe, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
 
-	p.output, err = os.Create(p.Path)
+	output, err := os.Create(path)
 	if err != nil {
+		_ = writePipe.Close()
+		_ = readPipe.Close()
+
 		return nil, err
 	}
 
-	return p.writePipe, nil
+	processor := &consoleProcessor{
+		Path:      path,
+		WritePipe: writePipe,
+		readPipe:  readPipe,
+		output:    output,
+	}
+
+	return processor, nil
 }
 
 // Close closes the file descriptors.
 func (p *consoleProcessor) Close() error {
 	var errs []error
 
-	errs = append(errs, p.writePipe.Close())
+	errs = append(errs, p.WritePipe.Close())
 	if !p.ran {
 		errs = append(errs, p.readPipe.Close())
 		errs = append(errs, p.output.Close())
@@ -70,4 +91,20 @@ func (p *consoleProcessor) run() error {
 	}
 
 	return nil
+}
+
+func setupConsoleProcessors(consolePaths []string) (consoleProcessors, error) {
+	// Collect processors so they can be easily closed.
+	processors := make([]*consoleProcessor, 0)
+
+	for _, console := range consolePaths {
+		processor, err := newConsoleProcessor(console)
+		if err != nil {
+			return nil, fmt.Errorf("create processor %s: %v", console, err)
+		}
+
+		processors = append(processors, processor)
+	}
+
+	return processors, nil
 }

@@ -14,12 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/aibor/virtrun/internal/initprog"
 	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHostWithLibsNonZeroRC(t *testing.T) {

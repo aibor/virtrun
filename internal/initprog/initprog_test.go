@@ -9,10 +9,9 @@ import (
 	"io"
 	"testing"
 
+	"github.com/aibor/virtrun/internal/initprog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aibor/virtrun/internal/initprog"
 )
 
 func TestInits(t *testing.T) {

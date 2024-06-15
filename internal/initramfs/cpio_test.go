@@ -10,11 +10,10 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/cavaliergopher/cpio"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aibor/virtrun/internal/initramfs"
 )
 
 func TestCPIOWriterWriteDirectory(t *testing.T) {

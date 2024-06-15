@@ -7,9 +7,8 @@ package initramfs_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFilesLdd(t *testing.T) {

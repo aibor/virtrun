@@ -7,9 +7,8 @@ package qemu_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCommmandConsoleDeviceName(t *testing.T) {

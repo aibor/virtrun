@@ -7,10 +7,9 @@ package qemu_test
 import (
 	"testing"
 
+	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aibor/virtrun/internal/qemu"
 )
 
 func TestArgsAdd(t *testing.T) {

@@ -21,8 +21,22 @@ func TestGuestSysinit(t *testing.T) {
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
 
-	test := func(standalone bool) func(t *testing.T) {
-		return func(t *testing.T) {
+	tests := []struct {
+		name       string
+		standalone bool
+	}{
+		{
+			name:       "wrapped",
+			standalone: false,
+		},
+		{
+			name:       "standalone",
+			standalone: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			virtrunArgs := []string{
 				"-kernel", KernelPath,
 			}
@@ -33,7 +47,7 @@ func TestGuestSysinit(t *testing.T) {
 				"integration_guest",
 			}
 
-			if standalone {
+			if tt.standalone {
 				virtrunArgs = append(virtrunArgs, "-standalone")
 				testTags = append(testTags, "standalone")
 			}
@@ -68,9 +82,6 @@ func TestGuestSysinit(t *testing.T) {
 				t.Log(string(out))
 			}
 			assert.NoError(t, err)
-		}
+		})
 	}
-
-	t.Run("wrapped", test(false))
-	t.Run("standalone", test(true))
 }

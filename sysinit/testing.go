@@ -23,7 +23,6 @@ func RunTests(m *testing.M) {
 	rc := 1
 	if err == ErrNotPidOne {
 		rc = 127
-
 	}
 	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	os.Exit(rc)

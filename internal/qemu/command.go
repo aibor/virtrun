@@ -118,7 +118,6 @@ func (c *Command) Validate() error {
 		if c.TransportType == TransportTypeMMIO {
 			return fmt.Errorf("%s does not work with virtio-mmio", c.Machine)
 		}
-
 	}
 	return nil
 }

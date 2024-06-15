@@ -100,6 +100,7 @@ func NewCommand(arch string) (*Command, error) {
 // Console device number is starting at 1, as console 0 is the default stdout.
 func (c *Command) AddConsole(file string) string {
 	c.AdditionalConsoles = append(c.AdditionalConsoles, file)
+
 	return c.TransportType.ConsoleDeviceName(uint8(len(c.AdditionalConsoles)))
 }
 
@@ -112,6 +113,7 @@ func (c *Command) Validate() error {
 			return errors.New("microvm does not support pci transport")
 		case c.TransportType == TransportTypeISA && len(c.AdditionalConsoles) > 0:
 			msg := "microvm supports only one isa serial port, used for stdio"
+
 			return errors.New(msg)
 		}
 	case "virt":
@@ -158,9 +160,11 @@ func (c *Command) ProcessGoTestFlags() {
 			"-test.mutexprofile",
 			"-test.trace":
 			needsOutputDirPrefix = append(needsOutputDirPrefix, idx)
+
 			continue
 		case "-test.outputdir":
 			outputDir = splits[1]
+
 			fallthrough
 		case "-test.gocoverdir":
 			splits[1] = "/tmp"
@@ -262,9 +266,11 @@ func (a *Arguments) addConsoleArgsFunc(transportType TransportType) func(int) {
 		}
 	case TransportTypePCI:
 		a.Add(ArgDevice("virtio-serial-pci", "max_ports=8"))
+
 		return addVirtualConsoleFunc
 	case TransportTypeMMIO:
 		a.Add(ArgDevice("virtio-serial-device", "max_ports=8"))
+
 		return addVirtualConsoleFunc
 	default: // Ignore invalid transport types.
 		return func(_ int) {}
@@ -330,6 +336,7 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 	// Collect process information.
 	if err := cmd.Wait(); err != nil {
 		rc = 1
+
 		return rc, fmt.Errorf("qemu: %v", err)
 	}
 

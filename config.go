@@ -48,6 +48,7 @@ func newConfig() (*config, error) {
 	for _, name := range []string{"VIRTRUN_ARCH", "GOARCH"} {
 		if v, exists := os.LookupEnv(name); exists {
 			arch = v
+
 			break
 		}
 	}
@@ -342,5 +343,6 @@ func addArgsFromEnv(args []string, varName string) []string {
 	// Allow to pass args by environment variable. Args given directly with the
 	// command have precedence and override args from environment.
 	envArgs := strings.Fields(os.Getenv(varName))
+
 	return append(envArgs, args...)
 }

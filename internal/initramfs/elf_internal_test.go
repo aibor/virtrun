@@ -66,6 +66,7 @@ func TestELFFileLdd(t *testing.T) {
 
 			if tt.errMsg != "" {
 				require.ErrorContains(t, err, tt.errMsg)
+
 				return
 			}
 

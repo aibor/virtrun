@@ -39,6 +39,7 @@ func TestInits(t *testing.T) {
 			file, err := initprog.For(tt.arch)
 			if tt.errMsg != "" {
 				assert.ErrorContains(t, err, tt.errMsg)
+
 				return
 			}
 

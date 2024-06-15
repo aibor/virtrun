@@ -99,6 +99,7 @@ func TestStdoutProcessor(t *testing.T) {
 
 			if tt.err != nil {
 				assert.ErrorIs(t, err, tt.err)
+
 				return
 			}
 

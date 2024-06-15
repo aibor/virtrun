@@ -117,6 +117,7 @@ func (i *Initramfs) AddRequiredSharedObjects() error {
 				return err
 			}
 		}
+
 		return nil
 	}); err != nil {
 		return err
@@ -143,6 +144,7 @@ func (i *Initramfs) collectLibs() (map[string]bool, error) {
 			if errors.Is(err, ErrNotELFFile) || errors.Is(err, ErrNoInterpreter) {
 				return nil
 			}
+
 			return fmt.Errorf("resolve %s: %v", path, err)
 		}
 
@@ -192,6 +194,7 @@ func (i *Initramfs) WriteToTempFile(tmpDir string) (string, error) {
 	err = i.WriteInto(file)
 	if err != nil {
 		_ = os.Remove(file.Name())
+
 		return "", fmt.Errorf("create archive: %v", err)
 	}
 

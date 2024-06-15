@@ -43,6 +43,7 @@ func TestMountPoints(t *testing.T) {
 func TestNotPidOne(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
+
 	cmd := exec.CommandContext(ctx, "/init")
 	require.NoError(t, cmd.Start(), "command must start")
 	require.Error(t, cmd.Wait(), "command should have exited with error")
@@ -71,7 +72,9 @@ func TestEnv(t *testing.T) {
 	if os.Getpid() == 1 {
 		t.Skip("env only tested when called by default init")
 	}
+
 	envPath, envPathExists := os.LookupEnv("PATH")
+
 	if assert.True(t, envPathExists, "PATH env var should be present") {
 		assert.Equal(t, "/data", envPath, "PATH env var should be correct")
 	}

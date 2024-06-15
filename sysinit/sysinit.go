@@ -55,7 +55,7 @@ func IsPidOneChild() bool {
 // function.
 func Poweroff() {
 	// Silence the kernel so it does not show up in our test output.
-	_ = os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0755)
+	_ = os.WriteFile("/proc/sys/kernel/printk", []byte("0"), 0o755)
 
 	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
 		fmt.Printf("error calling power off: %v\n", err)

@@ -196,13 +196,13 @@ func (i *Initramfs) writeTo(writer Writer, sourceFS fs.FS) error {
 				return err
 			}
 			defer source.Close()
-			return writer.WriteRegular(path, source, 0755)
+			return writer.WriteRegular(path, source, 0o755)
 		case FileTypeDirectory:
 			return writer.WriteDirectory(path)
 		case FileTypeLink:
 			return writer.WriteLink(path, node.RelatedPath)
 		case FileTypeVirtual:
-			return writer.WriteRegular(path, node.Source, 0755)
+			return writer.WriteRegular(path, node.Source, 0o755)
 		default:
 			return fmt.Errorf("unknown file type %d", node.Type)
 		}

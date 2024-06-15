@@ -145,7 +145,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 				mock: MockWriter{
 					Path:   "/init",
 					Source: testFile,
-					Mode:   0755,
+					Mode:   0o755,
 				},
 			},
 			{
@@ -177,7 +177,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 				mock: MockWriter{
 					Path:   "/init",
 					Source: testFile,
-					Mode:   0755,
+					Mode:   0o755,
 				},
 			},
 		}

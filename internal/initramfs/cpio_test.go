@@ -41,7 +41,7 @@ func TestCPIOWriterWriteLink(t *testing.T) {
 		h, err := r.Next()
 		require.NoError(t, err)
 		assert.Equal(t, "test", h.Name)
-		assert.EqualValues(t, 0777|cpio.TypeSymlink, h.Mode)
+		assert.EqualValues(t, 0o777|cpio.TypeSymlink, h.Mode)
 		assert.EqualValues(t, 0, h.Size)
 		assert.Equal(t, "target", h.Linkname)
 	})
@@ -69,7 +69,7 @@ func TestCPIOWriterWriteRegular(t *testing.T) {
 			w := initramfs.NewCPIOWriter(&bytes.Buffer{})
 			file, err := testFS.Open(f)
 			require.NoError(t, err)
-			err = w.WriteRegular("test", file, 0755)
+			err = w.WriteRegular("test", file, 0o755)
 			assert.ErrorContains(t, err, "not a regular file")
 		})
 	}
@@ -81,14 +81,14 @@ func TestCPIOWriterWriteRegular(t *testing.T) {
 
 			file, err := testFS.Open("regular")
 			require.NoError(t, err)
-			err = w.WriteRegular("test", file, 0755)
+			err = w.WriteRegular("test", file, 0o755)
 			require.NoError(t, err)
 
 			r := cpio.NewReader(&b)
 			h, err := r.Next()
 			require.NoError(t, err)
 			assert.Equal(t, "test", h.Name)
-			assert.EqualValues(t, 0755|cpio.TypeReg, h.Mode)
+			assert.EqualValues(t, 0o755|cpio.TypeReg, h.Mode)
 			assert.EqualValues(t, 200, h.Size)
 
 			body := make([]byte, 200)
@@ -102,7 +102,7 @@ func TestCPIOWriterWriteRegular(t *testing.T) {
 
 			file, err := testFS.Open("regular")
 			require.NoError(t, err)
-			err = w.WriteRegular("test", file, 0755)
+			err = w.WriteRegular("test", file, 0o755)
 			assert.ErrorContains(t, err, "write header for test:")
 		})
 	})

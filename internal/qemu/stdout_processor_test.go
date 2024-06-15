@@ -37,7 +37,9 @@ func TestStdoutProcessor(t *testing.T) {
 		{
 			name: "oom",
 			input: []string{
+				//nolint:lll
 				"[    0.378012] oom-kill:constraint=CONSTRAINT_NONE,nodemask=(null),cpuset=/,mems_allowed=0,global_oom,task_memcg=/,task=main,pid=116,uid=0",
+				//nolint:lll
 				"[    0.378083] Out of memory: Killed process 116 (main) total-vm:48156kB, anon-rss:43884kB, file-rss:4kB, shmem-rss:2924kB, UID:0 pgtables:140kB oom_score_adj:0",
 			},
 			output: []string{""},

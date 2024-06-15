@@ -17,6 +17,7 @@ import (
 	"github.com/aibor/virtrun/internal/initramfs"
 )
 
+//nolint:cyclop
 func run() (int, error) {
 	// Our init programs may return 127 and 126, so use 125 for indicating
 	// issues.

@@ -70,6 +70,7 @@ func newConfig() (*config, error) {
 	return cfg, nil
 }
 
+//nolint:cyclop
 func (cfg *config) parseArgs(args []string) error {
 	fsName := args[0] + " [flags...] binary [initargs...]"
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)

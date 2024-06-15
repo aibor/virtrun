@@ -35,7 +35,6 @@ func TestInits(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.arch, func(t *testing.T) {
 			file, err := initprog.For(tt.arch)
 			if tt.errMsg != "" {

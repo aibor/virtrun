@@ -51,7 +51,6 @@ func TestInitramfsNew(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			i := New(tt.initFunc)
 			assertNode(t, i, "/init", tt.expected)
@@ -183,7 +182,6 @@ func TestInitramfsWriteTo(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
 				t.Run("works", func(t *testing.T) {
 					i := Initramfs{}

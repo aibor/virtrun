@@ -154,7 +154,6 @@ func TestParseArgs(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := config{
 				cmd: &qemu.Command{},
@@ -208,7 +207,6 @@ func TestAddArgsFromEnv(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			varName := "TESTARGS"
 			t.Setenv(varName, tt.env)

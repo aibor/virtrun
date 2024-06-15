@@ -67,7 +67,6 @@ func TestArgsEqual(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.equal {
 				assert.True(t, tt.a.Equal(tt.b), "a")

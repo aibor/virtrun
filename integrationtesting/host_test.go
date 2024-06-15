@@ -85,7 +85,6 @@ func TestHostRCParsing(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			binary, err := filepath.Abs("testdata/bin/" + tt.bin)
 			require.NoError(t, err)

@@ -88,7 +88,6 @@ func TestStdoutProcessor(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			cmdOut := bytes.NewBufferString(strings.Join(tt.input, "\n"))
 			stdOut := bytes.NewBuffer(make([]byte, 0, 512))

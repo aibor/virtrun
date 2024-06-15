@@ -54,7 +54,6 @@ func ExecParallel(paths []string, args []string, outW, errW io.Writer) error {
 	eg := errgroup.Group{}
 	eg.SetLimit(runtime.GOMAXPROCS(0))
 	for _, path := range paths {
-		path := path
 		eg.Go(func() error {
 			var outBuf, errBuf bytes.Buffer
 			cmd := exec.Command(path, args...)

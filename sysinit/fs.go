@@ -6,7 +6,9 @@ package sysinit
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"syscall"
 )
 
@@ -83,4 +85,29 @@ func CreateSymlinks(symlinks Symlinks) error {
 	}
 
 	return nil
+}
+
+// ListRegularFiles lists all regular files in the given directory and all
+// sub directories.
+func ListRegularFiles(dir string) ([]string, error) {
+	var files []string
+
+	walkFunc := func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.Type().IsRegular() {
+			files = append(files, path)
+		}
+
+		return nil
+	}
+
+	err := filepath.WalkDir(dir, walkFunc)
+	if err != nil {
+		return nil, fmt.Errorf("walk dir: %w", err)
+	}
+
+	return files, nil
 }

@@ -75,6 +75,7 @@ type Config struct {
 	MountPoints       MountPoints
 	Symlinks          Symlinks
 	ConfigureLoopback bool
+	ModulesDir        string
 }
 
 // DefaultConfig creates a new default config.
@@ -139,6 +140,12 @@ func Run(cfg Config, fn func() (int, error)) error {
 	}()
 
 	// Setup the system.
+	if cfg.ModulesDir != "" {
+		if err = LoadModules(cfg.ModulesDir); err != nil {
+			return err
+		}
+	}
+
 	if cfg.ConfigureLoopback {
 		if err = ConfigureLoopbackInterface(); err != nil {
 			return err

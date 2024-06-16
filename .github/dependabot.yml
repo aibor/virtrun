@@ -10,7 +10,6 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "chore"
-      scope: "gomod"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -18,7 +17,6 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "chore"
-      scope: "ci"
 
   - package-ecosystem: "docker"
     directory: "/"
@@ -26,7 +24,6 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "chore"
-      scope: "docker"
 
   - package-ecosystem: "docker"
     directory: "/integrationtesting/"
@@ -34,4 +31,3 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "chore"
-      scope: "docker"

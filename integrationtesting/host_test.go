@@ -43,6 +43,9 @@ func TestHostWithLibsNonZeroRC(t *testing.T) {
 	err = irfs.AddRequiredSharedObjects()
 	require.NoError(t, err)
 
+	err = irfs.AddFiles("/lib/modules")
+	require.NoError(t, err)
+
 	cmd.Initramfs, err = irfs.WriteToTempFile(t.TempDir())
 	require.NoError(t, err)
 
@@ -107,6 +110,9 @@ func TestHostRCParsing(t *testing.T) {
 
 			irfs := initramfs.New(initramfs.WithVirtualInitFile(init))
 			err = irfs.AddFile("/", "main", binary)
+			require.NoError(t, err)
+
+			err = irfs.AddFiles("/lib/modules")
 			require.NoError(t, err)
 
 			cmd.Initramfs, err = irfs.WriteToTempFile(t.TempDir())

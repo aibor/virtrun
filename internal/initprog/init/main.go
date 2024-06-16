@@ -23,6 +23,7 @@ func runInit() (int, error) {
 	}
 
 	cfg := sysinit.DefaultConfig()
+	cfg.ModulesDir = "/lib/modules"
 
 	err := sysinit.Run(cfg, func() (int, error) {
 		// "/main" is the file virtrun copies the given binary to.

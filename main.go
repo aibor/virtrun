@@ -76,6 +76,10 @@ func run() (int, error) {
 		return errRC, fmt.Errorf("initramfs: add libs: %v", err)
 	}
 
+	if err := irfs.AddFiles("lib/modules", cfg.modules...); err != nil {
+		return errRC, fmt.Errorf("initramfs: add modules: %v", err)
+	}
+
 	cfg.cmd.Initramfs, err = irfs.WriteToTempFile("")
 	if err != nil {
 		return errRC, fmt.Errorf("initramfs: write to temp file: %v", err)

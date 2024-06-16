@@ -33,6 +33,7 @@ type config struct {
 	arch                string
 	binary              string
 	files               []string
+	modules             []string
 	standalone          bool
 	noGoTestFlagRewrite bool
 	keepInitramfs       bool
@@ -216,6 +217,25 @@ func (cfg *config) parseArgs(args []string) error {
 		},
 	)
 
+	fs.Func(
+		"addModule",
+		"kernel module to add to guest. Flag may be used more than once.",
+		func(s string) error {
+			if s == "" {
+				return errors.New("file path must not be empty")
+			}
+
+			path, err := filepath.Abs(s)
+			if err != nil {
+				return err
+			}
+
+			cfg.modules = append(cfg.modules, path)
+
+			return nil
+		},
+	)
+
 	versionFlag := fs.Bool(
 		"version",
 		false,
@@ -295,6 +315,12 @@ func (cfg *config) validate() error {
 	for _, file := range cfg.files {
 		if _, err := os.Stat(file); err != nil {
 			return fmt.Errorf("check file: %v", err)
+		}
+	}
+
+	for _, file := range cfg.modules {
+		if _, err := os.Stat(file); err != nil {
+			return fmt.Errorf("check module: %v", err)
 		}
 	}
 

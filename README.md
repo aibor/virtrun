@@ -30,8 +30,8 @@ If not in `$PATH`, you can specify the path to the binary with the flag
 
 The kernel must be compiled to work with some support for working in QEMU.
 Especially some kind of serial console or virtual console must be present. All
-of this must be compiled into the kernel directly, ass there is no way to load
-kernel modules, unless your given binary does that.
+of this must be compiled into the kernel directly. Additional modules can be
+loaded for functionality required bu the binary itself.
 
 The absolute path to the kernel must be given by flag `-kernel`. Make sure the
 kernel matches the architecture of your binaries and the QEMU binary.
@@ -98,7 +98,8 @@ $ virtrun -kernel /boot/vmlinuz-linux -addFile /usr/bin/bash /usr/bin/tree -x
 |   |-- ld-linux-x86-64.so.2
 |   |-- libc.so.6
 |   |-- libncursesw.so.6
-|   `-- libreadline.so.8
+|   |-- libreadline.so.8
+|   `-- modules
 |-- lib64 -> /lib
 |-- main
 |-- proc
@@ -109,6 +110,12 @@ $ virtrun -kernel /boot/vmlinuz-linux -addFile /usr/bin/bash /usr/bin/tree -x
 `-- usr
     `-- lib -> /lib
 ```
+
+Kernel modules can be added with the flag `-addModule` that can be used
+multiple times. Absolute paths must be given. The modules are added to the
+directory `/lib/modules` and are loaded automatically by the default init.
+Dependencies must be provided an are not resolved automatically. The modules
+must be added in the correct order.
 
 ### With `go test -exec`
 

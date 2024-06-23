@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCommmandArgs(t *testing.T) {
+func TestCommandArgs(t *testing.T) {
 	t.Run("yes-kvm", func(t *testing.T) {
 		cmd := Command{}
 		args := cmd.Args()
@@ -49,10 +49,10 @@ func TestCommmandArgs(t *testing.T) {
 			TransportType: TransportTypeMMIO,
 		}
 
-		expected := Arguments{
-			ArgChardev("file,id=vcon1,path=/dev/fd/1"),
-			ArgChardev("file,id=vcon3,path=/dev/fd/3"),
-			ArgChardev("file,id=vcon4,path=/dev/fd/4"),
+		expected := []Argument{
+			RepeatableArg("chardev", "file,id=vcon1,path=/dev/fd/1"),
+			RepeatableArg("chardev", "file,id=vcon3,path=/dev/fd/3"),
+			RepeatableArg("chardev", "file,id=vcon4,path=/dev/fd/4"),
 		}
 
 		found := 0
@@ -81,10 +81,10 @@ func TestCommmandArgs(t *testing.T) {
 			TransportType: TransportTypeISA,
 		}
 
-		expected := Arguments{
-			ArgSerial("file:/dev/fd/1"),
-			ArgSerial("file:/dev/fd/3"),
-			ArgSerial("file:/dev/fd/4"),
+		expected := []Argument{
+			RepeatableArg("serial", "file:/dev/fd/1"),
+			RepeatableArg("serial", "file:/dev/fd/3"),
+			RepeatableArg("serial", "file:/dev/fd/4"),
 		}
 
 		found := 0

@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -48,7 +49,7 @@ type Command struct {
 	// ExtraArgs are  extra arguments that are passed to the QEMU command.
 	// They may not interfere with the essential arguments set by the command
 	// itself or an error will be returned on [Command.Run].
-	ExtraArgs Arguments
+	ExtraArgs []Argument
 	// Additional files attached to consoles besides the default one used for
 	// stdout. They will be present in the guest system as "/dev/ttySx" or
 	// "/dev/hvcx" where x is the index of the slice + 1.
@@ -70,12 +71,12 @@ func NewCommand(arch string) (*Command, error) {
 		Memory: 256, //nolint:gomnd,mnd
 		SMP:    1,
 		NoKVM:  !KVMAvailableFor(arch),
-		ExtraArgs: Arguments{
-			ArgDisplay("none"),
-			ArgMonitor("none"),
-			UniqueArg("no-reboot"),
-			UniqueArg("nodefaults"),
-			UniqueArg("no-user-config"),
+		ExtraArgs: []Argument{
+			UniqueArg("display", "none"),
+			UniqueArg("monitor", "none"),
+			UniqueArg("no-reboot", ""),
+			UniqueArg("nodefaults", ""),
+			UniqueArg("no-user-config", ""),
 		},
 	}
 
@@ -183,46 +184,49 @@ func (c *Command) ProcessGoTestFlags() {
 }
 
 // Args compiles the argument list for the QEMU command.
-func (c *Command) Args() Arguments {
-	a := Arguments{
-		ArgKernel(c.Kernel),
-		ArgInitrd(c.Initramfs),
+func (c *Command) Args() []Argument {
+	a := []Argument{
+		UniqueArg("kernel", c.Kernel),
+		UniqueArg("initrd", c.Initramfs),
 	}
 
 	if c.Machine != "" {
-		a.Add(ArgMachine(c.Machine))
+		a = append(a, UniqueArg("machine", c.Machine))
 	}
 
 	if c.CPU != "" {
-		a.Add(ArgCPU(c.CPU))
+		a = append(a, UniqueArg("cpu", c.CPU))
 	}
 
 	if c.SMP != 0 {
-		a.Add(ArgSMP(int(c.SMP)))
+		a = append(a, UniqueArg("smp", strconv.Itoa(int(c.SMP))))
 	}
 
 	if c.Memory != 0 {
-		a.Add(ArgMemory(int(c.Memory)))
+		a = append(a, UniqueArg("m", strconv.Itoa(int(c.Memory))))
 	}
 
 	if !c.NoKVM {
-		a.Add(UniqueArg("enable-kvm"))
+		a = append(a, UniqueArg("enable-kvm", ""))
 	}
 
-	addConsoleArgs := a.addConsoleArgsFunc(c.TransportType)
+	a = append(a, prepareConsoleArgs(c.TransportType)...)
+	addConsoleArgs := consoleArgsFunc(c.TransportType)
 
 	// Add stdout console.
-	addConsoleArgs(1)
+	a = append(a, addConsoleArgs(1)...)
 
 	// Write console output to file descriptors. Those are provided by the
 	// [exec.Cmd.ExtraFiles].
 	for idx := range c.AdditionalConsoles {
 		// FDs 0, 1, 2 are standard in, out, err, so start at 3.
-		addConsoleArgs(minAdditionalFileDescriptor + idx)
+		a = append(a, addConsoleArgs(minAdditionalFileDescriptor+idx)...)
 	}
 
-	a.Add(c.ExtraArgs...)
-	a.Add(ArgAppend(c.kernelCmdlineArgs()...))
+	a = append(a, c.ExtraArgs...)
+
+	kernelCmdline := strings.Join(c.kernelCmdlineArgs(), " ")
+	a = append(a, RepeatableArg("append", kernelCmdline))
 
 	return a
 }
@@ -250,30 +254,42 @@ func fdPath(fd int) string {
 	return fmt.Sprintf("/dev/fd/%d", fd)
 }
 
-func (a *Arguments) addConsoleArgsFunc(transportType TransportType) func(int) {
-	addVirtualConsoleFunc := func(fd int) {
-		vcon := fmt.Sprintf("vcon%d", fd)
-		a.Add(
-			ArgChardev("file", "id="+vcon, "path="+fdPath(fd)),
-			ArgDevice("virtconsole", "chardev="+vcon),
-		)
+func prepareConsoleArgs(transportType TransportType) []Argument {
+	switch transportType {
+	case TransportTypePCI:
+		return []Argument{
+			RepeatableArg("device", "virtio-serial-pci,max_ports=8"),
+		}
+	case TransportTypeMMIO:
+		return []Argument{
+			RepeatableArg("device", "virtio-serial-device,max_ports=8"),
+		}
+	default: // Ignore invalid transport types.
+		return nil
 	}
+}
 
+func consoleArgsFunc(transportType TransportType) func(int) []Argument {
 	switch transportType {
 	case TransportTypeISA:
-		return func(fd int) {
-			a.Add(ArgSerial("file:" + fdPath(fd)))
+		return func(fd int) []Argument {
+			return []Argument{
+				RepeatableArg("serial", "file:"+fdPath(fd)),
+			}
 		}
-	case TransportTypePCI:
-		a.Add(ArgDevice("virtio-serial-pci", "max_ports=8"))
+	case TransportTypePCI, TransportTypeMMIO:
+		return func(fd int) []Argument {
+			vcon := fmt.Sprintf("vcon%d", fd)
+			chardev := fmt.Sprintf("file,id=%s,path=%s", vcon, fdPath(fd))
+			device := "virtconsole,chardev=" + vcon
 
-		return addVirtualConsoleFunc
-	case TransportTypeMMIO:
-		a.Add(ArgDevice("virtio-serial-device", "max_ports=8"))
-
-		return addVirtualConsoleFunc
+			return []Argument{
+				RepeatableArg("chardev", chardev),
+				RepeatableArg("device", device),
+			}
+		}
 	default: // Ignore invalid transport types.
-		return func(_ int) {}
+		return func(_ int) (_ []Argument) { return }
 	}
 }
 
@@ -285,7 +301,7 @@ func (a *Arguments) addConsoleArgsFunc(transportType TransportType) func(int) {
 // a non 0 value is returned. If no error is returned, the value was received
 // by the guest system.
 func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error) {
-	args, err := c.Args().Build()
+	args, err := BuildArgumentStrings(c.Args())
 	if err != nil {
 		return 1, err
 	}

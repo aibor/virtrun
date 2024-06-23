@@ -80,20 +80,78 @@ func TestArgsEqual(t *testing.T) {
 	}
 }
 
-func TestArgsWithValue(t *testing.T) {
-	a := Argument{name: "t"}.WithValue()("val")
-	e := Argument{name: "t", value: "val"}
-	assert.Equal(t, e, a)
+func TestUniqueArg(t *testing.T) {
+	tests := []struct {
+		name          string
+		value         []string
+		expectedValue string
+	}{
+		{
+			name:          "empty",
+			value:         nil,
+			expectedValue: "",
+		},
+		{
+			name:          "single",
+			value:         []string{"value"},
+			expectedValue: "value",
+		},
+		{
+			name:          "multi",
+			value:         []string{"value", "more", "really"},
+			expectedValue: "value,more,really",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expected := Argument{
+				name:          "name",
+				value:         tt.expectedValue,
+				nonUniqueName: false,
+			}
+
+			actual := UniqueArg("name", tt.value...)
+
+			assert.Equal(t, expected, actual)
+		})
+	}
 }
 
-func TestArgsWithMultiValue(t *testing.T) {
-	a := Argument{name: "t"}.WithMultiValue("--")("val1", "val2", "val3")
-	e := Argument{name: "t", value: "val1--val2--val3"}
-	assert.Equal(t, e, a)
-}
+func TestRepeatableArg(t *testing.T) {
+	tests := []struct {
+		name          string
+		value         []string
+		expectedValue string
+	}{
+		{
+			name:          "empty",
+			value:         nil,
+			expectedValue: "",
+		},
+		{
+			name:          "single",
+			value:         []string{"value"},
+			expectedValue: "value",
+		},
+		{
+			name:          "multi",
+			value:         []string{"value", "more", "really"},
+			expectedValue: "value,more,really",
+		},
+	}
 
-func TestArgsWithIntValue(t *testing.T) {
-	a := Argument{name: "t"}.WithIntValue()(99)
-	e := Argument{name: "t", value: "99"}
-	assert.Equal(t, e, a)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expected := Argument{
+				name:          "name",
+				value:         "value",
+				nonUniqueName: true,
+			}
+
+			actual := RepeatableArg("name", "value")
+
+			assert.Equal(t, expected, actual)
+		})
+	}
 }

@@ -12,35 +12,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestArgsAdd(t *testing.T) {
-	a := qemu.Arguments{}
-	b := qemu.UniqueArg("t").WithValue()("99")
-	a.Add(b)
-	assert.Equal(t, qemu.Arguments{b}, a)
-}
-
-func TestArgsBuild(t *testing.T) {
+func TestBuildArgumentStrings(t *testing.T) {
 	t.Run("builds", func(t *testing.T) {
-		a := qemu.Arguments{
-			qemu.ArgKernel("vmlinuz"),
-			qemu.ArgInitrd("boot"),
+		a := []qemu.Argument{
+			qemu.UniqueArg("kernel", "vmlinuz"),
+			qemu.UniqueArg("initrd", "boot"),
 			qemu.UniqueArg("yes"),
+			qemu.RepeatableArg("more", "a"),
+			qemu.RepeatableArg("more", "b"),
 		}
 		e := []string{
 			"-kernel", "vmlinuz",
 			"-initrd", "boot",
 			"-yes",
+			"-more", "a",
+			"-more", "b",
 		}
-		b, err := a.Build()
+		b, err := qemu.BuildArgumentStrings(a)
 		require.NoError(t, err)
 		assert.Equal(t, e, b)
 	})
+
 	t.Run("collision", func(t *testing.T) {
-		a := qemu.Arguments{
-			qemu.ArgKernel("vmlinuz"),
-			qemu.ArgKernel("bsd"),
+		a := []qemu.Argument{
+			qemu.UniqueArg("kernel", "vmlinuz"),
+			qemu.UniqueArg("kernel", "bsd"),
 		}
-		_, err := a.Build()
+		_, err := qemu.BuildArgumentStrings(a)
 		assert.Error(t, err)
 	})
 }

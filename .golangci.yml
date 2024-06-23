@@ -8,7 +8,6 @@ linters:
     - depguard
     - exhaustruct
     - funlen
-    - gochecknoglobals
     - err113
     - paralleltest
     - varnamelen

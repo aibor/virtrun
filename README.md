@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 # virtrun
 
-[![PkgGoDev](https://pkg.go.dev/badge/github.com/aibor/virtrun)](https://pkg.go.dev/github.com/aibor/virtrun)
+[![PkgGoDev][pkg-go-dev-badge]][pkg-go-dev]
 
 virtrun is a library and binary QEMU wrapper for running binaries in an
 isolated system.
@@ -227,3 +227,6 @@ overridden by flags. See `virtrun -help` for all flags.
 Virtrun supports different QEMU IO transport types. Which is needed depends on
 the kernel and machine type used. If you don't get any output, try different
 transport types with flag `-transport`
+
+[pkg-go-dev]: https://pkg.go.dev/github.com/aibor/virtrun
+[pkg-go-dev-badge]: https://pkg.go.dev/badge/github.com/aibor/virtrun

@@ -70,6 +70,34 @@ func Poweroff() {
 	os.Exit(0)
 }
 
+// Config defines basic system configuration.
+type Config struct {
+	MountPoints       MountPoints
+	Symlinks          Symlinks
+	ConfigureLoopback bool
+}
+
+// DefaultConfig creates a new default config.
+func DefaultConfig() Config {
+	return Config{
+		MountPoints: MountPoints{
+			{"/proc", FSTypeProc},
+			{"/sys", FSTypeSys},
+			{"/sys/fs/bpf", FSTypeBpf},
+			{"/dev", FSTypeDevTmp},
+			{"/run", FSTypeTmp},
+			{"/tmp", FSTypeTmp},
+		},
+		Symlinks: Symlinks{
+			"/dev/fd":     "/proc/self/fd/",
+			"/dev/stdin":  "/proc/self/fd/0",
+			"/dev/stdout": "/proc/self/fd/1",
+			"/dev/stderr": "/proc/self/fd/2",
+		},
+		ConfigureLoopback: true,
+	}
+}
+
 // Run is the entry point for an actual init system. It prepares the system
 // to be used. Preparing steps are:
 // - Guarding itself to be actually PID 1.
@@ -85,7 +113,7 @@ func Poweroff() {
 // returned with an error. If the error is an [exec.ExitError], it is
 // parsed and its return code is used. Otherwise the return code is 127 in case
 // it was never set or 126 in case there was an error.
-func Run(fn func() (int, error)) error {
+func Run(cfg Config, fn func() (int, error)) error {
 	if !IsPidOne() {
 		return ErrNotPidOne
 	}
@@ -111,15 +139,17 @@ func Run(fn func() (int, error)) error {
 	}()
 
 	// Setup the system.
-	if err = ConfigureLoopbackInterface(); err != nil {
+	if cfg.ConfigureLoopback {
+		if err = ConfigureLoopbackInterface(); err != nil {
+			return err
+		}
+	}
+
+	if err = MountAll(cfg.MountPoints); err != nil {
 		return err
 	}
 
-	if err = MountAll(); err != nil {
-		return err
-	}
-
-	if err = CreateCommonSymlinks(); err != nil {
+	if err = CreateSymlinks(cfg.Symlinks); err != nil {
 		return err
 	}
 

@@ -7,7 +7,6 @@ package sysinit
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"syscall"
 )
 
@@ -35,46 +34,25 @@ type MountPoint struct {
 // MountPoints is a collection of MountPoints.
 type MountPoints []MountPoint
 
-// MountPointPresets defines architecture specific mount points.
-var MountPointPresets = map[string]MountPoints{
-	"amd64": {
-		{"/proc", FSTypeProc},
-		{"/sys", FSTypeSys},
-		{"/sys/fs/bpf", FSTypeBpf},
-		{"/sys/kernel/tracing", FSTypeTracing},
-		{"/dev", FSTypeDevTmp},
-		{"/run", FSTypeTmp},
-		{"/tmp", FSTypeTmp},
-	},
-	"arm64": {
-		{"/proc", FSTypeProc},
-		{"/sys", FSTypeSys},
-		{"/sys/fs/bpf", FSTypeBpf},
-		{"/dev", FSTypeDevTmp},
-		{"/run", FSTypeTmp},
-		{"/tmp", FSTypeTmp},
-	},
-}
+// Symlinks is a collection of symbolic links. Keys are symbolic links to
+// create with the value being the target to link to.
+type Symlinks map[string]string
 
-// CommonSymlinks defines symbolic links usually set by init systems.
-var CommonSymlinks = map[string]string{
-	"/dev/fd":     "/proc/self/fd/",
-	"/dev/stdin":  "/proc/self/fd/0",
-	"/dev/stdout": "/proc/self/fd/1",
-	"/dev/stderr": "/proc/self/fd/2",
-}
-
-// MountFs mounts the special file system with type FsType at the given path.
+// Mount mounts the special file system with type FsType at the given path.
 //
 // If path does not exist, it is created. An error is returned if this or the
 // mount syscall fails.
-func MountFs(path string, fstype FSType) error {
-	if err := os.MkdirAll(path, defaultDirMode); err != nil {
-		return fmt.Errorf("mkdir %s: %v", path, err)
+func Mount(mount MountPoint) error {
+	err := os.MkdirAll(mount.Path, defaultDirMode)
+	if err != nil {
+		return fmt.Errorf("mkdir %s: %v", mount.Path, err)
 	}
 
-	if err := syscall.Mount(string(fstype), path, string(fstype), 0, ""); err != nil {
-		return fmt.Errorf("mount %s (%s): %v", path, fstype, err)
+	fsType := string(mount.FSType)
+
+	err = syscall.Mount(fsType, mount.Path, fsType, 0, "")
+	if err != nil {
+		return fmt.Errorf("mount %s (%s): %v", mount.Path, mount.FSType, err)
 	}
 
 	return nil
@@ -84,16 +62,9 @@ func MountFs(path string, fstype FSType) error {
 //
 // All special file systems required for usual operations, like accessing
 // kernel variables, modifying kernel knobs or accessing devices are mounted.
-func MountAll() error {
-	arch := runtime.GOARCH
-
-	mounts, exists := MountPointPresets[arch]
-	if !exists {
-		return fmt.Errorf("no mount point preset found for arch %s", arch)
-	}
-
-	for _, mp := range mounts {
-		if err := MountFs(mp.Path, mp.FSType); err != nil {
+func MountAll(mountPoints MountPoints) error {
+	for _, mp := range mountPoints {
+		if err := Mount(mp); err != nil {
 			return err
 		}
 	}
@@ -101,11 +72,11 @@ func MountAll() error {
 	return nil
 }
 
-// CreateCommonSymlinks creates common symbolic links in the file system.
+// CreateSymlinks creates common symbolic links in the file system.
 //
 // This must be run after all file systems have been mounted.
-func CreateCommonSymlinks() error {
-	for link, target := range CommonSymlinks {
+func CreateSymlinks(symlinks Symlinks) error {
+	for link, target := range symlinks {
 		if err := os.Symlink(target, link); err != nil {
 			return fmt.Errorf("create common symlink %s: %v", link, err)
 		}

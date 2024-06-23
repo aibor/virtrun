@@ -22,7 +22,9 @@ func runInit() (int, error) {
 		"PATH=/data",
 	}
 
-	err := sysinit.Run(func() (int, error) {
+	cfg := sysinit.DefaultConfig()
+
+	err := sysinit.Run(cfg, func() (int, error) {
 		// "/main" is the file virtrun copies the given binary to.
 		cmd := exec.Command("/main", os.Args[1:]...)
 		cmd.Stdout = os.Stdout

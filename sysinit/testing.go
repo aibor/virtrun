@@ -18,7 +18,8 @@ import (
 // PID 1, since the intention of this library is to run test binaries in an
 // isolated system.
 func RunTests(m *testing.M) {
-	err := Run(func() (int, error) {
+	cfg := DefaultConfig()
+	err := Run(cfg, func() (int, error) {
 		return m.Run(), nil
 	})
 

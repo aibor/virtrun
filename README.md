@@ -8,6 +8,7 @@ SPDX-License-Identifier: MIT
 
 [![PkgGoDev][pkg-go-dev-badge]][pkg-go-dev]
 [![Go Report Card][go-report-card-badge]][go-report-card]
+[![Actions][actions-test-badge]][actions-test]
 
 virtrun is a library and binary QEMU wrapper for running binaries in an
 isolated system.
@@ -233,3 +234,5 @@ transport types with flag `-transport`
 [pkg-go-dev-badge]:     https://pkg.go.dev/badge/github.com/aibor/virtrun
 [go-report-card]:       https://goreportcard.com/report/github.com/aibor/virtrun
 [go-report-card-badge]: https://goreportcard.com/badge/github.com/aibor/virtrun
+[actions-test]:         https://github.com/aibor/virtrun/actions/workflows/test.yaml
+[actions-test-badge]:   https://github.com/aibor/virtrun/actions/workflows/test.yaml/badge.svg?branch=main

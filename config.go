@@ -24,8 +24,8 @@ const minMemory = 128
 // Set on build.
 var (
 	version = "dev"
-	commit  = "none"
-	date    = "unknown"
+	commit  = "none"    //nolint:gochecknoglobals
+	date    = "unknown" //nolint:gochecknoglobals
 )
 
 type config struct {

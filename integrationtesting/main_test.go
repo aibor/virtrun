@@ -7,6 +7,7 @@
 package integrationtesting_test
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -16,9 +17,10 @@ import (
 )
 
 var (
-	KernelPath = "/kernels/vmlinuz"
-	KernelArch = runtime.GOARCH
-	Verbose    bool
+	KernelPath    = "/kernels/vmlinuz"
+	KernelArch    = runtime.GOARCH
+	KernelModules []string
+	Verbose       bool
 )
 
 func TestMain(m *testing.M) {
@@ -39,6 +41,24 @@ func TestMain(m *testing.M) {
 		"verbose",
 		Verbose,
 		"show complete guest output",
+	)
+	flag.Func(
+		"kernel.module",
+		"kernel module to add to guest. Flag may be used more than once.",
+		func(s string) error {
+			if s == "" {
+				return errors.New("file path must not be empty")
+			}
+
+			path, err := filepath.Abs(s)
+			if err != nil {
+				return err
+			}
+
+			KernelModules = append(KernelModules, path)
+
+			return nil
+		},
 	)
 	flag.Parse()
 

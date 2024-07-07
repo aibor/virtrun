@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -93,6 +94,18 @@ func TestCommonSymlinks(t *testing.T) {
 			target, err := os.Readlink(link)
 			require.NoError(t, err, "link must be readable")
 			assert.Equal(t, expectedTarget, target, "link target should be as expected")
+		})
+	}
+}
+
+func TestModules(t *testing.T) {
+	modules, err := os.ReadDir("/lib/modules")
+	require.NoError(t, err)
+
+	for _, module := range modules {
+		modname := strings.Split(module.Name(), ".")[0]
+		t.Run(modname, func(t *testing.T) {
+			assert.DirExists(t, "/sys/module/"+modname)
 		})
 	}
 }

@@ -14,8 +14,7 @@ RUN set -eux; \
 ENV ARCH=amd64
 RUN --mount=type=cache,target=/var/cache/apk \
   apk add \
-    "$pkg" \
-	go \
+    go \
     qemu-system-x86_64 \
     qemu-system-aarch64
 

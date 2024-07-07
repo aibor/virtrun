@@ -74,6 +74,28 @@ jobs:
               -kernel.path "/github/workspace/vmlinuz" \
               -kernel.arch ${{ env.KERNELARCH }}
 
+  integration-tests-modules:
+    name: Run integration tests for kernel modules
+    runs-on: ubuntu-latest
+    needs:
+      - lint-and-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run module test
+        uses: ./integrationtesting
+        with:
+          cmd: |
+            apk add linux-virt
+            ln -s /lib/modules/*/kernel /lib/modules/
+            go test -race -v -tags integration ./integrationtesting/ \
+              -kernel.path "/boot/vmlinuz-virt" \
+              -kernel.arch amd64 \
+              -kernel.module /lib/modules/kernel/drivers/net/tun.ko.gz \
+              -kernel.module /lib/modules/kernel/drivers/net/veth.ko.gz \
+              -run TestGuestSysinit
+
   reuse-lint:
     name: FSFE REUSE Compliance Check
     runs-on: ubuntu-latest
@@ -89,6 +111,7 @@ jobs:
     needs:
     - lint-and-test
     - integration-tests
+    - integration-tests-modules
     - reuse-lint
     steps:
     - run: exit 1

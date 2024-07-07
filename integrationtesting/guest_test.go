@@ -44,6 +44,10 @@ func TestGuestSysinit(t *testing.T) {
 				virtrunArgs = append(virtrunArgs, "-verbose")
 			}
 
+			for _, path := range KernelModules {
+				virtrunArgs = append(virtrunArgs, "-addModule", path)
+			}
+
 			testTags := []string{
 				"integration_guest",
 			}

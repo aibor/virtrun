@@ -203,7 +203,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-    sysinit.RunTests(m)
+    sysinit.RunTests(m, sysinit.DefaultConfig())
 }
 ```
 

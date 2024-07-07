@@ -13,5 +13,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	sysinit.RunTests(m)
+	cfg := sysinit.DefaultConfig()
+	cfg.ModulesDir = "/lib/modules"
+
+	sysinit.RunTests(m, cfg)
 }

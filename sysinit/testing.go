@@ -17,8 +17,7 @@ import (
 // only in case of failure. It is an error if the process does not run with
 // PID 1, since the intention of this library is to run test binaries in an
 // isolated system.
-func RunTests(m *testing.M) {
-	cfg := DefaultConfig()
+func RunTests(m *testing.M, cfg Config) {
 	err := Run(cfg, func() (int, error) {
 		return m.Run(), nil
 	})

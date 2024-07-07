@@ -5,7 +5,7 @@
 package main
 
 import (
-	"path/filepath"
+	"io"
 	"testing"
 
 	"github.com/aibor/virtrun/internal/qemu"
@@ -13,14 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseArgs(t *testing.T) {
-	absBinPath, err := filepath.Abs("bin.test")
+func TestArgsParseArgs(t *testing.T) {
+	absBinPath, err := absoluteFilePath("bin.test")
 	require.NoError(t, err)
 
 	tests := []struct {
 		name     string
 		args     []string
-		expected config
+		expected args
 		errMsg   string
 	}{
 		{
@@ -69,11 +69,13 @@ func TestParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expected: config{
-				binary: absBinPath,
-				cmd: &qemu.Command{
-					Kernel: "/boot/this",
-					InitArgs: []string{
+			expected: args{
+				initramfsArgs: initramfsArgs{
+					binary: absBinPath,
+				},
+				qemuArgs: qemuArgs{
+					kernel: "/boot/this",
+					initArgs: []string{
 						"-test.paniconexit0",
 						"-test.v=true",
 						"-test.timeout=10m0s",
@@ -87,7 +89,7 @@ func TestParseArgs(t *testing.T) {
 				"-kernel=/boot/this",
 				"-cpu", "host",
 				"-machine=pc",
-				"-transport", "2",
+				"-transport", "mmio",
 				"-memory=269",
 				"-verbose",
 				"-smp", "7",
@@ -102,30 +104,32 @@ func TestParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expected: config{
-				binary: absBinPath,
-				files: []string{
-					"/file2",
-					"/dir/file3",
+			expected: args{
+				initramfsArgs: initramfsArgs{
+					binary: absBinPath,
+					files: []string{
+						"/file2",
+						"/dir/file3",
+					},
+					standalone:    true,
+					keepInitramfs: true,
 				},
-				cmd: &qemu.Command{
-					Kernel:        "/boot/this",
-					CPU:           "host",
-					Machine:       "pc",
-					TransportType: qemu.TransportTypeMMIO,
-					Memory:        269,
-					Verbose:       true,
-					NoKVM:         true,
-					SMP:           7,
-					InitArgs: []string{
+				qemuArgs: qemuArgs{
+					kernel:    "/boot/this",
+					cpu:       "host",
+					machine:   "pc",
+					transport: transport{qemu.TransportTypeMMIO},
+					memory:    limitedUintFlag{value: 269},
+					noKVM:     true,
+					smp:       limitedUintFlag{value: 7},
+					initArgs: []string{
 						"-test.paniconexit0",
 						"-test.v=true",
 						"-test.timeout=10m0s",
 					},
+					verbose:             true,
+					noGoTestFlagRewrite: true,
 				},
-				standalone:          true,
-				noGoTestFlagRewrite: true,
-				keepInitramfs:       true,
 			},
 		},
 		{
@@ -138,11 +142,13 @@ func TestParseArgs(t *testing.T) {
 				"-x",
 				"-standalone",
 			},
-			expected: config{
-				binary: absBinPath,
-				cmd: &qemu.Command{
-					Kernel: "/boot/this",
-					InitArgs: []string{
+			expected: args{
+				initramfsArgs: initramfsArgs{
+					binary: absBinPath,
+				},
+				qemuArgs: qemuArgs{
+					kernel: "/boot/this",
+					initArgs: []string{
 						"-test.paniconexit0",
 						"another.file",
 						"-x",
@@ -155,12 +161,9 @@ func TestParseArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := config{
-				cmd: &qemu.Command{},
-			}
+			args := args{}
 
-			execArgs := append([]string{"self"}, tt.args...)
-			err := cfg.parseArgs(execArgs)
+			err := args.parseArgs("self", tt.args, io.Discard)
 
 			if tt.errMsg != "" {
 				assert.ErrorContains(t, err, tt.errMsg)
@@ -169,7 +172,7 @@ func TestParseArgs(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, tt.expected, cfg)
+			assert.Equal(t, tt.expected, args)
 		})
 	}
 }
@@ -209,9 +212,9 @@ func TestAddArgsFromEnv(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			varName := "TESTARGS"
+			varName := "VIRTRUN_ARGS"
 			t.Setenv(varName, tt.env)
-			assert.Equal(t, tt.output, addArgsFromEnv(tt.input, varName))
+			assert.Equal(t, tt.output, prependEnvArgs(tt.input))
 		})
 	}
 }

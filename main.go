@@ -11,25 +11,64 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
+	"strings"
 	"syscall"
-
-	"github.com/aibor/virtrun/internal/initprog"
-	"github.com/aibor/virtrun/internal/initramfs"
 )
 
-//nolint:cyclop
+const (
+	memMin = 128
+	memMax = 16384
+
+	smpMin = 1
+	smpMax = 16
+)
+
+func getArch() string {
+	var arch string
+
+	// Allow user to specify architecture by dedicated env var VIRTRUN_ARCH. It
+	// can be empty, to suppress the GOARCH lookup and enforce the fallback to
+	// the runtime architecture. If VIRTRUN_ARCH is not present, GOARCH will be
+	// used. This is handy in case of cross-architecture go test invocations.
+	for _, name := range []string{"VIRTRUN_ARCH", "GOARCH"} {
+		if v, exists := os.LookupEnv(name); exists {
+			arch = v
+
+			break
+		}
+	}
+
+	// Fallback to runtime architecture.
+	if arch == "" {
+		arch = runtime.GOARCH
+	}
+
+	return arch
+}
+
+// prependEnvArgs prepends virtrun arguments from the environment to the given
+// list and returns the result. Because those args are prepended, the given
+// args have precedence when parsed with [flag].
+func prependEnvArgs(args []string) []string {
+	envArgs := strings.Fields(os.Getenv("VIRTRUN_ARGS"))
+
+	return append(envArgs, args...)
+}
+
 func run() (int, error) {
 	// Our init programs may return 127 and 126, so use 125 for indicating
 	// issues.
 	const errRC int = 125
 
-	cfg, err := newConfig()
+	args, err := newArgs(getArch())
 	if err != nil {
 		return errRC, err
 	}
 
-	// ParseArgs already prints errors, so we just exit.
-	if err := cfg.parseArgs(os.Args); err != nil {
+	err = args.parseArgs(os.Args[0], prependEnvArgs(os.Args[1:]), os.Stderr)
+	if err != nil {
+		// ParseArgs already prints errors, so we just exit without an error.
 		if errors.Is(err, flag.ErrHelp) {
 			return 0, nil
 		}
@@ -37,61 +76,30 @@ func run() (int, error) {
 		return errRC, nil
 	}
 
-	if err := cfg.validate(); err != nil {
+	err = args.validate()
+	if err != nil {
 		return errRC, err
 	}
 
-	// In order to be useful with "go test -exec", rewrite the file based flags
-	// so the output can be passed from guest to kernel via consoles.
-	if !cfg.noGoTestFlagRewrite {
-		cfg.cmd.ProcessGoTestFlags()
-	}
-
 	// Build initramfs for the run.
-	var irfs *initramfs.Initramfs
-	if cfg.standalone {
-		// In standalone mode, the first file (which might be the only one)
-		// is supposed to work as an init matching our requirements.
-		irfs = initramfs.New(initramfs.WithRealInitFile(cfg.binary))
-	} else {
-		// In the default wrapped mode a pre-compiled init is used that just
-		// executes "/main".
-		init, err := initprog.For(cfg.arch)
-		if err != nil {
-			return errRC, fmt.Errorf("embedded init: %v", err)
-		}
-
-		irfs = initramfs.New(initramfs.WithVirtualInitFile(init))
-
-		if err := irfs.AddFile("/", "main", cfg.binary); err != nil {
-			return errRC, fmt.Errorf("initramfs: add main file: %v", err)
-		}
-	}
-
-	if err := irfs.AddFiles("data", cfg.files...); err != nil {
-		return errRC, fmt.Errorf("initramfs: add files: %v", err)
-	}
-
-	if err := irfs.AddRequiredSharedObjects(); err != nil {
-		return errRC, fmt.Errorf("initramfs: add libs: %v", err)
-	}
-
-	if err := irfs.AddFiles("lib/modules", cfg.modules...); err != nil {
-		return errRC, fmt.Errorf("initramfs: add modules: %v", err)
-	}
-
-	cfg.cmd.Initramfs, err = irfs.WriteToTempFile("")
+	irfs, err := newInitramfsArchive(args.initramfsArgs, args.arch)
 	if err != nil {
-		return errRC, fmt.Errorf("initramfs: write to temp file: %v", err)
+		return errRC, fmt.Errorf("initramfs: %v", err)
+	}
+	defer irfs.Close()
+
+	cmd, err := newCommand(args.qemuArgs, irfs.path)
+	if err != nil {
+		return errRC, err
 	}
 
-	defer func() {
-		if cfg.keepInitramfs {
-			fmt.Fprintf(os.Stderr, "initramfs kept at: %s\n", cfg.cmd.Initramfs)
-		} else {
-			_ = os.Remove(cfg.cmd.Initramfs)
+	if args.debug {
+		fmt.Fprintln(os.Stdout, "QEMU Args:")
+
+		for _, arg := range cmd.Args() {
+			fmt.Fprintln(os.Stderr, arg)
 		}
-	}()
+	}
 
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),
@@ -103,7 +111,7 @@ func run() (int, error) {
 	)
 	defer cancel()
 
-	guestRC, err := cfg.cmd.Run(ctx, os.Stdout, os.Stderr)
+	guestRC, err := cmd.Run(ctx, os.Stdout, os.Stderr)
 	if err != nil {
 		return errRC, fmt.Errorf("run: %v", err)
 	}

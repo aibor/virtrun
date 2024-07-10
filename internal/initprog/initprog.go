@@ -13,8 +13,8 @@ import (
 // Pre-compile init programs for all supported architectures. Statically linked
 // so they can be used on any host platform.
 //
-//go:generate env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags inits -buildvcs=false -ldflags "-s -w" -o amd64 ./init/
-//go:generate env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags inits -buildvcs=false -ldflags "-s -w" -o arm64 ./init/
+//go:generate env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags inits -buildvcs=false -trimpath -ldflags "-s -w" -o amd64 ./init/
+//go:generate env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags inits -buildvcs=false -trimpath -ldflags "-s -w" -o arm64 ./init/
 
 // Embed pre-compiled init programs explicitly to trigger build time errors.
 //

@@ -21,6 +21,13 @@ import (
 
 const minAdditionalFileDescriptor = 3
 
+// Default literal values.
+const (
+	defaultCPU    = "max"
+	defaultMemory = 256
+	defaultSMP    = 1
+)
+
 // Command defines the parameters for a single virtualized run.
 type Command struct {
 	// Path to the qemu-system binary
@@ -64,12 +71,13 @@ type Command struct {
 // NewCommand creates a new [Command] with defaults set to the given
 // architecture. If it does not match the host architecture, the
 // [Command.NoKVM] flag ist set.
-// Supported architectures so far: amd64, arm64.
+// Supported architectures: amd64, arm64.
+// Returns [errors.ErrUnsupported] for unsupported architectures.
 func NewCommand(arch string) (*Command, error) {
 	cmd := Command{
-		CPU:    "max",
-		Memory: 256, //nolint:gomnd,mnd
-		SMP:    1,
+		CPU:    defaultCPU,
+		Memory: defaultMemory,
+		SMP:    defaultSMP,
 		NoKVM:  !KVMAvailableFor(arch),
 		ExtraArgs: []Argument{
 			UniqueArg("display", "none"),
@@ -90,7 +98,7 @@ func NewCommand(arch string) (*Command, error) {
 		cmd.Machine = "virt"
 		cmd.TransportType = TransportTypeMMIO
 	default:
-		return nil, fmt.Errorf("arch not supported: %s", arch)
+		return nil, fmt.Errorf("arch [%s]: %w", arch, errors.ErrUnsupported)
 	}
 
 	return &cmd, nil

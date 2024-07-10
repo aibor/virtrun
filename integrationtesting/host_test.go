@@ -7,15 +7,14 @@
 package integrationtesting_test
 
 import (
+	"bytes"
 	"context"
 	"os"
-	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
 
-	"github.com/aibor/virtrun/internal/initprog"
-	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/aibor/virtrun/internal/cmd"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,36 +23,32 @@ import (
 func TestHostWithLibsNonZeroRC(t *testing.T) {
 	t.Setenv("LD_LIBRARY_PATH", "../internal/initramfs/testdata/lib")
 
-	binary, err := filepath.Abs("../internal/initramfs/testdata/bin/main")
+	binary, err := cmd.AbsoluteFilePath("../internal/initramfs/testdata/bin/main")
 	require.NoError(t, err)
 
-	cmd, err := qemu.NewCommand(KernelArch)
+	args, err := cmd.NewArgs(KernelArch)
 	require.NoError(t, err)
 
-	cmd.Kernel = KernelPath
-	cmd.Verbose = Verbose
+	args.Kernel = KernelPath
+	args.Verbose = Verbose
+	args.Binary = binary
 
-	init, err := initprog.For(KernelArch)
+	irfs, err := cmd.NewInitramfsArchive(args.InitramfsArgs)
 	require.NoError(t, err)
+	t.Cleanup(func() { _ = irfs.Close() })
 
-	irfs := initramfs.New(initramfs.WithVirtualInitFile(init))
-	err = irfs.AddFile("/", "main", binary)
-	require.NoError(t, err)
-
-	err = irfs.AddRequiredSharedObjects()
-	require.NoError(t, err)
-
-	err = irfs.AddFiles("/lib/modules")
-	require.NoError(t, err)
-
-	cmd.Initramfs, err = irfs.WriteToTempFile(t.TempDir())
+	cmd, err := cmd.NewQemuCommand(args.QemuArgs, irfs.Path)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
 
-	rc, err := cmd.Run(ctx, os.Stdout, os.Stderr)
+	var stdOut, stdErr bytes.Buffer
+	rc, err := cmd.Run(ctx, &stdOut, &stdErr)
 	require.NoError(t, err)
+
+	t.Log(stdOut.String())
+	t.Log(stdErr.String())
 
 	expectedRC := 73
 	if KernelArch != runtime.GOARCH {
@@ -90,37 +85,36 @@ func TestHostRCParsing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			binary, err := filepath.Abs("testdata/bin/" + tt.bin)
+			binary, err := cmd.AbsoluteFilePath("testdata/bin/" + tt.bin)
 			require.NoError(t, err)
 
 			if KernelArch != runtime.GOARCH {
 				t.Skipf("non matching architecture")
 			}
 
-			cmd, err := qemu.NewCommand(KernelArch)
+			args, err := cmd.NewArgs(KernelArch)
 			require.NoError(t, err)
 
-			cmd.Kernel = KernelPath
-			cmd.Verbose = Verbose
-			cmd.Memory = 128
-			cmd.InitArgs = tt.args
+			args.Kernel = KernelPath
+			args.Verbose = Verbose
+			args.Binary = binary
 
-			init, err := initprog.For(KernelArch)
+			args.Memory.Value = 128
+			args.InitArgs = tt.args
+
+			irfs, err := cmd.NewInitramfsArchive(args.InitramfsArgs)
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = irfs.Close() })
+
+			cmd, err := cmd.NewQemuCommand(args.QemuArgs, irfs.Path)
 			require.NoError(t, err)
 
-			irfs := initramfs.New(initramfs.WithVirtualInitFile(init))
-			err = irfs.AddFile("/", "main", binary)
-			require.NoError(t, err)
-
-			err = irfs.AddFiles("/lib/modules")
-			require.NoError(t, err)
-
-			cmd.Initramfs, err = irfs.WriteToTempFile(t.TempDir())
-			require.NoError(t, err)
+			t.Log(cmd.Args())
 
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			t.Cleanup(cancel)
 
+			var stdOut, stdErr bytes.Buffer
 			rc, err := cmd.Run(ctx, os.Stdout, os.Stderr)
 
 			if tt.err != nil {
@@ -130,6 +124,10 @@ func TestHostRCParsing(t *testing.T) {
 			}
 
 			require.NoError(t, err)
+
+			t.Log(stdOut.String())
+			t.Log(stdErr.String())
+
 			assert.Equal(t, 0, rc)
 		})
 	}

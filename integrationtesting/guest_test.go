@@ -38,7 +38,7 @@ func TestGuestSysinit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			virtrunArgs := []string{
-				"-kernel", KernelPath,
+				"-kernel", string(KernelPath),
 			}
 			if Verbose {
 				virtrunArgs = append(virtrunArgs, "-verbose")

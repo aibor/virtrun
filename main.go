@@ -11,62 +11,26 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
-	"strings"
 	"syscall"
+
+	"github.com/aibor/virtrun/internal/cmd"
 )
-
-const (
-	memMin = 128
-	memMax = 16384
-
-	smpMin = 1
-	smpMax = 16
-)
-
-func getArch() string {
-	var arch string
-
-	// Allow user to specify architecture by dedicated env var VIRTRUN_ARCH. It
-	// can be empty, to suppress the GOARCH lookup and enforce the fallback to
-	// the runtime architecture. If VIRTRUN_ARCH is not present, GOARCH will be
-	// used. This is handy in case of cross-architecture go test invocations.
-	for _, name := range []string{"VIRTRUN_ARCH", "GOARCH"} {
-		if v, exists := os.LookupEnv(name); exists {
-			arch = v
-
-			break
-		}
-	}
-
-	// Fallback to runtime architecture.
-	if arch == "" {
-		arch = runtime.GOARCH
-	}
-
-	return arch
-}
-
-// prependEnvArgs prepends virtrun arguments from the environment to the given
-// list and returns the result. Because those args are prepended, the given
-// args have precedence when parsed with [flag].
-func prependEnvArgs(args []string) []string {
-	envArgs := strings.Fields(os.Getenv("VIRTRUN_ARGS"))
-
-	return append(envArgs, args...)
-}
 
 func run() (int, error) {
 	// Our init programs may return 127 and 126, so use 125 for indicating
 	// issues.
 	const errRC int = 125
 
-	args, err := newArgs(getArch())
+	args, err := cmd.NewArgs(cmd.GetArch())
 	if err != nil {
 		return errRC, err
 	}
 
-	err = args.parseArgs(os.Args[0], prependEnvArgs(os.Args[1:]), os.Stderr)
+	err = args.ParseArgs(
+		os.Args[0],
+		cmd.PrependEnvArgs(os.Args[1:]),
+		os.Stderr,
+	)
 	if err != nil {
 		// ParseArgs already prints errors, so we just exit without an error.
 		if errors.Is(err, flag.ErrHelp) {
@@ -76,25 +40,26 @@ func run() (int, error) {
 		return errRC, nil
 	}
 
-	err = args.validate()
+	err = args.Validate()
 	if err != nil {
 		return errRC, err
 	}
 
 	// Build initramfs for the run.
-	irfs, err := newInitramfsArchive(args.initramfsArgs, args.arch)
+
+	irfs, err := cmd.NewInitramfsArchive(args.InitramfsArgs)
 	if err != nil {
 		return errRC, fmt.Errorf("initramfs: %v", err)
 	}
 	defer irfs.Close()
 
-	cmd, err := newCommand(args.qemuArgs, irfs.path)
+	cmd, err := cmd.NewQemuCommand(args.QemuArgs, irfs.Path)
 	if err != nil {
 		return errRC, err
 	}
 
-	if args.debug {
-		fmt.Fprintln(os.Stdout, "QEMU Args:")
+	if args.Debug {
+		fmt.Fprintln(os.Stderr, "QEMU Args:")
 
 		for _, arg := range cmd.Args() {
 			fmt.Fprintln(os.Stderr, arg)

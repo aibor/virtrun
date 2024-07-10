@@ -7,24 +7,23 @@
 package integrationtesting_test
 
 import (
-	"errors"
 	"flag"
-	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/aibor/virtrun/internal/cmd"
 )
 
 var (
-	KernelPath    = "/kernels/vmlinuz"
+	KernelPath    = cmd.FilePath("/kernels/vmlinuz")
 	KernelArch    = runtime.GOARCH
-	KernelModules []string
+	KernelModules cmd.FilePathList
 	Verbose       bool
 )
 
 func TestMain(m *testing.M) {
-	flag.StringVar(
+	flag.TextVar(
 		&KernelPath,
 		"kernel.path",
 		KernelPath,
@@ -42,30 +41,12 @@ func TestMain(m *testing.M) {
 		Verbose,
 		"show complete guest output",
 	)
-	flag.Func(
+	flag.Var(
+		&KernelModules,
 		"kernel.module",
 		"kernel module to add to guest. Flag may be used more than once.",
-		func(s string) error {
-			if s == "" {
-				return errors.New("file path must not be empty")
-			}
-
-			path, err := filepath.Abs(s)
-			if err != nil {
-				return err
-			}
-
-			KernelModules = append(KernelModules, path)
-
-			return nil
-		},
 	)
 	flag.Parse()
-
-	if !filepath.IsAbs(KernelPath) {
-		fmt.Fprintf(os.Stderr, "KernelPath must be absolute: %v", KernelPath)
-		os.Exit(1)
-	}
 
 	os.Exit(m.Run())
 }

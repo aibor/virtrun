@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package main
+package cmd
 
 import (
 	"io"
@@ -14,13 +14,13 @@ import (
 )
 
 func TestArgsParseArgs(t *testing.T) {
-	absBinPath, err := absoluteFilePath("bin.test")
+	absBinPath, err := AbsoluteFilePath("bin.test")
 	require.NoError(t, err)
 
 	tests := []struct {
 		name     string
 		args     []string
-		expected args
+		expected Args
 		errMsg   string
 	}{
 		{
@@ -69,13 +69,13 @@ func TestArgsParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expected: args{
-				initramfsArgs: initramfsArgs{
-					binary: absBinPath,
+			expected: Args{
+				InitramfsArgs: InitramfsArgs{
+					Binary: absBinPath,
 				},
-				qemuArgs: qemuArgs{
-					kernel: "/boot/this",
-					initArgs: []string{
+				QemuArgs: QemuArgs{
+					Kernel: "/boot/this",
+					InitArgs: []string{
 						"-test.paniconexit0",
 						"-test.v=true",
 						"-test.timeout=10m0s",
@@ -104,31 +104,31 @@ func TestArgsParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expected: args{
-				initramfsArgs: initramfsArgs{
-					binary: absBinPath,
-					files: []string{
+			expected: Args{
+				InitramfsArgs: InitramfsArgs{
+					Binary: absBinPath,
+					Files: []string{
 						"/file2",
 						"/dir/file3",
 					},
-					standalone:    true,
-					keepInitramfs: true,
+					Standalone:    true,
+					KeepInitramfs: true,
 				},
-				qemuArgs: qemuArgs{
-					kernel:    "/boot/this",
-					cpu:       "host",
-					machine:   "pc",
-					transport: transport{qemu.TransportTypeMMIO},
-					memory:    limitedUintFlag{value: 269},
-					noKVM:     true,
-					smp:       limitedUintFlag{value: 7},
-					initArgs: []string{
+				QemuArgs: QemuArgs{
+					Kernel:    "/boot/this",
+					CPU:       "host",
+					Machine:   "pc",
+					Transport: transportType{qemu.TransportTypeMMIO},
+					Memory:    limitedUintFlag{Value: 269},
+					NoKVM:     true,
+					SMP:       limitedUintFlag{Value: 7},
+					InitArgs: []string{
 						"-test.paniconexit0",
 						"-test.v=true",
 						"-test.timeout=10m0s",
 					},
-					verbose:             true,
-					noGoTestFlagRewrite: true,
+					Verbose:             true,
+					NoGoTestFlagRewrite: true,
 				},
 			},
 		},
@@ -142,13 +142,13 @@ func TestArgsParseArgs(t *testing.T) {
 				"-x",
 				"-standalone",
 			},
-			expected: args{
-				initramfsArgs: initramfsArgs{
-					binary: absBinPath,
+			expected: Args{
+				InitramfsArgs: InitramfsArgs{
+					Binary: absBinPath,
 				},
-				qemuArgs: qemuArgs{
-					kernel: "/boot/this",
-					initArgs: []string{
+				QemuArgs: QemuArgs{
+					Kernel: "/boot/this",
+					InitArgs: []string{
 						"-test.paniconexit0",
 						"another.file",
 						"-x",
@@ -161,9 +161,9 @@ func TestArgsParseArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := args{}
+			args := Args{}
 
-			err := args.parseArgs("self", tt.args, io.Discard)
+			err := args.ParseArgs("self", tt.args, io.Discard)
 
 			if tt.errMsg != "" {
 				assert.ErrorContains(t, err, tt.errMsg)
@@ -173,48 +173,6 @@ func TestArgsParseArgs(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, args)
-		})
-	}
-}
-
-func TestAddArgsFromEnv(t *testing.T) {
-	tests := []struct {
-		name   string
-		env    string
-		input  []string
-		output []string
-	}{
-		{
-			name:   "empty",
-			env:    "",
-			input:  []string{},
-			output: []string{},
-		},
-		{
-			name:   "only input, empty env",
-			env:    "",
-			input:  []string{"-kernel", "/boot/vmlinuz"},
-			output: []string{"-kernel", "/boot/vmlinuz"},
-		},
-		{
-			name:   "only env, empty input",
-			env:    "-kernel /boot/vmlinuz",
-			input:  []string{},
-			output: []string{"-kernel", "/boot/vmlinuz"},
-		},
-		{
-			name:   "both used",
-			env:    "-kernel /boot/vmlinuz",
-			input:  []string{"-verbose"},
-			output: []string{"-kernel", "/boot/vmlinuz", "-verbose"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			varName := "VIRTRUN_ARGS"
-			t.Setenv(varName, tt.env)
-			assert.Equal(t, tt.output, prependEnvArgs(tt.input))
 		})
 	}
 }

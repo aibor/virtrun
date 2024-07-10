@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package main
+package cmd
 
 import (
 	"debug/elf"
@@ -16,6 +16,18 @@ import (
 	"github.com/aibor/virtrun/internal/qemu"
 )
 
+const (
+	cpuDefault = "max"
+
+	memMin     = 128
+	memMax     = 16384
+	memDefault = 256
+
+	smpMin     = 1
+	smpMax     = 16
+	smpDefault = 1
+)
+
 // Set on build.
 var (
 	version = "dev"
@@ -24,16 +36,16 @@ var (
 )
 
 type limitedUintFlag struct {
-	value    uint
+	Value    uint
 	min, max uint64
 	unit     string
 }
 
 func (u limitedUintFlag) MarshalText() ([]byte, error) {
-	return []byte(strconv.Itoa(int(u.value)) + u.unit), nil
+	return []byte(strconv.Itoa(int(u.Value)) + u.unit), nil
 }
 
-var errValueOutsideRange = errors.New("value is outside of range")
+var ErrValueOutsideRange = errors.New("value is outside of range")
 
 func (u *limitedUintFlag) UnmarshalText(text []byte) error {
 	value, err := strconv.ParseUint(string(text), 10, 0)
@@ -42,31 +54,31 @@ func (u *limitedUintFlag) UnmarshalText(text []byte) error {
 	}
 
 	if u.min > 0 && value < u.min {
-		return fmt.Errorf("%d < %d: %v", value, u.min, errValueOutsideRange)
+		return fmt.Errorf("%d < %d: %w", value, u.min, ErrValueOutsideRange)
 	}
 
 	if u.max > 0 && value > u.max {
-		return fmt.Errorf("%d > %d: %v", value, u.max, errValueOutsideRange)
+		return fmt.Errorf("%d > %d: %w", value, u.max, ErrValueOutsideRange)
 	}
 
-	u.value = uint(value)
+	u.Value = uint(value)
 
 	return nil
 }
 
-type transport struct {
+type transportType struct {
 	qemu.TransportType
 }
 
 var errInvalidTransportType = errors.New("unknown transport type")
 
 // MarshalText implements [encoding.TextMarshaler].
-func (t transport) MarshalText() ([]byte, error) {
+func (t transportType) MarshalText() ([]byte, error) {
 	return []byte(t.String()), nil
 }
 
 // UnarshalText implements [encoding.TextUnmarshaler].
-func (t *transport) UnmarshalText(text []byte) error {
+func (t *transportType) UnmarshalText(text []byte) error {
 	s := string(text)
 
 	types := []qemu.TransportType{
@@ -85,196 +97,194 @@ func (t *transport) UnmarshalText(text []byte) error {
 	return errInvalidTransportType
 }
 
-type qemuArgs struct {
-	qemu                string
-	kernel              filePath
-	machine             string
-	cpu                 string
-	smp                 limitedUintFlag
-	memory              limitedUintFlag
-	transport           transport
-	initArgs            []string
-	noKVM               bool
-	verbose             bool
-	noGoTestFlagRewrite bool
+type Args struct {
+	QemuArgs
+	InitramfsArgs
+	Version bool
+	Debug   bool
 }
 
-type initramfsArgs struct {
-	arch          string
-	binary        filePath
-	files         filePathList
-	modules       filePathList
-	standalone    bool
-	keepInitramfs bool
-}
+func NewArgs(arch string) (Args, error) {
+	var (
+		qemuBin   string
+		machine   string
+		transport qemu.TransportType
+	)
 
-type args struct {
-	qemuArgs
-	initramfsArgs
-	version bool
-	debug   bool
-}
-
-func newArgs(arch string) (args, error) {
-	cmd, err := qemu.NewCommand(arch)
-	if err != nil {
-		return args{}, err
+	switch arch {
+	case "amd64":
+		qemuBin = "qemu-system-x86_64"
+		machine = "q35"
+		transport = qemu.TransportTypePCI
+	case "arm64":
+		qemuBin = "qemu-system-aarch64"
+		machine = "virt"
+		transport = qemu.TransportTypeMMIO
+	default:
+		return Args{}, fmt.Errorf("arch [%s]: %w", arch, errors.ErrUnsupported)
 	}
 
-	args := args{
-		qemuArgs: qemuArgs{
-			qemu:    cmd.Executable,
-			machine: cmd.Machine,
-			cpu:     cmd.CPU,
-			memory: limitedUintFlag{
-				cmd.Memory,
+	args := Args{
+		QemuArgs: QemuArgs{
+			QemuBin:   qemuBin,
+			Machine:   machine,
+			Transport: transportType{transport},
+			CPU:       cpuDefault,
+			Memory: limitedUintFlag{
+				memDefault,
 				memMin,
 				memMax,
 				"MB",
 			},
-			smp: limitedUintFlag{
-				cmd.SMP,
+			SMP: limitedUintFlag{
+				smpDefault,
 				smpMin,
 				smpMax,
 				"",
 			},
-			transport: transport{cmd.TransportType},
-			noKVM:     cmd.NoKVM,
+			NoKVM: !qemu.KVMAvailableFor(arch),
+			ExtraArgs: []qemu.Argument{
+				qemu.UniqueArg("display", "none"),
+				qemu.UniqueArg("monitor", "none"),
+				qemu.UniqueArg("no-reboot", ""),
+				qemu.UniqueArg("nodefaults", ""),
+				qemu.UniqueArg("no-user-config", ""),
+			},
 		},
-		initramfsArgs: initramfsArgs{
-			arch: arch,
+		InitramfsArgs: InitramfsArgs{
+			Arch: arch,
 		},
 	}
 
 	return args, nil
 }
 
-func (a *args) newFlagset(self string) *flag.FlagSet {
+func (a *Args) newFlagset(self string) *flag.FlagSet {
 	fsName := self + " [flags...] binary [initargs...]"
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 
 	fs.StringVar(
-		&a.qemu,
+		&a.QemuBin,
 		"qemu-bin",
-		a.qemu,
+		a.QemuBin,
 		"QEMU binary to use",
 	)
 
 	fs.TextVar(
-		&a.kernel,
+		&a.Kernel,
 		"kernel",
-		a.kernel,
+		a.Kernel,
 		"path to kernel to use",
 	)
 
 	fs.StringVar(
-		&a.machine,
+		&a.Machine,
 		"machine",
-		a.machine,
+		a.Machine,
 		"QEMU machine type to use",
 	)
 
 	fs.StringVar(
-		&a.cpu,
+		&a.CPU,
 		"cpu",
-		a.cpu,
+		a.CPU,
 		"QEMU CPU type to use",
 	)
 
 	fs.BoolVar(
-		&a.noKVM,
+		&a.NoKVM,
 		"nokvm",
-		a.noKVM,
+		a.NoKVM,
 		"disable hardware support",
 	)
 
 	fs.TextVar(
-		&a.transport,
+		&a.Transport,
 		"transport",
-		a.transport,
+		a.Transport,
 		"io transport type: isa/0, pci/1, mmio/2",
 	)
 
 	fs.BoolVar(
-		&a.verbose,
+		&a.Verbose,
 		"verbose",
-		a.verbose,
+		a.Verbose,
 		"enable verbose guest system output",
 	)
 
 	fs.TextVar(
-		&a.memory,
+		&a.Memory,
 		"memory",
-		a.memory,
+		a.Memory,
 		"memory (in MB) for the QEMU VM",
 	)
 
 	fs.TextVar(
-		&a.smp,
+		&a.SMP,
 		"smp",
-		a.smp,
+		a.SMP,
 		"number of CPUs for the QEMU VM",
 	)
 
 	fs.BoolVar(
-		&a.standalone,
+		&a.Standalone,
 		"standalone",
-		a.standalone,
+		a.Standalone,
 		"run first given file as init itself. Use this if it has virtrun support built in.",
 	)
 
 	fs.BoolVar(
-		&a.noGoTestFlagRewrite,
+		&a.NoGoTestFlagRewrite,
 		"noGoTestFlagRewrite",
-		a.noGoTestFlagRewrite,
+		a.NoGoTestFlagRewrite,
 		"disable automatic go test flag rewrite for file based output.",
 	)
 
 	fs.BoolVar(
-		&a.keepInitramfs,
+		&a.KeepInitramfs,
 		"keepInitramfs",
-		a.keepInitramfs,
+		a.KeepInitramfs,
 		"do not delete initramfs once qemu is done. Intended for debugging. "+
 			"The path to the file is printed on stderr",
 	)
 
 	fs.Var(
-		&a.files,
+		&a.Files,
 		"addFile",
 		"file to add to guest's /data dir. Flag may be used more than once.",
 	)
 
 	fs.Var(
-		&a.modules,
+		&a.Modules,
 		"addModule",
 		"kernel module to add to guest. Flag may be used more than once.",
 	)
 
 	fs.BoolVar(
-		&a.version,
+		&a.Version,
 		"version",
-		a.version,
+		a.Version,
 		"show version and exit",
 	)
 
 	fs.BoolVar(
-		&a.debug,
+		&a.Debug,
 		"debug",
-		a.debug,
+		a.Debug,
 		"enable debug output",
 	)
 
 	return fs
 }
 
-func (a *args) parseArgs(name string, args []string, output io.Writer) error {
+func (a *Args) ParseArgs(name string, args []string, output io.Writer) error {
 	fs := a.newFlagset(name)
 	fs.SetOutput(output)
 
 	// Parses arguments up to the first one that is not prefixed with a "-" or
 	// is "--".
 	if err := fs.Parse(args); err != nil {
-		return err
+		return fmt.Errorf("parse args: %w", err)
 	}
 
 	printf := func(format string, a ...any) string {
@@ -295,14 +305,14 @@ func (a *args) parseArgs(name string, args []string, output io.Writer) error {
 
 	// With version flag, just print the version and exit. Using [flag.ErrHelp]
 	// the main binary is supposed to return with a non error exit code.
-	if a.version {
+	if a.Version {
 		msgFmt := "virtrun %s\n  commit %s\n  built at %s"
 		printf(msgFmt, version, commit, date)
 
 		return flag.ErrHelp
 	}
 
-	if a.kernel == "" {
+	if a.Kernel == "" {
 		return failf("no kernel given (use -kernel)")
 	}
 
@@ -311,51 +321,51 @@ func (a *args) parseArgs(name string, args []string, output io.Writer) error {
 		return failf("no binary given")
 	}
 
-	binary, err := absoluteFilePath(fs.Args()[0])
+	binary, err := AbsoluteFilePath(fs.Args()[0])
 	if err != nil {
-		return failf("binary path: %v", err)
+		return failf("binary path: %w", err)
 	}
 
-	a.binary = binary
+	a.Binary = binary
 
 	// All further positional arguments after the binary file will be passed to
 	// the guest system's init program.
-	a.initArgs = fs.Args()[1:]
+	a.InitArgs = fs.Args()[1:]
 
 	return nil
 }
 
-func (a *args) validate() error {
+func (a *Args) Validate() error {
 	// Check files are actually present.
-	if _, err := exec.LookPath(a.qemu); err != nil {
-		return fmt.Errorf("check qemu binary: %v", err)
+	if _, err := exec.LookPath(a.QemuBin); err != nil {
+		return fmt.Errorf("check qemu binary: %w", err)
 	}
 
-	if err := a.kernel.check(); err != nil {
-		return fmt.Errorf("check kernel file: %v", err)
+	if err := a.Kernel.check(); err != nil {
+		return fmt.Errorf("check kernel file: %w", err)
 	}
 
-	for _, file := range a.files {
-		if err := filePath(file).check(); err != nil {
-			return fmt.Errorf("check file: %v", err)
+	for _, file := range a.Files {
+		if err := FilePath(file).check(); err != nil {
+			return fmt.Errorf("check file: %w", err)
 		}
 	}
 
-	for _, file := range a.modules {
-		if err := filePath(file).check(); err != nil {
-			return fmt.Errorf("check module: %v", err)
+	for _, file := range a.Modules {
+		if err := FilePath(file).check(); err != nil {
+			return fmt.Errorf("check module: %w", err)
 		}
 	}
 
 	// Do some deeper validation for the main binary.
-	elfFile, err := elf.Open(string(a.binary))
+	elfFile, err := elf.Open(string(a.Binary))
 	if err != nil {
-		return fmt.Errorf("check main binary: %v", err)
+		return fmt.Errorf("check main binary: %w", err)
 	}
 	defer elfFile.Close()
 
-	if err := validateELF(elfFile.FileHeader, a.arch); err != nil {
-		return fmt.Errorf("check main binary: %v", err)
+	if err := validateELF(elfFile.FileHeader, a.Arch); err != nil {
+		return fmt.Errorf("check main binary: %w", err)
 	}
 
 	return nil

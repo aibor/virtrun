@@ -21,13 +21,6 @@ import (
 
 const minAdditionalFileDescriptor = 3
 
-// Default literal values.
-const (
-	defaultCPU    = "max"
-	defaultMemory = 256
-	defaultSMP    = 1
-)
-
 // Command defines the parameters for a single virtualized run.
 type Command struct {
 	// Path to the qemu-system binary
@@ -66,42 +59,6 @@ type Command struct {
 	// Print qemu command before running, increase guest kernel logging and
 	// do not stop printing stdout when our RC string is found.
 	Verbose bool
-}
-
-// NewCommand creates a new [Command] with defaults set to the given
-// architecture. If it does not match the host architecture, the
-// [Command.NoKVM] flag ist set.
-// Supported architectures: amd64, arm64.
-// Returns [errors.ErrUnsupported] for unsupported architectures.
-func NewCommand(arch string) (*Command, error) {
-	cmd := Command{
-		CPU:    defaultCPU,
-		Memory: defaultMemory,
-		SMP:    defaultSMP,
-		NoKVM:  !KVMAvailableFor(arch),
-		ExtraArgs: []Argument{
-			UniqueArg("display", "none"),
-			UniqueArg("monitor", "none"),
-			UniqueArg("no-reboot", ""),
-			UniqueArg("nodefaults", ""),
-			UniqueArg("no-user-config", ""),
-		},
-	}
-
-	switch arch {
-	case "amd64":
-		cmd.Executable = "qemu-system-x86_64"
-		cmd.Machine = "q35"
-		cmd.TransportType = TransportTypePCI
-	case "arm64":
-		cmd.Executable = "qemu-system-aarch64"
-		cmd.Machine = "virt"
-		cmd.TransportType = TransportTypeMMIO
-	default:
-		return nil, fmt.Errorf("arch [%s]: %w", arch, errors.ErrUnsupported)
-	}
-
-	return &cmd, nil
 }
 
 // AddConsole adds an additional file to the QEMU command. This will be

@@ -16,8 +16,6 @@ const (
 	TransportTypePCI
 	// Virtio MMIO transport. Requires kernel built with CONFIG_VIRTIO_MMIO.
 	TransportTypeMMIO
-
-	LenTransportType
 )
 
 // TransportType represents QEMU IO transport types.
@@ -31,4 +29,18 @@ func (t *TransportType) ConsoleDeviceName(num uint8) string {
 	}
 
 	return fmt.Sprintf(f, num)
+}
+
+// String implements [fmt.Stringer].
+func (t *TransportType) String() string {
+	switch *t {
+	case TransportTypeISA:
+		return "isa"
+	case TransportTypePCI:
+		return "pci"
+	case TransportTypeMMIO:
+		return "mmio"
+	default:
+		return ""
+	}
 }

@@ -43,19 +43,24 @@ func TestHostWithLibsNonZeroRC(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
 
-	var stdOut, stdErr bytes.Buffer
-	rc, err := cmd.Run(ctx, &stdOut, &stdErr)
-	require.NoError(t, err)
+	var (
+		stdOut, stdErr bytes.Buffer
+		cmdErr         *qemu.CommandError
+	)
+
+	err = cmd.Run(ctx, &stdOut, &stdErr)
 
 	t.Log(stdOut.String())
 	t.Log(stdErr.String())
+
+	require.ErrorAs(t, err, &cmdErr)
 
 	expectedRC := 73
 	if KernelArch != runtime.GOARCH {
 		expectedRC = 126
 	}
 
-	assert.Equal(t, expectedRC, rc)
+	assert.Equal(t, expectedRC, cmdErr.ExitCode)
 }
 
 func TestHostRCParsing(t *testing.T) {
@@ -69,6 +74,12 @@ func TestHostRCParsing(t *testing.T) {
 			name: "return 0",
 			bin:  "return",
 			args: []string{"0"},
+		},
+		{
+			name: "return 1",
+			bin:  "return",
+			args: []string{"1"},
+			err:  qemu.ErrGuestNonZeroExitCode,
 		},
 		{
 			name: "panic",
@@ -115,7 +126,10 @@ func TestHostRCParsing(t *testing.T) {
 			t.Cleanup(cancel)
 
 			var stdOut, stdErr bytes.Buffer
-			rc, err := cmd.Run(ctx, os.Stdout, os.Stderr)
+			err = cmd.Run(ctx, os.Stdout, os.Stderr)
+
+			t.Log(stdOut.String())
+			t.Log(stdErr.String())
 
 			if tt.err != nil {
 				require.ErrorIs(t, err, tt.err)
@@ -124,11 +138,6 @@ func TestHostRCParsing(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-
-			t.Log(stdOut.String())
-			t.Log(stdErr.String())
-
-			assert.Equal(t, 0, rc)
 		})
 	}
 }

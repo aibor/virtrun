@@ -14,17 +14,17 @@ import (
 	"syscall"
 
 	"github.com/aibor/virtrun/internal/cmd"
+	"github.com/aibor/virtrun/internal/qemu"
 )
 
-//nolint:cyclop
-func run() (int, error) {
-	// Our init programs may return 127 and 126, so use 125 for indicating
-	// issues.
-	const errRC int = 125
+// The init programs may return 127 and 126, so use 125 for indicating
+// issues if the error does not return it's own return code.
+const errExitCode = 125
 
+func run() error {
 	args, err := cmd.NewArgs(cmd.GetArch())
 	if err != nil {
-		return errRC, err
+		return err
 	}
 
 	err = args.ParseArgs(
@@ -35,22 +35,21 @@ func run() (int, error) {
 	if err != nil {
 		// ParseArgs already prints errors, so we just exit without an error.
 		if errors.Is(err, flag.ErrHelp) {
-			return 0, nil
+			return nil
 		}
 
-		return errRC, nil
+		return err
 	}
 
 	err = args.Validate()
 	if err != nil {
-		return errRC, err
+		return err
 	}
 
 	// Build initramfs for the run.
-
 	irfs, err := cmd.NewInitramfsArchive(args.InitramfsArgs)
 	if err != nil {
-		return errRC, fmt.Errorf("initramfs: %w", err)
+		return fmt.Errorf("initramfs: %w", err)
 	}
 
 	defer func() {
@@ -62,15 +61,11 @@ func run() (int, error) {
 
 	cmd, err := cmd.NewQemuCommand(args.QemuArgs, irfs.Path)
 	if err != nil {
-		return errRC, err
+		return err
 	}
 
 	if args.Debug {
-		fmt.Fprintln(os.Stderr, "QEMU Args:")
-
-		for _, arg := range cmd.Args() {
-			fmt.Fprintln(os.Stderr, arg)
-		}
+		fmt.Fprintf(os.Stderr, "QEMU Args: %+ v", cmd.Args())
 	}
 
 	ctx, cancel := signal.NotifyContext(
@@ -83,19 +78,29 @@ func run() (int, error) {
 	)
 	defer cancel()
 
-	guestRC, err := cmd.Run(ctx, os.Stdout, os.Stderr)
+	err = cmd.Run(ctx, os.Stdout, os.Stderr)
 	if err != nil {
-		return errRC, fmt.Errorf("run: %w", err)
+		return fmt.Errorf("run: %w", err)
 	}
 
-	return guestRC, nil
+	return nil
+}
+
+func parseRC(err error) int {
+	var qemuCmdErr *qemu.CommandError
+
+	if errors.As(err, &qemuCmdErr) {
+		return qemuCmdErr.ExitCode
+	}
+
+	return errExitCode
 }
 
 func main() {
-	rc, err := run()
+	err := run()
 	if err != nil {
+		rc := parseRC(err)
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(rc)
 	}
-
-	os.Exit(rc)
 }

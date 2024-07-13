@@ -86,7 +86,7 @@ func TestStdoutProcessor(t *testing.T) {
 				"more out",
 				"",
 			},
-			err: qemu.ErrGuestNoRCFound,
+			err: qemu.ErrGuestNoExitCodeFound,
 		},
 	}
 

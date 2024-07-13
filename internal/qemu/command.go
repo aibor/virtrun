@@ -263,10 +263,10 @@ func consoleArgsFunc(transportType TransportType) func(int) []Argument {
 // guest system correctly communicated a 0 value via stdout. In any other case,
 // a non 0 value is returned. If no error is returned, the value was received
 // by the guest system.
-func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error) {
+func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) error {
 	args, err := BuildArgumentStrings(c.Args())
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	cmd := exec.CommandContext(ctx, c.Executable, args...)
@@ -274,7 +274,7 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return 1, fmt.Errorf("get cmd stdout: %v", err)
+		return fmt.Errorf("get cmd stdout: %w", err)
 	}
 
 	// Create console output processors that fix line endings by stripping "\r".
@@ -285,7 +285,7 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 	// the actual target file on the host.
 	processors, err := setupConsoleProcessors(c.AdditionalConsoles)
 	if err != nil {
-		return 1, err
+		return err
 	}
 	defer processors.Close()
 
@@ -297,7 +297,7 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 	}
 
 	if err := cmd.Start(); err != nil {
-		return 1, fmt.Errorf("start: %v", err)
+		return fmt.Errorf("start: %w", err)
 	}
 
 	// We need to process cmd stdout in any case to get our return code from
@@ -310,25 +310,47 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 	// at program termination. Error should be reported, but should not
 	// terminate immediately. There might be more severe errors that following,
 	// like process execution or persistent IO errors.
-	rc, rcErr := ParseStdout(outPipe, stdout, c.Verbose)
+	exitCode, guestErr := ParseStdout(outPipe, stdout, c.Verbose)
 
 	// Collect process information.
 	if err := cmd.Wait(); err != nil {
-		rc = 1
-
-		return rc, fmt.Errorf("qemu: %v", err)
+		return fmt.Errorf("qemu command: %w", handleCmdError(err))
 	}
 
 	// Close console processors, so possible errors can be collected.
 	_ = processors.Close()
 
 	if err := processorsGroup.Wait(); err != nil {
-		return 1, fmt.Errorf("processor error: %v", err)
+		return fmt.Errorf("processor error: %w", err)
 	}
 
-	if rcErr != nil {
-		return 1, rcErr
+	if guestErr != nil {
+		return guestErr
 	}
 
-	return rc, nil
+	return handleExitCode(exitCode)
+}
+
+func handleCmdError(err error) error {
+	var exitErr *exec.ExitError
+
+	if !errors.As(err, &exitErr) {
+		return err
+	}
+
+	return &CommandError{
+		Err:      err,
+		ExitCode: exitErr.ExitCode(),
+	}
+}
+
+func handleExitCode(exitCode int) error {
+	if exitCode != 0 {
+		return &CommandError{
+			Err:      ErrGuestNonZeroExitCode,
+			ExitCode: exitCode,
+		}
+	}
+
+	return nil
 }

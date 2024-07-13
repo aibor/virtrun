@@ -19,19 +19,29 @@ type Argument struct {
 	nonUniqueName bool
 }
 
+// String implements [fmt.Stringer].
+func (a Argument) String() string {
+	s := "-" + a.name
+	if a.value != "" {
+		s += " " + a.value
+	}
+
+	return s
+}
+
 // Name returns the name of the [Argument].
-func (a *Argument) Name() string {
+func (a Argument) Name() string {
 	return a.name
 }
 
 // Value returns the value of the [Argument].
-func (a *Argument) Value() string {
+func (a Argument) Value() string {
 	return a.value
 }
 
 // UniqueName returns if the name of the [Argument] must be unique in an
 // [Arguments] list.
-func (a *Argument) UniqueName() bool {
+func (a Argument) UniqueName() bool {
 	return !a.nonUniqueName
 }
 
@@ -39,7 +49,7 @@ func (a *Argument) UniqueName() bool {
 //
 // If the name is marked unique, only names are
 // compared. Otherwise name and value are compared.
-func (a *Argument) Equal(b Argument) bool {
+func (a Argument) Equal(b Argument) bool {
 	if a.name != b.name {
 		return false
 	}

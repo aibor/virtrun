@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -20,6 +21,20 @@ import (
 // The init programs may return 127 and 126, so use 125 for indicating
 // issues if the error does not return it's own return code.
 const errExitCode = 125
+
+func setupLogging(debug bool) {
+	level := slog.LevelWarn
+	if debug {
+		level = slog.LevelDebug
+	}
+
+	slog.SetDefault(slog.New(slog.NewTextHandler(
+		os.Stderr,
+		&slog.HandlerOptions{
+			Level: level,
+		},
+	)))
+}
 
 func run() error {
 	args, err := cmd.NewArgs(cmd.GetArch())
@@ -41,6 +56,8 @@ func run() error {
 		return err
 	}
 
+	setupLogging(args.Debug)
+
 	err = args.Validate()
 	if err != nil {
 		return err
@@ -52,11 +69,15 @@ func run() error {
 		return fmt.Errorf("initramfs: %w", err)
 	}
 
+	slog.Debug("Initramfs created", slog.String("path", irfs.Path))
+
 	defer func() {
 		err := irfs.Cleanup()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: cleanup initramfs archive: %v", err)
 		}
+
+		slog.Debug("Initramfs cleaned up", slog.String("path", irfs.Path))
 	}()
 
 	cmd, err := cmd.NewQemuCommand(args.QemuArgs, irfs.Path)
@@ -64,9 +85,10 @@ func run() error {
 		return err
 	}
 
-	if args.Debug {
-		fmt.Fprintf(os.Stderr, "QEMU Args: %+ v", cmd.Args())
-	}
+	slog.Debug("QEMU command",
+		slog.String("qemu", cmd.Executable),
+		slog.Any("args", cmd.Args()),
+	)
 
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),

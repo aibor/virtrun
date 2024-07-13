@@ -21,7 +21,7 @@ import (
 // LoadModules loads all files found in the given directory as kernel modules.
 func LoadModules(dir string) error {
 	files, err := ListRegularFiles(dir)
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("list module files: %w", err)
 	}
 

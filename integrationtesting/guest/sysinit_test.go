@@ -8,6 +8,7 @@ package main_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -100,6 +101,10 @@ func TestCommonSymlinks(t *testing.T) {
 
 func TestModules(t *testing.T) {
 	modules, err := os.ReadDir("/lib/modules")
+	if errors.Is(err, os.ErrNotExist) {
+		t.Skip("no modules present")
+	}
+
 	require.NoError(t, err)
 
 	for _, module := range modules {

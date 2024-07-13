@@ -6,9 +6,11 @@ linters:
   enable-all: true
   disable:
     - depguard
-    - exhaustruct
-    - funlen
     - err113
+    - exhaustruct
+    - execinquery
+    - funlen
+    - gomnd
     - paralleltest
     - varnamelen
     - wrapcheck
@@ -24,6 +26,19 @@ linters-settings:
     excludes:
       - G204
 
-  mnd:
-    ignored-functions:
-      - '^cobra\..*NArgs$'
+issues:
+  include:
+    - EXC0002
+    - EXC0003
+    - EXC0004
+    - EXC0005
+    - EXC0006
+    - EXC0007
+    - EXC0008
+    - EXC0013
+    - EXC0014
+
+  exclude-rules:
+    - linters:
+        - errcheck
+      source: "^\\s+defer \\S+\\.Close()"

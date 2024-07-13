@@ -50,7 +50,7 @@ func run() (int, error) {
 
 	irfs, err := cmd.NewInitramfsArchive(args.InitramfsArgs)
 	if err != nil {
-		return errRC, fmt.Errorf("initramfs: %v", err)
+		return errRC, fmt.Errorf("initramfs: %w", err)
 	}
 
 	defer func() {
@@ -85,7 +85,7 @@ func run() (int, error) {
 
 	guestRC, err := cmd.Run(ctx, os.Stdout, os.Stderr)
 	if err != nil {
-		return errRC, fmt.Errorf("run: %v", err)
+		return errRC, fmt.Errorf("run: %w", err)
 	}
 
 	return guestRC, nil

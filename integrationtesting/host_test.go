@@ -35,7 +35,7 @@ func TestHostWithLibsNonZeroRC(t *testing.T) {
 
 	irfs, err := cmd.NewInitramfsArchive(args.InitramfsArgs)
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = irfs.Close() })
+	t.Cleanup(func() { _ = irfs.Cleanup() })
 
 	cmd, err := cmd.NewQemuCommand(args.QemuArgs, irfs.Path)
 	require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestHostRCParsing(t *testing.T) {
 
 			irfs, err := cmd.NewInitramfsArchive(args.InitramfsArgs)
 			require.NoError(t, err)
-			t.Cleanup(func() { _ = irfs.Close() })
+			t.Cleanup(func() { _ = irfs.Cleanup() })
 
 			cmd, err := cmd.NewQemuCommand(args.QemuArgs, irfs.Path)
 			require.NoError(t, err)

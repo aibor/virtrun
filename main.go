@@ -54,7 +54,7 @@ func run() (int, error) {
 	}
 
 	defer func() {
-		err := irfs.Close()
+		err := irfs.Cleanup()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: cleanup initramfs archive: %v", err)
 		}

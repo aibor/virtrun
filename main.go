@@ -16,6 +16,7 @@ import (
 	"github.com/aibor/virtrun/internal/cmd"
 )
 
+//nolint:cyclop
 func run() (int, error) {
 	// Our init programs may return 127 and 126, so use 125 for indicating
 	// issues.
@@ -51,7 +52,13 @@ func run() (int, error) {
 	if err != nil {
 		return errRC, fmt.Errorf("initramfs: %v", err)
 	}
-	defer irfs.Close()
+
+	defer func() {
+		err := irfs.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: cleanup initramfs archive: %v", err)
+		}
+	}()
 
 	cmd, err := cmd.NewQemuCommand(args.QemuArgs, irfs.Path)
 	if err != nil {

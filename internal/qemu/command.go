@@ -322,7 +322,7 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 	}
 
 	// Close console processors, so possible errors can be collected.
-	processors.Close()
+	_ = processors.Close()
 
 	if err := processorsGroup.Wait(); err != nil {
 		return 1, fmt.Errorf("processor error: %v", err)

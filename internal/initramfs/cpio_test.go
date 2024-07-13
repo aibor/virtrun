@@ -24,7 +24,7 @@ func TestCPIOWriterWriteDirectory(t *testing.T) {
 	})
 	t.Run("closed", func(t *testing.T) {
 		w := initramfs.NewCPIOWriter(&bytes.Buffer{})
-		w.Close()
+		require.NoError(t, w.Close())
 		err := w.WriteDirectory("test")
 		assert.ErrorContains(t, err, "write header for test:")
 	})
@@ -47,7 +47,7 @@ func TestCPIOWriterWriteLink(t *testing.T) {
 	})
 	t.Run("closed", func(t *testing.T) {
 		w := initramfs.NewCPIOWriter(&bytes.Buffer{})
-		w.Close()
+		require.NoError(t, w.Close())
 		err := w.WriteLink("test", "target")
 		assert.ErrorContains(t, err, "write header for test:")
 	})
@@ -99,7 +99,7 @@ func TestCPIOWriterWriteRegular(t *testing.T) {
 		})
 		t.Run("closed", func(t *testing.T) {
 			w := initramfs.NewCPIOWriter(&bytes.Buffer{})
-			w.Close()
+			require.NoError(t, w.Close())
 
 			file, err := testFS.Open("regular")
 			require.NoError(t, err)

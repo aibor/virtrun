@@ -26,7 +26,7 @@ const lddTimeoutSeconds = 5
 var (
 	// ErrNoInterpreter is returned if no interpreter is found in an ELF file.
 	ErrNoInterpreter = errors.New("no interpreter in ELF file")
-	// ErrNoELFFile is returned if the file does not have an ELF magic number.
+	// ErrNotELFFile is returned if the file does not have an ELF magic number.
 	ErrNotELFFile = errors.New("is not an ELF file")
 )
 

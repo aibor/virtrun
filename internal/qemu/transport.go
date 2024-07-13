@@ -9,12 +9,15 @@ import (
 )
 
 const (
-	// ISA legacy transport. Should work for amd64 in any case. With "microvm"
-	// machine type only provides one console for stdout.
+	// TransportTypeISA is ISA legacy transport. It should work for amd64 in
+	// any case. With "microvm" machine type only provides one console for
+	// stdout.
 	TransportTypeISA TransportType = iota
-	// Virtio PCI transport. Requires kernel built with CONFIG_VIRTIO_PCI.
+	// TransportTypePCI is VirtIO PCI transport. Requires kernel built with
+	// CONFIG_VIRTIO_PCI.
 	TransportTypePCI
-	// Virtio MMIO transport. Requires kernel built with CONFIG_VIRTIO_MMIO.
+	// TransportTypeMMIO is Virtio MMIO transport. Requires kernel built with
+	// CONFIG_VIRTIO_MMIO.
 	TransportTypeMMIO
 )
 

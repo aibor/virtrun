@@ -8,14 +8,16 @@ package initramfs
 type FileType int
 
 const (
-	// A regular file is copied completely into the archive.
+	// FileTypeRegular is a regular file. It is copied completely into the
+	// archive.
 	FileTypeRegular FileType = iota
-	// A directory is created in the archive. Parent directories are not created
-	// automatically. Ensure to create the complete file tree yourself.
+	// FileTypeDirectory is a directory is created in the archive. Parent
+	// directories are not created automatically. They must be created
+	// beforehand.
 	FileTypeDirectory
-	// A symbolic link in the archive.
+	// FileTypeLink is a symbolic link in the archive.
 	FileTypeLink
-	// A file with its content written from an io.Reader instead of being
-	// copied from the fs.
+	// FileTypeVirtual is like [FileTypeRegular] but with its content written
+	// from an io.Reader instead of being copied from the fs.
 	FileTypeVirtual
 )

@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
-// Build simple initramfs CPIO archives. Intended only for short lived guests.
-//
-// Intended to build small initramfs archives, that only have a couple of
-// binaries and their required shared libraries.
+// Package initramfs can beused to build simple initramfs CPIO archives. It is
+// intended for short lived guests only. The initramfs archives is supposed to
+// be as small as possible with only a couple of binaries and their required
+// shared libraries.
 package initramfs

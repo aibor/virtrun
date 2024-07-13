@@ -70,8 +70,8 @@ func RepeatableArg(name string, value ...string) Argument {
 	}
 }
 
-// Build compiles the [Argument]s to into a slice of strings which can be used
-// with [exec.Command].
+// BuildArgumentStrings compiles the [Argument]s to into a slice of strings
+// which can be used with [exec.Command].
 //
 // It returns an error if any name uniqueness constraints of any [Argument] is
 // violated.

@@ -9,10 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -333,17 +331,4 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) (int, error
 	}
 
 	return rc, nil
-}
-
-// KVMAvailableFor checks if KVM support is available for the given
-// architecture.
-func KVMAvailableFor(arch string) bool {
-	if runtime.GOARCH != arch {
-		return false
-	}
-
-	f, err := os.OpenFile("/dev/kvm", os.O_WRONLY, 0)
-	_ = f.Close()
-
-	return err == nil
 }

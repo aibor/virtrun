@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/aibor/virtrun/internal/initprog"
 	"github.com/aibor/virtrun/internal/initramfs"
@@ -37,9 +38,13 @@ func NewInitramfsArchive(args InitramfsArgs) (*InitramfsArchive, error) {
 		return nil, fmt.Errorf("add libs: %v", err)
 	}
 
-	err = irfs.AddFiles("lib/modules", args.Modules...)
-	if err != nil {
-		return nil, fmt.Errorf("add modules: %v", err)
+	for idx, module := range args.Modules {
+		name := fmt.Sprintf("%04d-%s", idx, filepath.Base(module))
+
+		err = irfs.AddFile("lib/modules", name, module)
+		if err != nil {
+			return nil, fmt.Errorf("add modules: %v", err)
+		}
 	}
 
 	path, err := irfs.WriteToTempFile("")

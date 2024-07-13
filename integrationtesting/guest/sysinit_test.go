@@ -108,7 +108,7 @@ func TestModules(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, module := range modules {
-		modname := strings.Split(module.Name(), ".")[0]
+		modname := strings.Split(module.Name(), ".")[0][5:]
 		t.Run(modname, func(t *testing.T) {
 			assert.DirExists(t, "/sys/module/"+modname)
 		})

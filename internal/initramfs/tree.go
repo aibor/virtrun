@@ -67,7 +67,7 @@ func (t *Tree) Mkdir(path string) (*TreeNode, error) {
 
 	parent, err := t.Mkdir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("mkdir %s: %v", dir, err)
+		return nil, fmt.Errorf("mkdir %s: %w", dir, err)
 	}
 
 	node, err := parent.AddDirectory(name)

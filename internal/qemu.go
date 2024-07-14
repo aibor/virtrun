@@ -80,7 +80,7 @@ func NewQemuCommand(args QemuArgs, initramfsPath string) (*qemu.Command, error) 
 	// Do some simple input validation to catch most obvious issues.
 	err := cmd.Validate()
 	if err != nil {
-		return nil, fmt.Errorf("validate qemu command: %v", err)
+		return nil, fmt.Errorf("validate qemu command: %w", err)
 	}
 
 	return cmd, nil

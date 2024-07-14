@@ -30,7 +30,7 @@ var ErrNotRegularFile = errors.New("not a regular file")
 func (f FilePath) check() error {
 	stat, err := os.Stat(string(f))
 	if err != nil {
-		return err
+		return fmt.Errorf("stat: %w", err)
 	}
 
 	if !stat.Mode().IsRegular() {

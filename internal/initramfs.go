@@ -24,17 +24,17 @@ type InitramfsArgs struct {
 func NewInitramfsArchive(args InitramfsArgs) (*InitramfsArchive, error) {
 	irfs, err := newInitramfs(string(args.Binary), args.Standalone, args.Arch)
 	if err != nil {
-		return nil, fmt.Errorf("new: %v", err)
+		return nil, fmt.Errorf("new: %w", err)
 	}
 
 	err = irfs.AddFiles("data", args.Files...)
 	if err != nil {
-		return nil, fmt.Errorf("add files: %v", err)
+		return nil, fmt.Errorf("add files: %w", err)
 	}
 
 	err = irfs.AddRequiredSharedObjects()
 	if err != nil {
-		return nil, fmt.Errorf("add libs: %v", err)
+		return nil, fmt.Errorf("add libs: %w", err)
 	}
 
 	for idx, module := range args.Modules {
@@ -42,13 +42,13 @@ func NewInitramfsArchive(args InitramfsArgs) (*InitramfsArchive, error) {
 
 		err = irfs.AddFile("lib/modules", name, module)
 		if err != nil {
-			return nil, fmt.Errorf("add modules: %v", err)
+			return nil, fmt.Errorf("add modules: %w", err)
 		}
 	}
 
 	path, err := irfs.WriteToTempFile("")
 	if err != nil {
-		return nil, fmt.Errorf("write to temp file: %v", err)
+		return nil, fmt.Errorf("write to temp file: %w", err)
 	}
 
 	a := &InitramfsArchive{
@@ -71,7 +71,12 @@ func (a *InitramfsArchive) Cleanup() error {
 		return nil
 	}
 
-	return os.Remove(a.Path)
+	err := os.Remove(a.Path)
+	if err != nil {
+		return fmt.Errorf("remove: %w", err)
+	}
+
+	return nil
 }
 
 func newInitramfs(
@@ -96,14 +101,14 @@ func newInitramfsWithInit(
 	// executes "/main".
 	init, err := initProgFor(arch)
 	if err != nil {
-		return nil, fmt.Errorf("embedded init: %v", err)
+		return nil, fmt.Errorf("embedded init: %w", err)
 	}
 
 	irfs := initramfs.New(initramfs.WithVirtualInitFile(init))
 
 	err = irfs.AddFile("/", "main", mainBinary)
 	if err != nil {
-		return nil, fmt.Errorf("add main file: %v", err)
+		return nil, fmt.Errorf("add main file: %w", err)
 	}
 
 	return irfs, nil

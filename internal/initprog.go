@@ -27,7 +27,12 @@ var _inits embed.FS
 func initProgFor(arch Arch) (fs.File, error) {
 	switch arch {
 	case ArchAMD64, ArchARM64:
-		return _inits.Open(filepath.Join("init", arch.String()))
+		f, err := _inits.Open(filepath.Join("init", arch.String()))
+		if err != nil {
+			return nil, fmt.Errorf("open: %w", err)
+		}
+
+		return f, nil
 	default:
 		return nil, fmt.Errorf("arch not supported: %s", arch)
 	}

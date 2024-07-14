@@ -47,14 +47,14 @@ type Symlinks map[string]string
 func Mount(mount MountPoint) error {
 	err := os.MkdirAll(mount.Path, defaultDirMode)
 	if err != nil {
-		return fmt.Errorf("mkdir %s: %v", mount.Path, err)
+		return fmt.Errorf("mkdir %s: %w", mount.Path, err)
 	}
 
 	fsType := string(mount.FSType)
 
 	err = syscall.Mount(fsType, mount.Path, fsType, 0, "")
 	if err != nil {
-		return fmt.Errorf("mount %s (%s): %v", mount.Path, mount.FSType, err)
+		return fmt.Errorf("mount %s (%s): %w", mount.Path, mount.FSType, err)
 	}
 
 	return nil
@@ -80,7 +80,7 @@ func MountAll(mountPoints MountPoints) error {
 func CreateSymlinks(symlinks Symlinks) error {
 	for link, target := range symlinks {
 		if err := os.Symlink(target, link); err != nil {
-			return fmt.Errorf("create common symlink %s: %v", link, err)
+			return fmt.Errorf("create common symlink %s: %w", link, err)
 		}
 	}
 

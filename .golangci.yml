@@ -13,12 +13,8 @@ linters:
     - gomnd
     - paralleltest
     - varnamelen
-    - wrapcheck
 
 linters-settings:
-  errorlint:
-    errorf: false
-
   exhaustive:
     default-signifies-exhaustive: true
 

@@ -15,8 +15,13 @@ import (
 func ConfigureLoopbackInterface() error {
 	link, err := netlink.LinkByName("lo")
 	if err != nil {
-		return fmt.Errorf("get link: %v", err)
+		return fmt.Errorf("get link: %w", err)
 	}
 
-	return netlink.LinkSetUp(link)
+	err = netlink.LinkSetUp(link)
+	if err != nil {
+		return fmt.Errorf("set link up: %w", err)
+	}
+
+	return nil
 }

@@ -71,12 +71,12 @@ func initModule(f *os.File, params string) error {
 
 	_, err = io.Copy(&data, decompressed)
 	if err != nil {
-		return fmt.Errorf("read file: %v", err)
+		return fmt.Errorf("read file: %w", err)
 	}
 
 	err = unix.InitModule(data.Bytes(), params)
 	if err != nil {
-		return fmt.Errorf("init_module: %v", err)
+		return fmt.Errorf("init_module: %w", err)
 	}
 
 	return nil
@@ -92,7 +92,12 @@ func decompress(r namedReader) (io.Reader, error) {
 	case "ko":
 		return r, nil
 	case "gz":
-		return gzip.NewReader(r)
+		gzipReader, err := gzip.NewReader(r)
+		if err != nil {
+			return nil, fmt.Errorf("new gzip reader: %w", err)
+		}
+
+		return gzipReader, nil
 	default:
 		return nil, fmt.Errorf("unknown extension: %w", errors.ErrUnsupported)
 	}
@@ -111,7 +116,7 @@ func finitModule(f *os.File, params string) error {
 			return fmt.Errorf("finit_module: %w", errors.ErrUnsupported)
 		}
 
-		return fmt.Errorf("finit_module: %v", err)
+		return fmt.Errorf("finit_module: %w", err)
 	}
 
 	return nil

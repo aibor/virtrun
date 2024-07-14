@@ -22,7 +22,7 @@ func (u LimitedUintFlag) MarshalText() ([]byte, error) {
 func (u *LimitedUintFlag) UnmarshalText(text []byte) error {
 	value, err := strconv.ParseUint(string(text), 10, 0)
 	if err != nil {
-		return err
+		return fmt.Errorf("parse: %w", err)
 	}
 
 	if u.min > 0 && value < u.min {

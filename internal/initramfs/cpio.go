@@ -26,18 +26,28 @@ func NewCPIOWriter(w io.Writer) *CPIOWriter {
 
 // Close closes the [Writer]. Flush is called by the underlying closer.
 func (w *CPIOWriter) Close() error {
-	return w.cpioWriter.Close()
+	err := w.cpioWriter.Close()
+	if err != nil {
+		return fmt.Errorf("close: %w", err)
+	}
+
+	return nil
 }
 
 // Flush writes the data to the underlying [io.Writer].
 func (w *CPIOWriter) Flush() error {
-	return w.cpioWriter.Flush()
+	err := w.cpioWriter.Flush()
+	if err != nil {
+		return fmt.Errorf("flush: %w", err)
+	}
+
+	return nil
 }
 
 // writeHeader writes the cpio header.
 func (w *CPIOWriter) writeHeader(hdr *cpio.Header) error {
 	if err := w.cpioWriter.WriteHeader(hdr); err != nil {
-		return fmt.Errorf("write header for %s: %v", hdr.Name, err)
+		return fmt.Errorf("write header for %s: %w", hdr.Name, err)
 	}
 
 	return nil
@@ -68,7 +78,7 @@ func (w *CPIOWriter) WriteLink(path, target string) error {
 
 	// Body of a link is the path of the target file.
 	if _, err := w.cpioWriter.Write([]byte(target)); err != nil {
-		return fmt.Errorf("write body for %s: %v", path, err)
+		return fmt.Errorf("write body for %s: %w", path, err)
 	}
 
 	return nil
@@ -78,7 +88,7 @@ func (w *CPIOWriter) WriteLink(path, target string) error {
 func (w *CPIOWriter) WriteRegular(path string, source fs.File, mode fs.FileMode) error {
 	info, err := source.Stat()
 	if err != nil {
-		return fmt.Errorf("read info: %v", err)
+		return fmt.Errorf("read info: %w", err)
 	}
 
 	if !info.Mode().IsRegular() {
@@ -87,7 +97,7 @@ func (w *CPIOWriter) WriteRegular(path string, source fs.File, mode fs.FileMode)
 
 	cpioHdr, err := cpio.FileInfoHeader(info, "")
 	if err != nil {
-		return fmt.Errorf("create header: %v", err)
+		return fmt.Errorf("create header: %w", err)
 	}
 
 	cpioHdr.Name = path
@@ -100,7 +110,7 @@ func (w *CPIOWriter) WriteRegular(path string, source fs.File, mode fs.FileMode)
 	}
 
 	if _, err := io.Copy(w.cpioWriter, source); err != nil {
-		return fmt.Errorf("write body for %s: %v", path, err)
+		return fmt.Errorf("write body for %s: %w", path, err)
 	}
 
 	return nil

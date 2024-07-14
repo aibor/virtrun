@@ -15,7 +15,7 @@ import (
 	"github.com/aibor/virtrun/sysinit"
 )
 
-func runInit() (int, error) {
+func main() {
 	env := []string{
 		// Set PATH environment variable to the directory all additional files
 		// are written to by virtrun.
@@ -34,18 +34,14 @@ func runInit() (int, error) {
 
 		return 0, cmd.Run()
 	})
-	if errors.Is(err, sysinit.ErrNotPidOne) {
-		return 127, err //nolint:gomnd,mnd
-	}
-
-	return 126, err //nolint:gomnd,mnd
-}
-
-func main() {
-	rc, err := runInit()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-	}
+		rc := 126
+		if errors.Is(err, sysinit.ErrNotPidOne) {
+			rc = 127
+		}
 
-	os.Exit(rc)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+
+		os.Exit(rc)
+	}
 }

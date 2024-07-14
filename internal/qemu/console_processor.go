@@ -41,7 +41,7 @@ func (p *consoleProcessors) Close() error {
 func newConsoleProcessor(path string) (*consoleProcessor, error) {
 	readPipe, writePipe, err := os.Pipe()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("pipe: %w", err)
 	}
 
 	output, err := os.Create(path)
@@ -49,7 +49,7 @@ func newConsoleProcessor(path string) (*consoleProcessor, error) {
 		_ = writePipe.Close()
 		_ = readPipe.Close()
 
-		return nil, err
+		return nil, fmt.Errorf("create: %w", err)
 	}
 
 	processor := &consoleProcessor{
@@ -86,7 +86,7 @@ func (p *consoleProcessor) run() error {
 	for scanner.Scan() {
 		_, err := p.output.Write(append(scanner.Bytes(), byte('\n')))
 		if err != nil {
-			return fmt.Errorf("serial processor run %s: %v", p.Path, err)
+			return fmt.Errorf("serial processor run %s: %w", p.Path, err)
 		}
 	}
 
@@ -100,7 +100,7 @@ func setupConsoleProcessors(consolePaths []string) (consoleProcessors, error) {
 	for _, console := range consolePaths {
 		processor, err := newConsoleProcessor(console)
 		if err != nil {
-			return nil, fmt.Errorf("create processor %s: %v", console, err)
+			return nil, fmt.Errorf("create processor %s: %w", console, err)
 		}
 
 		processors = append(processors, processor)

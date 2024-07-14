@@ -102,7 +102,7 @@ func (i *Initramfs) AddRequiredSharedObjects() error {
 		for path := range pathSet {
 			dir, name := filepath.Split(path)
 			if _, err := dirNode.AddRegular(name, path); err != nil {
-				return fmt.Errorf("add file %s: %v", name, err)
+				return fmt.Errorf("add file %s: %w", name, err)
 			}
 			if err := i.addLinkToLibDir(dir); err != nil {
 				return err
@@ -111,7 +111,7 @@ func (i *Initramfs) AddRequiredSharedObjects() error {
 			// get the real path that the dynamic linker needs.
 			canonicalDir, err := filepath.EvalSymlinks(dir)
 			if err != nil {
-				return err
+				return fmt.Errorf("eval symlinks: %w", err)
 			}
 			if err := i.addLinkToLibDir(canonicalDir); err != nil {
 				return err
@@ -145,13 +145,13 @@ func (i *Initramfs) collectLibs() (map[string]bool, error) {
 				return nil
 			}
 
-			return fmt.Errorf("resolve %s: %v", path, err)
+			return fmt.Errorf("resolve %s: %w", path, err)
 		}
 
 		for _, p := range paths {
 			absPath, err := filepath.Abs(p)
 			if err != nil {
-				return fmt.Errorf("abs path for %s: %v", p, err)
+				return fmt.Errorf("abs path for %s: %w", p, err)
 			}
 			pathSet[absPath] = true
 		}
@@ -173,7 +173,7 @@ func (i *Initramfs) addLinkToLibDir(path string) error {
 
 	err := i.fileTree.Ln(i.libDir, path)
 	if err != nil && !errors.Is(err, ErrNodeExists) {
-		return fmt.Errorf("add link for %s: %v", path, err)
+		return fmt.Errorf("add link for %s: %w", path, err)
 	}
 
 	return nil
@@ -187,7 +187,7 @@ func (i *Initramfs) addLinkToLibDir(path string) error {
 func (i *Initramfs) WriteToTempFile(tmpDir string) (string, error) {
 	file, err := os.CreateTemp(tmpDir, "initramfs")
 	if err != nil {
-		return "", fmt.Errorf("create temp file: %v", err)
+		return "", fmt.Errorf("create temp file: %w", err)
 	}
 	defer file.Close()
 
@@ -195,7 +195,7 @@ func (i *Initramfs) WriteToTempFile(tmpDir string) (string, error) {
 	if err != nil {
 		_ = os.Remove(file.Name())
 
-		return "", fmt.Errorf("create archive: %v", err)
+		return "", fmt.Errorf("create archive: %w", err)
 	}
 
 	return file.Name(), nil
@@ -220,7 +220,7 @@ func (i *Initramfs) writeTo(writer Writer, sourceFS fs.FS) error {
 
 			source, err := sourceFS.Open(relPath)
 			if err != nil {
-				return err
+				return fmt.Errorf("open: %w", err)
 			}
 			defer source.Close()
 
@@ -240,7 +240,7 @@ func (i *Initramfs) writeTo(writer Writer, sourceFS fs.FS) error {
 func (i *Initramfs) withDirNode(dir string, fn func(*TreeNode) error) error {
 	dirNode, err := i.fileTree.Mkdir(dir)
 	if err != nil {
-		return fmt.Errorf("add dir %s: %v", dir, err)
+		return fmt.Errorf("add dir %s: %w", dir, err)
 	}
 
 	return fn(dirNode)
@@ -248,7 +248,7 @@ func (i *Initramfs) withDirNode(dir string, fn func(*TreeNode) error) error {
 
 func addFile(dirNode *TreeNode, name, path string) error {
 	if _, err := dirNode.AddRegular(name, path); err != nil {
-		return fmt.Errorf("add file %s: %v", path, err)
+		return fmt.Errorf("add file %s: %w", path, err)
 	}
 
 	return nil

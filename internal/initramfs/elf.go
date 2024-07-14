@@ -81,7 +81,7 @@ func readInterpreter(path string) (string, error) {
 			return "", ErrNotELFFile
 		}
 
-		return "", err
+		return "", fmt.Errorf("open: %w", err)
 	}
 	defer elfFile.Close()
 
@@ -94,7 +94,7 @@ func readInterpreter(path string) (string, error) {
 		_, err := prog.Open().Read(buf)
 
 		if err != nil && !errors.Is(err, io.EOF) {
-			return "", fmt.Errorf("read interpreter: %v", err)
+			return "", fmt.Errorf("read interpreter: %w", err)
 		}
 		// Only terminate if the found path is not empty. If there is no other
 		// prog with a valid path, it will result in the final ErrNoInterpreter.
@@ -132,7 +132,7 @@ func ldd(interpreter, path string) (ldInfos, error) {
 	cmd.Stderr = &stderrBuf
 
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("ldd: %v: %s", err, stderrBuf.String())
+		return nil, fmt.Errorf("ldd: %w: %s", err, stderrBuf.String())
 	}
 
 	var infos ldInfos

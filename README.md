@@ -14,7 +14,7 @@ virtrun is a library and binary QEMU wrapper for running binaries in an
 isolated system.
 
 The package uses itself for testing, so see the guest tests in
-[integrationtesting](integrationtesting/) for real life examples.
+[testing/guest_test.go](testing/guest_test.go) for a real life example.
 
 
 ## Requirements
@@ -207,7 +207,7 @@ func TestMain(m *testing.M) {
 }
 ```
 
-See the integration_tests/guest directory for a working example.
+See the [testing/guest](testing/guest) directory for a working example.
 
 Instead of using `sysinit.RunTests` you can use call the various parts
 individually, of course, and just mount the file systems you need or additional

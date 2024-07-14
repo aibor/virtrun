@@ -64,13 +64,13 @@ jobs:
         env:
           CONTAINERBIN: docker
         run: |
-          ./integrationtesting/fetch_kernel.sh ${{ env.KERNELVERSION }} ${{ env.KERNELARCH }} "${{ github.workspace }}/vmlinuz"
+          ./testing/fetch_kernel.sh ${{ env.KERNELVERSION }} ${{ env.KERNELARCH }} "${{ github.workspace }}/vmlinuz"
 
       - name: Run tests
-        uses: ./integrationtesting
+        uses: ./testing
         with:
           cmd: |
-            go test -race -v -tags integration ./integrationtesting/ \
+            go test -race -v -tags integration ./testing/ \
               -kernel.path "/github/workspace/vmlinuz" \
               -kernel.arch ${{ env.KERNELARCH }}
 
@@ -84,12 +84,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run module test
-        uses: ./integrationtesting
+        uses: ./testing
         with:
           cmd: |
             apk add linux-virt
             ln -s /lib/modules/*/kernel /lib/modules/
-            go test -race -v -tags integration ./integrationtesting/ \
+            go test -race -v -tags integration ./testing/ \
               -kernel.path "/boot/vmlinuz-virt" \
               -kernel.arch amd64 \
               -kernel.module /lib/modules/kernel/drivers/net/tun.ko.gz \

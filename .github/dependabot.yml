@@ -26,7 +26,7 @@ updates:
       prefix: "chore"
 
   - package-ecosystem: "docker"
-    directory: "/integrationtesting/"
+    directory: "/testing/"
     schedule:
       interval: "weekly"
     commit-message:

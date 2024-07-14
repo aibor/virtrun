@@ -9,7 +9,6 @@ package integration_test
 import (
 	"bytes"
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -124,7 +123,7 @@ func TestHostRCParsing(t *testing.T) {
 
 			var stdOut, stdErr bytes.Buffer
 
-			err = cmd.Run(ctx, os.Stdout, os.Stderr)
+			err = cmd.Run(ctx, &stdOut, &stdErr)
 
 			t.Log(stdOut.String())
 			t.Log(stdErr.String())

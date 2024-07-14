@@ -12,13 +12,13 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/aibor/virtrun/internal/cmd"
+	"github.com/aibor/virtrun/internal"
 )
 
 var (
-	KernelPath    = cmd.FilePath("/kernels/vmlinuz")
+	KernelPath    = internal.FilePath("/kernels/vmlinuz")
 	KernelArch    = runtime.GOARCH
-	KernelModules cmd.FilePathList
+	KernelModules internal.FilePathList
 	Verbose       bool
 )
 

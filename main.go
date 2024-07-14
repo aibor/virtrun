@@ -14,7 +14,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/aibor/virtrun/internal/cmd"
+	"github.com/aibor/virtrun/internal"
 	"github.com/aibor/virtrun/internal/qemu"
 )
 
@@ -37,14 +37,14 @@ func setupLogging(debug bool) {
 }
 
 func run() error {
-	args, err := cmd.NewArgs(cmd.GetArch())
+	args, err := internal.NewArgs(internal.GetArch())
 	if err != nil {
 		return err
 	}
 
 	err = args.ParseArgs(
 		os.Args[0],
-		cmd.PrependEnvArgs(os.Args[1:]),
+		internal.PrependEnvArgs(os.Args[1:]),
 		os.Stderr,
 	)
 	if err != nil {
@@ -64,7 +64,7 @@ func run() error {
 	}
 
 	// Build initramfs for the run.
-	irfs, err := cmd.NewInitramfsArchive(args.InitramfsArgs)
+	irfs, err := internal.NewInitramfsArchive(args.InitramfsArgs)
 	if err != nil {
 		return fmt.Errorf("initramfs: %w", err)
 	}
@@ -80,7 +80,7 @@ func run() error {
 		slog.Debug("Initramfs cleaned up", slog.String("path", irfs.Path))
 	}()
 
-	cmd, err := cmd.NewQemuCommand(args.QemuArgs, irfs.Path)
+	cmd, err := internal.NewQemuCommand(args.QemuArgs, irfs.Path)
 	if err != nil {
 		return err
 	}

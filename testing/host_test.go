@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
@@ -55,7 +54,7 @@ func TestHostWithLibsNonZeroRC(t *testing.T) {
 	actualExitCode := qemu.ExitCodeFrom(err)
 
 	expectedExitCode := 73
-	if KernelArch != runtime.GOARCH {
+	if !KernelArch.IsNative() {
 		expectedExitCode = 126
 	}
 
@@ -98,7 +97,7 @@ func TestHostRCParsing(t *testing.T) {
 			binary, err := internal.AbsoluteFilePath("testdata/bin/" + tt.bin)
 			require.NoError(t, err)
 
-			if KernelArch != runtime.GOARCH {
+			if !KernelArch.IsNative() {
 				t.Skipf("non matching architecture")
 			}
 

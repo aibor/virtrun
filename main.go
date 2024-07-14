@@ -34,7 +34,12 @@ func setupLogging(debug bool) {
 }
 
 func run() error {
-	args, err := internal.NewArgs(internal.GetArch())
+	arch, err := internal.GetArch()
+	if err != nil {
+		return fmt.Errorf("get arch: %w", err)
+	}
+
+	args, err := internal.NewArgs(arch)
 	if err != nil {
 		return fmt.Errorf("new args: %w", err)
 	}

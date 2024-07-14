@@ -15,7 +15,7 @@ import (
 
 func TestInits(t *testing.T) {
 	tests := []struct {
-		arch    string
+		arch    Arch
 		machine elf.Machine
 		errMsg  string
 	}{
@@ -34,7 +34,7 @@ func TestInits(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.arch, func(t *testing.T) {
+		t.Run(string(tt.arch), func(t *testing.T) {
 			file, err := initProgFor(tt.arch)
 			if tt.errMsg != "" {
 				assert.ErrorContains(t, err, tt.errMsg)

@@ -104,7 +104,7 @@ type Args struct {
 	Debug   bool
 }
 
-func NewArgs(arch string) (Args, error) {
+func NewArgs(arch Arch) (Args, error) {
 	var (
 		qemuBin   string
 		machine   string
@@ -112,11 +112,11 @@ func NewArgs(arch string) (Args, error) {
 	)
 
 	switch arch {
-	case "amd64":
+	case ArchAMD64:
 		qemuBin = "qemu-system-x86_64"
 		machine = "q35"
 		transport = qemu.TransportTypePCI
-	case "arm64":
+	case ArchARM64:
 		qemuBin = "qemu-system-aarch64"
 		machine = "virt"
 		transport = qemu.TransportTypeMMIO
@@ -142,7 +142,7 @@ func NewArgs(arch string) (Args, error) {
 				smpMax,
 				"",
 			},
-			NoKVM: !qemu.KVMAvailableFor(arch),
+			NoKVM: !arch.KVMAvailable(),
 			ExtraArgs: []qemu.Argument{
 				qemu.UniqueArg("display", "none"),
 				qemu.UniqueArg("monitor", "none"),
@@ -372,7 +372,7 @@ func (a *Args) Validate() error {
 }
 
 // validateELF validates that ELF attributes match the requested architecture.
-func validateELF(hdr elf.FileHeader, arch string) error {
+func validateELF(hdr elf.FileHeader, arch Arch) error {
 	switch hdr.OSABI {
 	case elf.ELFOSABI_NONE, elf.ELFOSABI_LINUX:
 		// supported, pass
@@ -380,13 +380,13 @@ func validateELF(hdr elf.FileHeader, arch string) error {
 		return fmt.Errorf("OSABI not supported: %s", hdr.OSABI)
 	}
 
-	var archReq string
+	var archReq Arch
 
 	switch hdr.Machine {
 	case elf.EM_X86_64:
-		archReq = "amd64"
+		archReq = ArchAMD64
 	case elf.EM_AARCH64:
-		archReq = "arm64"
+		archReq = ArchARM64
 	default:
 		return fmt.Errorf("machine type not supported: %s", hdr.Machine)
 	}

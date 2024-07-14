@@ -24,10 +24,10 @@ var _inits embed.FS
 
 // initProgFor returns the pre-built init binary for the arch. The init binary
 // is supposed to set up the system and execute the file "/main".
-func initProgFor(arch string) (fs.File, error) {
+func initProgFor(arch Arch) (fs.File, error) {
 	switch arch {
-	case "amd64", "arm64":
-		return _inits.Open(filepath.Join("init", arch))
+	case ArchAMD64, ArchARM64:
+		return _inits.Open(filepath.Join("init", arch.String()))
 	default:
 		return nil, fmt.Errorf("arch not supported: %s", arch)
 	}

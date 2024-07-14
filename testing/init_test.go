@@ -8,7 +8,6 @@ package integration_test
 
 import (
 	"flag"
-	"runtime"
 
 	"github.com/aibor/virtrun/internal"
 )
@@ -16,11 +15,12 @@ import (
 //nolint:gochecknoglobals
 var (
 	KernelPath    = internal.FilePath("/kernels/vmlinuz")
-	KernelArch    = runtime.GOARCH
+	KernelArch    = internal.ArchNative
 	KernelModules internal.FilePathList
 	Verbose       bool
 )
 
+//nolint:gochecknoinits
 func init() {
 	flag.TextVar(
 		&KernelPath,
@@ -28,7 +28,7 @@ func init() {
 		KernelPath,
 		"absolute path of the test kernel",
 	)
-	flag.StringVar(
+	flag.TextVar(
 		&KernelArch,
 		"kernel.arch",
 		KernelArch,

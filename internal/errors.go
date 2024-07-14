@@ -4,7 +4,12 @@
 
 package internal
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var ErrArchNotSupported = errors.New("architecture not supported")
 
 // ParseArgsError wraps errors that occur during argument parsing.
 type ParseArgsError struct {

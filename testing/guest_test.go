@@ -86,13 +86,13 @@ func TestGuestSysinit(t *testing.T) {
 				os.Environ(),
 				// Set GOARCH so the test binary is compiled with the correct
 				// arch.
-				"GOARCH="+KernelArch,
+				"GOARCH="+KernelArch.String(),
 				// Although virtrun consume GOARCH, we need to set VIRTRUN_ARCH
 				// her as well, because we call virtrun wrapped in the "go run"
 				// above. For "go run" we need to unset GOARCH so it runs
 				// with the required host arch. Because of this, we need to set
 				// VIRTRUN_ARCH here as well to end up with the requested arch.
-				"VIRTRUN_ARCH="+KernelArch,
+				"VIRTRUN_ARCH="+KernelArch.String(),
 				"VIRTRUN_ARGS="+strings.Join(virtrunArgs, " "),
 			)
 

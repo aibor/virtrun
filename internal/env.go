@@ -6,13 +6,12 @@ package internal
 
 import (
 	"os"
-	"runtime"
 	"strings"
 )
 
 // GetArch gets the architecture to use for the command.
-func GetArch() string {
-	var arch string
+func GetArch() (Arch, error) {
+	arch := ArchNative
 
 	// Allow user to specify architecture by dedicated env var VIRTRUN_ARCH. It
 	// can be empty, to suppress the GOARCH lookup and enforce the fallback to
@@ -20,18 +19,19 @@ func GetArch() string {
 	// used. This is handy in case of cross-architecture go test invocations.
 	for _, name := range []string{"VIRTRUN_ARCH", "GOARCH"} {
 		if v, exists := os.LookupEnv(name); exists {
-			arch = v
+			// Keep default native arch in case the var is empty.
+			if v != "" {
+				err := arch.UnmarshalText([]byte(v))
+				if err != nil {
+					return "", err
+				}
+			}
 
 			break
 		}
 	}
 
-	// Fallback to runtime architecture.
-	if arch == "" {
-		arch = runtime.GOARCH
-	}
-
-	return arch
+	return arch, nil
 }
 
 // PrependEnvArgs prepends virtrun arguments from the environment to the given

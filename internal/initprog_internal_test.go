@@ -2,14 +2,13 @@
 //
 // SPDX-License-Identifier: MIT
 
-package initprog_test
+package internal
 
 import (
 	"debug/elf"
 	"io"
 	"testing"
 
-	"github.com/aibor/virtrun/internal/initprog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +35,7 @@ func TestInits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.arch, func(t *testing.T) {
-			file, err := initprog.For(tt.arch)
+			file, err := initProgFor(tt.arch)
 			if tt.errMsg != "" {
 				assert.ErrorContains(t, err, tt.errMsg)
 

@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aibor/virtrun/internal/initprog"
 	"github.com/aibor/virtrun/internal/initramfs"
 )
 
@@ -95,7 +94,7 @@ func newInitramfsWithInit(
 ) (*initramfs.Initramfs, error) {
 	// In the default wrapped mode a pre-compiled init is used that just
 	// executes "/main".
-	init, err := initprog.For(arch)
+	init, err := initProgFor(arch)
 	if err != nil {
 		return nil, fmt.Errorf("embedded init: %v", err)
 	}

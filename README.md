@@ -179,7 +179,7 @@ The sub-package [sysinit](https://pkg.go.dev/github.com/aibor/virtrun/sysinit)
 provides helper functions for necessary tasks.
 
 A simple init can be built using `sysinit.Run` which is a wrapper for those
-essential tasks. See the [simple init program](internal/initprog/init/main.go)
+essential tasks. See the [simple init program](internal/init/main.go)
 that is used in the default wrapped mode, for inspiration.
 
 For go test binaries `sysinit.RunTests` can be used in a custom `TestMain`

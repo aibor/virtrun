@@ -113,9 +113,9 @@ $ virtrun -kernel /boot/vmlinuz-linux -addFile /usr/bin/bash /usr/bin/tree -x
 
 Kernel modules can be added with the flag `-addModule` that can be used
 multiple times. Absolute paths must be given. The modules are added to the
-directory `/lib/modules` and are loaded automatically by the default init.
-Dependencies must be provided an are not resolved automatically. The modules
-must be added in the correct order.
+directory `/lib/modules` and are loaded automatically by the default init in 
+the order they are given in the command line. Dependencies must be provided an
+are not resolved automatically. The modules must be added in the correct order.
 
 ### With `go test -exec`
 
@@ -163,7 +163,7 @@ system back to the host:
 $ go test -exec 'virtrun' -cover -coverprofile cover.out .
 ```
 
-For debugging, use virtrun's flag `-verbose` togehter with go test's flag `-v`:
+For debugging, use virtrun's flag `-verbose` together with go test's flag `-v`:
 
 ```console
 $ go test -exec "virtrun -verbose" -v .

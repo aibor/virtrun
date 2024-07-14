@@ -7,6 +7,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,6 +21,9 @@ import (
 func TestGuestSysinit(t *testing.T) {
 	virtrunRoot, err := filepath.Abs("..")
 	require.NoError(t, err)
+
+	coverDir := os.Getenv("GOCOVERDIR")
+	require.NotEmpty(t, coverDir, "must set GOCOVERDIR")
 
 	tests := []struct {
 		name       string
@@ -63,10 +67,15 @@ func TestGuestSysinit(t *testing.T) {
 				// native arch of the test host.
 				"env",
 				"GOARCH=",
+				"GOCOVERDIR=" + coverDir,
 				"go",
 				"run",
+				"-cover",
+				"-covermode", "atomic",
 				virtrunRoot,
 			}
+
+			profile := fmt.Sprintf("%s/guest_%s_cover.out", coverDir, tt.name)
 
 			args := []string{
 				"test",
@@ -75,7 +84,8 @@ func TestGuestSysinit(t *testing.T) {
 				"-exec", strings.Join(execArgs, " "),
 				"-tags", strings.Join(testTags, ","),
 				"-cover",
-				"-coverprofile", "/tmp/cover.out",
+				"-covermode", "atomic",
+				"-coverprofile", profile,
 				"-coverpkg", "github.com/aibor/virtrun/sysinit",
 				"./guest/...",
 			}

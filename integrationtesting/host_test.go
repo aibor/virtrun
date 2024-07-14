@@ -109,7 +109,6 @@ func TestHostRCParsing(t *testing.T) {
 			args.Kernel = KernelPath
 			args.Verbose = Verbose
 			args.Binary = binary
-
 			args.Memory.Value = 128
 			args.InitArgs = tt.args
 
@@ -126,6 +125,7 @@ func TestHostRCParsing(t *testing.T) {
 			t.Cleanup(cancel)
 
 			var stdOut, stdErr bytes.Buffer
+
 			err = cmd.Run(ctx, os.Stdout, os.Stderr)
 
 			t.Log(stdOut.String())

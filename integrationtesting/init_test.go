@@ -8,13 +8,12 @@ package integrationtesting_test
 
 import (
 	"flag"
-	"os"
 	"runtime"
-	"testing"
 
 	"github.com/aibor/virtrun/internal"
 )
 
+//nolint:gochecknoglobals
 var (
 	KernelPath    = internal.FilePath("/kernels/vmlinuz")
 	KernelArch    = runtime.GOARCH
@@ -22,7 +21,7 @@ var (
 	Verbose       bool
 )
 
-func TestMain(m *testing.M) {
+func init() {
 	flag.TextVar(
 		&KernelPath,
 		"kernel.path",
@@ -46,7 +45,4 @@ func TestMain(m *testing.M) {
 		"kernel.module",
 		"kernel module to add to guest. Flag may be used more than once.",
 	)
-	flag.Parse()
-
-	os.Exit(m.Run())
 }

@@ -18,7 +18,7 @@ import (
 )
 
 func TestGuestSysinit(t *testing.T) {
-	cwd, err := os.Getwd()
+	virtrunRoot, err := filepath.Abs("..")
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -40,6 +40,7 @@ func TestGuestSysinit(t *testing.T) {
 			virtrunArgs := []string{
 				"-kernel", string(KernelPath),
 			}
+
 			if Verbose {
 				virtrunArgs = append(virtrunArgs, "-verbose")
 			}
@@ -57,18 +58,22 @@ func TestGuestSysinit(t *testing.T) {
 				testTags = append(testTags, "standalone")
 			}
 
-			virtrunArgString := strings.Join(virtrunArgs, " ")
-			// Unset GOARCH for the exec command as it needs to run as native
-			// arch of the test host.
-			execString := "env GOARCH= go run " + filepath.Join(cwd, "..")
-			tagString := strings.Join(testTags, ",")
+			execArgs := []string{
+				// Unset GOARCH for the exec command as it needs to run as
+				// native arch of the test host.
+				"env",
+				"GOARCH=",
+				"go",
+				"run",
+				virtrunRoot,
+			}
 
 			args := []string{
 				"test",
 				"-v",
 				"-timeout", "2m",
-				"-exec", execString,
-				"-tags", tagString,
+				"-exec", strings.Join(execArgs, " "),
+				"-tags", strings.Join(testTags, ","),
 				"-cover",
 				"-coverprofile", "/tmp/cover.out",
 				"-coverpkg", "github.com/aibor/virtrun/sysinit",
@@ -79,9 +84,16 @@ func TestGuestSysinit(t *testing.T) {
 
 			cmd.Env = append(
 				os.Environ(),
+				// Set GOARCH so the test binary is compiled with the correct
+				// arch.
 				"GOARCH="+KernelArch,
+				// Although virtrun consume GOARCH, we need to set VIRTRUN_ARCH
+				// her as well, because we call virtrun wrapped in the "go run"
+				// above. For "go run" we need to unset GOARCH so it runs
+				// with the required host arch. Because of this, we need to set
+				// VIRTRUN_ARCH here as well to end up with the requested arch.
 				"VIRTRUN_ARCH="+KernelArch,
-				"VIRTRUN_ARGS="+virtrunArgString,
+				"VIRTRUN_ARGS="+strings.Join(virtrunArgs, " "),
 			)
 
 			out, err := cmd.CombinedOutput()

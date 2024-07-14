@@ -284,7 +284,7 @@ func (a *Args) ParseArgs(name string, args []string, output io.Writer) error {
 	// Parses arguments up to the first one that is not prefixed with a "-" or
 	// is "--".
 	if err := fs.Parse(args); err != nil {
-		return fmt.Errorf("parse args: %w", err)
+		return &ParseArgsError{msg: "flag parse: %w", err: err}
 	}
 
 	printf := func(format string, a ...any) string {
@@ -300,7 +300,7 @@ func (a *Args) ParseArgs(name string, args []string, output io.Writer) error {
 
 		fs.Usage()
 
-		return errors.New(msg)
+		return &ParseArgsError{msg: msg}
 	}
 
 	// With version flag, just print the version and exit. Using [flag.ErrHelp]
@@ -309,7 +309,7 @@ func (a *Args) ParseArgs(name string, args []string, output io.Writer) error {
 		msgFmt := "virtrun %s\n  commit %s\n  built at %s"
 		printf(msgFmt, version, commit, date)
 
-		return flag.ErrHelp
+		return &ParseArgsError{err: flag.ErrHelp}
 	}
 
 	if a.Kernel == "" {

@@ -43,24 +43,23 @@ func TestHostWithLibsNonZeroRC(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
 
-	var (
-		stdOut, stdErr bytes.Buffer
-		cmdErr         *qemu.CommandError
-	)
+	var stdOut, stdErr bytes.Buffer
 
 	err = cmd.Run(ctx, &stdOut, &stdErr)
 
 	t.Log(stdOut.String())
 	t.Log(stdErr.String())
 
-	require.ErrorAs(t, err, &cmdErr)
+	require.ErrorIs(t, err, &qemu.CommandError{})
 
-	expectedRC := 73
+	actualExitCode := qemu.ExitCodeFrom(err)
+
+	expectedExitCode := 73
 	if KernelArch != runtime.GOARCH {
-		expectedRC = 126
+		expectedExitCode = 126
 	}
 
-	assert.Equal(t, expectedRC, cmdErr.ExitCode)
+	assert.Equal(t, expectedExitCode, actualExitCode)
 }
 
 func TestHostRCParsing(t *testing.T) {

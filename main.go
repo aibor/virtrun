@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -17,10 +18,6 @@ import (
 	"github.com/aibor/virtrun/internal"
 	"github.com/aibor/virtrun/internal/qemu"
 )
-
-// The init programs may return 127 and 126, so use 125 for indicating
-// issues if the error does not return it's own return code.
-const errExitCode = 125
 
 func setupLogging(debug bool) {
 	level := slog.LevelWarn
@@ -39,7 +36,7 @@ func setupLogging(debug bool) {
 func run() error {
 	args, err := internal.NewArgs(internal.GetArch())
 	if err != nil {
-		return err
+		return fmt.Errorf("new args: %w", err)
 	}
 
 	err = args.ParseArgs(
@@ -48,19 +45,14 @@ func run() error {
 		os.Stderr,
 	)
 	if err != nil {
-		// ParseArgs already prints errors, so we just exit without an error.
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
-
-		return err
+		return fmt.Errorf("parse args: %w", err)
 	}
 
 	setupLogging(args.Debug)
 
 	err = args.Validate()
 	if err != nil {
-		return err
+		return fmt.Errorf("validate args: %w", err)
 	}
 
 	// Build initramfs for the run.
@@ -82,7 +74,7 @@ func run() error {
 
 	cmd, err := internal.NewQemuCommand(args.QemuArgs, irfs.Path)
 	if err != nil {
-		return err
+		return fmt.Errorf("build qemu command: %w", err)
 	}
 
 	slog.Debug("QEMU command",
@@ -108,21 +100,28 @@ func run() error {
 	return nil
 }
 
-func parseRC(err error) int {
-	var qemuCmdErr *qemu.CommandError
-
-	if errors.As(err, &qemuCmdErr) {
-		return qemuCmdErr.ExitCode
+func handleRunError(err error, errWriter io.Writer) int {
+	if err == nil {
+		return 0
+	}
+	// [flag.ErrHelp] is returned when help is requested. So exit without error
+	// in this case.
+	if errors.Is(err, flag.ErrHelp) {
+		return 0
 	}
 
-	return errExitCode
+	// ParseArgs already prints errors, so we just exit without an error.
+	if errors.Is(err, &internal.ParseArgsError{}) {
+		return -1
+	}
+
+	fmt.Fprintf(errWriter, "Error: %v\n", err)
+
+	return qemu.ExitCodeFrom(err)
 }
 
 func main() {
 	err := run()
-	if err != nil {
-		rc := parseRC(err)
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(rc)
-	}
+	rc := handleRunError(err, os.Stderr)
+	os.Exit(rc)
 }

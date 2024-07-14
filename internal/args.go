@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
-	"strconv"
 
 	"github.com/aibor/virtrun/internal/qemu"
 )
@@ -34,68 +33,6 @@ var (
 	commit  = "none"    //nolint:gochecknoglobals
 	date    = "unknown" //nolint:gochecknoglobals
 )
-
-type limitedUintFlag struct {
-	Value    uint
-	min, max uint64
-	unit     string
-}
-
-func (u limitedUintFlag) MarshalText() ([]byte, error) {
-	return []byte(strconv.Itoa(int(u.Value)) + u.unit), nil
-}
-
-var ErrValueOutsideRange = errors.New("value is outside of range")
-
-func (u *limitedUintFlag) UnmarshalText(text []byte) error {
-	value, err := strconv.ParseUint(string(text), 10, 0)
-	if err != nil {
-		return err
-	}
-
-	if u.min > 0 && value < u.min {
-		return fmt.Errorf("%d < %d: %w", value, u.min, ErrValueOutsideRange)
-	}
-
-	if u.max > 0 && value > u.max {
-		return fmt.Errorf("%d > %d: %w", value, u.max, ErrValueOutsideRange)
-	}
-
-	u.Value = uint(value)
-
-	return nil
-}
-
-type transportType struct {
-	qemu.TransportType
-}
-
-var errInvalidTransportType = errors.New("unknown transport type")
-
-// MarshalText implements [encoding.TextMarshaler].
-func (t transportType) MarshalText() ([]byte, error) {
-	return []byte(t.String()), nil
-}
-
-// UnarshalText implements [encoding.TextUnmarshaler].
-func (t *transportType) UnmarshalText(text []byte) error {
-	s := string(text)
-
-	types := []qemu.TransportType{
-		qemu.TransportTypeISA,
-		qemu.TransportTypePCI,
-		qemu.TransportTypeMMIO,
-	}
-	for _, qt := range types {
-		if s == strconv.Itoa(int(qt)) || s == qt.String() {
-			t.TransportType = qt
-
-			return nil
-		}
-	}
-
-	return errInvalidTransportType
-}
 
 type Args struct {
 	QemuArgs
@@ -128,15 +65,15 @@ func NewArgs(arch Arch) (Args, error) {
 		QemuArgs: QemuArgs{
 			QemuBin:   qemuBin,
 			Machine:   machine,
-			Transport: transportType{transport},
+			Transport: TransportType{transport},
 			CPU:       cpuDefault,
-			Memory: limitedUintFlag{
+			Memory: LimitedUintFlag{
 				memDefault,
 				memMin,
 				memMax,
 				"MB",
 			},
-			SMP: limitedUintFlag{
+			SMP: LimitedUintFlag{
 				smpDefault,
 				smpMin,
 				smpMax,

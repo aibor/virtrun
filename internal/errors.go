@@ -9,7 +9,11 @@ import (
 	"fmt"
 )
 
-var ErrArchNotSupported = errors.New("architecture not supported")
+var (
+	ErrArchNotSupported     = errors.New("architecture not supported")
+	ErrInvalidTransportType = errors.New("unknown transport type")
+	ErrValueOutsideRange    = errors.New("value is outside of range")
+)
 
 // ParseArgsError wraps errors that occur during argument parsing.
 type ParseArgsError struct {

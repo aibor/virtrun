@@ -118,10 +118,10 @@ func TestArgsParseArgs(t *testing.T) {
 					Kernel:    "/boot/this",
 					CPU:       "host",
 					Machine:   "pc",
-					Transport: transportType{qemu.TransportTypeMMIO},
-					Memory:    limitedUintFlag{Value: 269},
+					Transport: TransportType{qemu.TransportTypeMMIO},
+					Memory:    LimitedUintFlag{Value: 269},
 					NoKVM:     true,
-					SMP:       limitedUintFlag{Value: 7},
+					SMP:       LimitedUintFlag{Value: 7},
 					InitArgs: []string{
 						"-test.paniconexit0",
 						"-test.v=true",

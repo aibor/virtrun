@@ -39,6 +39,5 @@ func GetArch() (Arch, error) {
 // args have precedence when parsed with [flag].
 func PrependEnvArgs(args []string) []string {
 	envArgs := strings.Fields(os.Getenv("VIRTRUN_ARGS"))
-
 	return append(envArgs, args...)
 }

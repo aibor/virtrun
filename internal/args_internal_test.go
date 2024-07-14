@@ -167,7 +167,6 @@ func TestArgsParseArgs(t *testing.T) {
 
 			if tt.errMsg != "" {
 				assert.ErrorContains(t, err, tt.errMsg)
-
 				return
 			}
 

@@ -194,7 +194,6 @@ func (i *Initramfs) WriteToTempFile(tmpDir string) (string, error) {
 	err = i.WriteInto(file)
 	if err != nil {
 		_ = os.Remove(file.Name())
-
 		return "", fmt.Errorf("create archive: %w", err)
 	}
 

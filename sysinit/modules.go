@@ -124,13 +124,11 @@ func finitModule(f *os.File, params string) error {
 
 func fileNameExtension(fileName string) string {
 	fileNameParts := strings.Split(fileName, ".")
-
 	return fileNameParts[len(fileNameParts)-1]
 }
 
 func hasFinitCompressionExtension(fileName string) bool {
 	extension := fileNameExtension(fileName)
-
 	return isFinitCompressionExtension(extension)
 }
 
@@ -138,6 +136,5 @@ func hasFinitCompressionExtension(fileName string) bool {
 // known extensions finit_module(2) supports.
 func isFinitCompressionExtension(extension string) bool {
 	supportedExtensions := []string{"gz", "xz", "zst"}
-
 	return slices.Contains(supportedExtensions, extension)
 }

@@ -32,7 +32,6 @@ func (t *TransportType) UnmarshalText(text []byte) error {
 	for _, qt := range types {
 		if s == strconv.Itoa(int(qt)) || s == qt.String() {
 			t.TransportType = qt
-
 			return nil
 		}
 	}

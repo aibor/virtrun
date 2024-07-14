@@ -22,6 +22,9 @@ linters-settings:
     excludes:
       - G204
 
+  nlreturn:
+    block-size: 2
+
 issues:
   include:
     - EXC0002

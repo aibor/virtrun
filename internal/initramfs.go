@@ -67,7 +67,6 @@ type InitramfsArchive struct {
 func (a *InitramfsArchive) Cleanup() error {
 	if a.keep {
 		fmt.Fprintf(os.Stderr, "initramfs kept at: %s\n", a.Path)
-
 		return nil
 	}
 

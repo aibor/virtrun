@@ -27,7 +27,6 @@ func (e *ParseArgsError) Error() string {
 
 func (e *ParseArgsError) Is(other error) bool {
 	_, ok := other.(*ParseArgsError)
-
 	return ok
 }
 

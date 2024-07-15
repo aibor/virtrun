@@ -2,11 +2,23 @@
 #
 # SPDX-License-Identifier: MIT
 
+project_name: virtrun
+
+version: 2
+
+gomod:
+  proxy: true
+
 builds:
   - binary: virtrun
+    mod_timestamp: "{{.CommitTimestamp}}"
     ldflags:
-      - >
-        -s -w
+      - -s -w
+      - -X {{.ModulePath}}/internal.version={{.Version}}
+      - -X {{.ModulePath}}/internal.commit={{.FullCommit}}
+      - -X {{.ModulePath}}/internal.date={{.CommitDate}}
+    flags:
+      - -trimpath
     goos:
       - linux
       - darwin

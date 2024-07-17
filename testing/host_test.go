@@ -48,16 +48,16 @@ func TestHostWithLibsNonZeroRC(t *testing.T) {
 	t.Log(stdOut.String())
 	t.Log(stdErr.String())
 
-	require.ErrorIs(t, err, &qemu.CommandError{})
+	var qemuCmdErr *qemu.CommandError
 
-	actualExitCode := qemu.ExitCodeFrom(err)
+	require.ErrorAs(t, err, &qemuCmdErr)
 
 	expectedExitCode := 73
 	if !KernelArch.IsNative() {
 		expectedExitCode = 126
 	}
 
-	assert.Equal(t, expectedExitCode, actualExitCode)
+	assert.Equal(t, expectedExitCode, qemuCmdErr.ExitCode)
 }
 
 func TestHostRCParsing(t *testing.T) {

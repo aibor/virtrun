@@ -48,15 +48,3 @@ func (e *CommandError) Is(other error) bool {
 func (e *CommandError) Unwrap() error {
 	return e.Err
 }
-
-// ExitCodeFrom returns the exit code if the given error is a [CommandError].
-// Otherwise, -1 is returned.
-func ExitCodeFrom(err error) int {
-	var qemuCmdErr *CommandError
-
-	if errors.As(err, &qemuCmdErr) {
-		return qemuCmdErr.ExitCode
-	}
-
-	return -1
-}

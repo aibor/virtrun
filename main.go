@@ -109,20 +109,35 @@ func handleRunError(err error, errWriter io.Writer) int {
 	if err == nil {
 		return 0
 	}
+
 	// [flag.ErrHelp] is returned when help is requested. So exit without error
 	// in this case.
 	if errors.Is(err, flag.ErrHelp) {
 		return 0
 	}
 
+	rc := -1
+
 	// ParseArgs already prints errors, so we just exit without an error.
 	if errors.Is(err, &internal.ParseArgsError{}) {
-		return -1
+		return rc
+	}
+
+	var qemuCmdErr *qemu.CommandError
+
+	if errors.As(err, &qemuCmdErr) {
+		rc = qemuCmdErr.ExitCode
+	}
+
+	// Do not print the error in case the guest process ran successfully and
+	// the guest properly communicated a non-zero exit code.
+	if errors.Is(err, qemu.ErrGuestNonZeroExitCode) {
+		return rc
 	}
 
 	fmt.Fprintf(errWriter, "Error: %v\n", err)
 
-	return qemu.ExitCodeFrom(err)
+	return rc
 }
 
 func main() {

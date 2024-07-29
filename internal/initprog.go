@@ -14,12 +14,12 @@ import (
 // Pre-compile init programs for all supported architectures. Statically linked
 // so they can be used on any host platform.
 //
-//go:generate env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags inits -buildvcs=false -trimpath -ldflags "-s -w" -o init/amd64 ./init/
-//go:generate env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags inits -buildvcs=false -trimpath -ldflags "-s -w" -o init/arm64 ./init/
+//go:generate env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -trimpath -ldflags "-s -w" -o bin/amd64 ./init/
+//go:generate env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -buildvcs=false -trimpath -ldflags "-s -w" -o bin/arm64 ./init/
 
 // Embed pre-compiled init programs explicitly to trigger build time errors.
 //
-//go:embed init/amd64 init/arm64
+//go:embed bin/amd64 bin/arm64
 var _inits embed.FS
 
 // initProgFor returns the pre-built init binary for the arch. The init binary
@@ -27,7 +27,7 @@ var _inits embed.FS
 func initProgFor(arch Arch) (fs.File, error) {
 	switch arch {
 	case ArchAMD64, ArchARM64:
-		f, err := _inits.Open(filepath.Join("init", arch.String()))
+		f, err := _inits.Open(filepath.Join("bin", arch.String()))
 		if err != nil {
 			return nil, fmt.Errorf("open: %w", err)
 		}

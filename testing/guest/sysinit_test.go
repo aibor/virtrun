@@ -8,7 +8,7 @@ package main_test
 
 import (
 	"context"
-	"errors"
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -99,18 +99,28 @@ func TestCommonSymlinks(t *testing.T) {
 	}
 }
 
-func TestModules(t *testing.T) {
-	modules, err := os.ReadDir("/lib/modules")
-	if errors.Is(err, os.ErrNotExist) {
-		t.Skip("no modules present")
-	}
+var testModules = flag.String("testModules", "", "module names to test")
 
+func TestModules(t *testing.T) {
+	modules, err := os.ReadFile("/proc/modules")
 	require.NoError(t, err)
 
-	for _, module := range modules {
-		modname := strings.Split(module.Name(), ".")[0][5:]
-		t.Run(modname, func(t *testing.T) {
-			assert.DirExists(t, "/sys/module/"+modname)
-		})
+	expected := []string{}
+	if *testModules != "" {
+		expected = strings.Split(*testModules, ",")
 	}
+
+	actual := []string{}
+	for _, line := range strings.Split(string(modules), "\n") {
+		if line == "" {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		actual = append(actual, fields[0])
+	}
+
+	t.Log("actual: ", actual)
+
+	assert.ElementsMatch(t, actual, expected)
 }

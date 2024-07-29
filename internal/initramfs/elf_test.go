@@ -5,6 +5,7 @@
 package initramfs_test
 
 import (
+	"os/exec"
 	"testing"
 
 	"github.com/aibor/virtrun/internal/initramfs"
@@ -12,48 +13,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestTestdata(t *testing.T) {
+	var cmdErr *exec.ExitError
+
+	cmd := exec.Command("testdata/bin/main")
+	require.ErrorAs(t, cmd.Run(), &cmdErr)
+
+	// 73 is the return code of the test binary if everything is properly
+	// linked.
+	assert.Equal(t, 73, cmdErr.ExitCode())
+}
+
 func TestFilesLdd(t *testing.T) {
-	defaultSearchPath := "testdata/lib"
+	actual, err := initramfs.Ldd("testdata/bin/main")
+	require.NoErrorf(t, err, "must resolve")
 
-	tests := []struct {
-		name          string
-		file          string
-		searchPath    string
-		expectedPaths []string
-		errMsg        string
-	}{
-		{
-			name:       "indirect reference",
-			file:       "testdata/bin/main",
-			searchPath: defaultSearchPath,
-			expectedPaths: []string{
-				"testdata/lib/libfunc2.so",
-				"testdata/lib/libfunc3.so",
-				// libfunc1.so last since it is referenced indirectly by libfunc3.so.
-				"testdata/lib/libfunc1.so",
-				"/lib64/ld-linux-x86-64.so.2",
-			},
-		},
-		{
-			name:   "fails if lib not found",
-			file:   "testdata/bin/main",
-			errMsg: "ldd: exit status 127: testdata/bin/main",
-		},
+	expected := []string{
+		"testdata/lib/libfunc2.so",
+		"testdata/lib/libfunc3.so",
+		"testdata/lib/libfunc1.so",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("LD_LIBRARY_PATH", tt.searchPath)
-
-			paths, err := initramfs.Ldd(tt.file)
-
-			if tt.errMsg != "" {
-				require.ErrorContains(t, err, tt.errMsg)
-				return
-			}
-
-			require.NoErrorf(t, err, "must resolve")
-			assert.Equal(t, tt.expectedPaths, paths)
-		})
-	}
+	initramfs.AssertContainsPaths(t, actual, expected)
 }

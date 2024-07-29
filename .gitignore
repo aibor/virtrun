@@ -3,5 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 /dist
+/internal/initramfs/testdata/bin/
+/internal/initramfs/testdata/lib/
 /testing/kernels/
 /testing/bin/

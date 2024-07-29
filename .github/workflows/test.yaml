@@ -27,7 +27,7 @@ jobs:
           cache: false
 
       - name: Run go generate
-        run: go generate -v ./...
+        run: go generate -tags testdata ./...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
@@ -77,7 +77,7 @@ jobs:
         uses: ./testing
         with:
           cmd: |
-            go generate -v -tags integration ./...
+            go generate -tags testdata,integration ./...
             go test -race -v -tags integration ./testing/ \
               -kernel.path "/github/workspace/vmlinuz" \
               -kernel.arch ${{ env.KERNELARCH }}
@@ -105,13 +105,16 @@ jobs:
           cmd: |
             apk add linux-virt
             ln -s /lib/modules/*/kernel /lib/modules/
-            go generate -v -tags integration ./...
-            go test -race -v -tags integration ./testing/ \
-              -kernel.path "/boot/vmlinuz-virt" \
-              -kernel.arch amd64 \
-              -kernel.module /lib/modules/kernel/drivers/net/tun.ko.gz \
-              -kernel.module /lib/modules/kernel/drivers/net/veth.ko.gz \
-              -run TestGuestSysinit
+            go generate ./...
+            go build -cover -covermode atomic -o /virtrun .
+            go test -v \
+              -tags integration_guest \
+              -exec "/virtrun \
+                -kernel /boot/vmlinuz-virt \
+                -addModule /lib/modules/kernel/drivers/net/tun.ko.gz \
+                -addModule /lib/modules/kernel/drivers/net/veth.ko.gz" \
+              ./testing/guest/ \
+              -testModules tun,veth
 
       - name: Run covdata
         run: go tool covdata percent -i "${{ env.GOCOVERDIR }}"

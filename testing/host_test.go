@@ -21,8 +21,6 @@ import (
 )
 
 func TestHostWithLibsNonZeroRC(t *testing.T) {
-	t.Setenv("LD_LIBRARY_PATH", "../internal/initramfs/testdata/lib")
-
 	binary, err := internal.AbsoluteFilePath("../internal/initramfs/testdata/bin/main")
 	require.NoError(t, err)
 

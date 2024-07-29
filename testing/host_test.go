@@ -4,6 +4,8 @@
 
 //go:build integration
 
+//go:generate env CGO_ENABLED=0 go build -v -trimpath -buildvcs=false -o bin/ ./cmd/...
+
 package integration_test
 
 import (
@@ -97,7 +99,7 @@ func TestHostRCParsing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			binary, err := internal.AbsoluteFilePath("testdata/bin/" + tt.bin)
+			binary, err := internal.AbsoluteFilePath("./bin/" + tt.bin)
 			require.NoError(t, err)
 
 			if !KernelArch.IsNative() {

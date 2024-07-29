@@ -74,6 +74,7 @@ jobs:
         uses: ./testing
         with:
           cmd: |
+            go generate -v -tags integration ./testing/
             go test -race -v -tags integration ./testing/ \
               -kernel.path "/github/workspace/vmlinuz" \
               -kernel.arch ${{ env.KERNELARCH }}
@@ -101,6 +102,7 @@ jobs:
           cmd: |
             apk add linux-virt
             ln -s /lib/modules/*/kernel /lib/modules/
+            go generate -v -tags integration ./testing/
             go test -race -v -tags integration ./testing/ \
               -kernel.path "/boot/vmlinuz-virt" \
               -kernel.arch amd64 \

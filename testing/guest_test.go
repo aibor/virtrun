@@ -4,6 +4,8 @@
 
 //go:build integration
 
+//go:generate env CGO_ENABLED=0 go build -v -trimpath -buildvcs=false -covermode atomic -o bin/ ../
+
 package integration_test
 
 import (
@@ -19,7 +21,7 @@ import (
 )
 
 func TestGuestSysinit(t *testing.T) {
-	virtrunRoot, err := filepath.Abs("..")
+	virtrun, err := filepath.Abs("./bin/virtrun")
 	require.NoError(t, err)
 
 	coverDir := os.Getenv("GOCOVERDIR")
@@ -65,16 +67,9 @@ func TestGuestSysinit(t *testing.T) {
 			}
 
 			execArgs := []string{
-				// Unset GOARCH for the exec command as it needs to run as
-				// native arch of the test host.
 				"env",
-				"GOARCH=",
 				"GOCOVERDIR=" + coverDir,
-				"go",
-				"run",
-				"-cover",
-				"-covermode", "atomic",
-				virtrunRoot,
+				virtrun,
 			}
 
 			profile := fmt.Sprintf("%s/guest_%s_cover.out", coverDir, tt.name)

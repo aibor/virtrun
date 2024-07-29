@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-//go:generate env CGO_ENABLED=0 go build -o ../../bin/ .
 package main
 
 import (

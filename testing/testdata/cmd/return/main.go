@@ -12,6 +12,10 @@ import (
 
 func main() {
 	// Use first argument as exit code.
-	rc, _ := strconv.Atoi(os.Args[1])
+	rc, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		panic("invalid input")
+	}
+
 	os.Exit(rc)
 }

@@ -62,10 +62,11 @@ func TestHostWithLibsNonZeroRC(t *testing.T) {
 
 func TestHostRCParsing(t *testing.T) {
 	tests := []struct {
-		name string
-		bin  string
-		args []string
-		err  error
+		name       string
+		bin        string
+		args       []string
+		standalone bool
+		err        error
 	}{
 		{
 			name: "return 0",
@@ -79,9 +80,10 @@ func TestHostRCParsing(t *testing.T) {
 			err:  qemu.ErrGuestNonZeroExitCode,
 		},
 		{
-			name: "panic",
-			bin:  "panic",
-			err:  qemu.ErrGuestPanic,
+			name:       "panic",
+			bin:        "panic",
+			standalone: true,
+			err:        qemu.ErrGuestPanic,
 		},
 		{
 			name: "oom",
@@ -109,6 +111,7 @@ func TestHostRCParsing(t *testing.T) {
 			args.Verbose = Verbose
 			args.Binary = binary
 			args.Memory.Value = 128
+			args.Standalone = tt.standalone
 			args.InitArgs = tt.args
 
 			irfs, err := internal.NewInitramfsArchive(args.InitramfsArgs)

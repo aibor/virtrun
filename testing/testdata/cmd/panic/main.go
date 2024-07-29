@@ -10,11 +10,24 @@ import (
 	"os"
 )
 
+func writeFile(path string, data string) error {
+	return os.WriteFile(path, []byte(data), os.ModePerm)
+}
+
 func run() error {
-	if err := os.WriteFile("/proc/sys/kernel/sysrq", []byte("1"), 0755); err != nil {
-		return err
+	if os.Getpid() != 1 {
+		return fmt.Errorf("not PID 1")
 	}
-	return os.WriteFile("/proc/sysrq-trigger", []byte("c"), 0755)
+
+	if err := writeFile("/proc/sys/kernel/sysrq", "1"); err != nil {
+		return fmt.Errorf("enable sysrq: %w", err)
+	}
+
+	if err := writeFile("/proc/sysrq-trigger", "c"); err != nil {
+		return fmt.Errorf("trigger panic: %w", err)
+	}
+
+	return nil
 }
 
 func main() {

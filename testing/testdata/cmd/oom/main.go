@@ -6,15 +6,29 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
 
-func main() {
+func run() error {
 	var grow []byte
-	memMB, _ := strconv.Atoi(os.Args[1])
+
+	memMB, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		panic("invalid input")
+	}
 
 	for i := 0; i < memMB; i++ {
 		grow = append(grow, make([]byte, 1024*1024)...)
+	}
+
+	return fmt.Errorf("still alive :(")
+}
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
 	}
 }

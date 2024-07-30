@@ -59,13 +59,9 @@ jobs:
     env:
       KERNELVERSION: "${{ matrix.kernel_version }}"
       KERNELARCH: "${{ matrix.kernel_arch }}"
-      GOCOVERDIR: "${{ github.workspace }}/gocoverdir"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Create gocoverdir
-        run: mkdir "${{ env.GOCOVERDIR }}"
 
       - name: Fetch kernel
         env:
@@ -77,13 +73,11 @@ jobs:
         uses: ./testing
         with:
           cmd: |
-            go generate -tags testdata,integration ./...
+            go generate -tags testdata ./...
+            GOARCH=${{ env.KERNELARCH }} go generate -tags integration ./testing/...
             go test -race -v -tags integration ./testing/ \
               -kernel.path "/github/workspace/vmlinuz" \
               -kernel.arch ${{ env.KERNELARCH }}
-
-      - name: Run covdata
-        run: go tool covdata percent -i "${{ env.GOCOVERDIR }}"
 
   integration-tests-modules:
     name: Run integration tests for kernel modules

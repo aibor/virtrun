@@ -45,9 +45,7 @@ func TestInits(t *testing.T) {
 			t.Cleanup(func() { _ = file.Close() })
 
 			seekFile, ok := file.(io.ReaderAt)
-			if !ok {
-				t.Skip("fs.File does not implement io.ReaderAt yet")
-			}
+			require.True(t, ok, "must implement io.ReaderAt")
 
 			elfFile, err := elf.NewFile(seekFile)
 			require.NoError(t, err)

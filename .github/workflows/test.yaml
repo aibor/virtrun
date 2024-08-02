@@ -107,6 +107,9 @@ jobs:
                 -kernel /boot/vmlinuz-virt \
                 -addModule /lib/modules/kernel/drivers/net/tun.ko.gz \
                 -addModule /lib/modules/kernel/drivers/net/veth.ko.gz" \
+              -cover \
+              -covermode atomic \
+              -coverprofile /tmp/cover.out \
               ./testing/guest/ \
               -testModules tun,veth
 

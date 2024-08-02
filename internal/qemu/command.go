@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -220,6 +221,21 @@ func (c *Command) kernelCmdlineArgs() []string {
 	return cmdline
 }
 
+func openFiles(paths []string) ([]io.WriteCloser, error) {
+	writers := make([]io.WriteCloser, len(paths))
+
+	for idx, path := range paths {
+		f, err := os.Create(path)
+		if err != nil {
+			return nil, fmt.Errorf("create file: %w", err)
+		}
+
+		writers[idx] = f
+	}
+
+	return writers, nil
+}
+
 func fdPath(fd int) string {
 	return fmt.Sprintf("/dev/fd/%d", fd)
 }
@@ -251,7 +267,12 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) error {
 	// "file" backend for QEMU console devices. [consoleProcessor.run] reads
 	// from the read end of the pipe, cleans the output and writes it into
 	// the actual target file on the host.
-	processors, err := setupConsoleProcessors(c.AdditionalConsoles)
+	consoleWriters, err := openFiles(c.AdditionalConsoles)
+	if err != nil {
+		return err
+	}
+
+	processors, err := setupConsoleProcessors(consoleWriters)
 	if err != nil {
 		return err
 	}

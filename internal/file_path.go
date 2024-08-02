@@ -5,7 +5,6 @@
 package internal
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,8 +23,6 @@ func (f *FilePath) UnmarshalText(text []byte) error {
 
 	return err
 }
-
-var ErrNotRegularFile = errors.New("not a regular file")
 
 func (f FilePath) check() error {
 	stat, err := os.Stat(string(f))
@@ -56,8 +53,6 @@ func (f *FilePathList) Set(value string) error {
 
 	return nil
 }
-
-var ErrEmptyFilePath = errors.New("file path must not be empty")
 
 func AbsoluteFilePath(path string) (FilePath, error) {
 	if path == "" {

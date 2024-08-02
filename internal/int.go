@@ -26,11 +26,11 @@ func (u *LimitedUintFlag) UnmarshalText(text []byte) error {
 	}
 
 	if u.min > 0 && value < u.min {
-		return fmt.Errorf("%d < %d: %w", value, u.min, ErrValueOutsideRange)
+		return fmt.Errorf("%d < %d: %w", value, u.min, ErrValueOutOfRange)
 	}
 
 	if u.max > 0 && value > u.max {
-		return fmt.Errorf("%d > %d: %w", value, u.max, ErrValueOutsideRange)
+		return fmt.Errorf("%d > %d: %w", value, u.max, ErrValueOutOfRange)
 	}
 
 	u.Value = uint(value)

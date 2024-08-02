@@ -1,6 +1,8 @@
-// SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
-//
-// SPDX-License-Identifier: MIT
+/*
+ * SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+ *
+ * SPDX-License-Identifier: MIT
+ */
 
 #include "defs.h"
 

@@ -69,22 +69,31 @@ func (c *Command) AddConsole(file string) string {
 
 // Validate checks for known incompatibilities.
 func (c *Command) Validate() error {
+	if !c.TransportType.isKnown() {
+		return &ArgumentError{
+			"unknown transport type: " + c.TransportType.String(),
+		}
+	}
+
 	switch c.Machine {
 	case "microvm":
 		switch {
 		case c.TransportType == TransportTypePCI:
-			return errors.New("microvm does not support pci transport")
+			return &ArgumentError{"microvm does not support pci transport"}
 		case c.TransportType == TransportTypeISA && len(c.AdditionalConsoles) > 0:
-			msg := "microvm supports only one isa serial port, used for stdio"
-			return errors.New(msg)
+			return &ArgumentError{
+				"microvm supports only one isa serial port, used for stdio",
+			}
 		}
 	case "virt":
 		if c.TransportType == TransportTypeISA {
-			return errors.New("virt requires virtio-mmio")
+			return &ArgumentError{"virt requires virtio-mmio"}
 		}
 	case "q35", "pc":
 		if c.TransportType == TransportTypeMMIO {
-			return fmt.Errorf("%s does not work with virtio-mmio", c.Machine)
+			return &ArgumentError{
+				c.Machine + " does not work with virtio-mmio",
+			}
 		}
 	}
 

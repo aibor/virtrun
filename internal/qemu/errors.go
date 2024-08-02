@@ -29,6 +29,22 @@ var (
 	ErrTransportTypeInvalid = errors.New("unknown transport type")
 )
 
+// ArgumentError indicates an issue with an input argument.
+type ArgumentError struct {
+	msg string
+}
+
+// Error implements the [error] interface.
+func (e *ArgumentError) Error() string {
+	return "argument error: " + e.msg
+}
+
+// Is implements the [errors.Is] interface.
+func (e *ArgumentError) Is(other error) bool {
+	_, ok := other.(*ArgumentError)
+	return ok
+}
+
 // CommandError wraps any error occurred during Command execution.
 type CommandError struct {
 	Err      error
@@ -43,7 +59,6 @@ func (e *CommandError) Error() string {
 // Is implements the [errors.Is] interface.
 func (e *CommandError) Is(other error) bool {
 	_, ok := other.(*CommandError)
-
 	return ok
 }
 

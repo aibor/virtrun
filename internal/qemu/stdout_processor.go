@@ -49,6 +49,9 @@ func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
 			}
 
 			guestErr = nil
+			if exitCode != 0 {
+				guestErr = ErrGuestNonZeroExitCode
+			}
 		}
 
 		// Skip line printing once the init exit code has been found unless
@@ -59,9 +62,20 @@ func ParseStdout(input io.Reader, output io.Writer, verbose bool) (int, error) {
 
 		_, err := fmt.Fprintln(output, line)
 		if err != nil {
-			return exitCode, fmt.Errorf("print: %w", err)
+			return fmt.Errorf("print: %w", err)
+		}
+	}
+	if scanner.Err() != nil {
+		return fmt.Errorf("stdout: %w", scanner.Err())
+	}
+
+	if guestErr != nil {
+		return &CommandError{
+			Err:      guestErr,
+			Guest:    true,
+			ExitCode: exitCode,
 		}
 	}
 
-	return exitCode, guestErr
+	return nil
 }

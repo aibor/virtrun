@@ -299,11 +299,11 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) error {
 	// at program termination. Error should be reported, but should not
 	// terminate immediately. There might be more severe errors that following,
 	// like process execution or persistent IO errors.
-	exitCode, guestErr := ParseStdout(outPipe, stdout, c.Verbose)
+	guestErr := ParseStdout(outPipe, stdout, c.Verbose)
 
 	// Collect process information.
 	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("qemu command: %w", handleCmdError(err))
+		return fmt.Errorf("qemu command: %w", wrapExitError(err))
 	}
 
 	// Close console processors, so possible errors can be collected.
@@ -313,14 +313,10 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) error {
 		return fmt.Errorf("processor error: %w", err)
 	}
 
-	if guestErr != nil {
-		return guestErr
-	}
-
-	return handleExitCode(exitCode)
+	return guestErr
 }
 
-func handleCmdError(err error) error {
+func wrapExitError(err error) error {
 	var exitErr *exec.ExitError
 
 	if !errors.As(err, &exitErr) {
@@ -331,15 +327,4 @@ func handleCmdError(err error) error {
 		Err:      err,
 		ExitCode: exitErr.ExitCode(),
 	}
-}
-
-func handleExitCode(exitCode int) error {
-	if exitCode != 0 {
-		return &CommandError{
-			Err:      ErrGuestNonZeroExitCode,
-			ExitCode: exitCode,
-		}
-	}
-
-	return nil
 }

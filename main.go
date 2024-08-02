@@ -126,7 +126,9 @@ func handleRunError(err error, errWriter io.Writer) int {
 	var qemuCmdErr *qemu.CommandError
 
 	if errors.As(err, &qemuCmdErr) {
-		rc = qemuCmdErr.ExitCode
+		if qemuCmdErr.ExitCode != 0 {
+			rc = qemuCmdErr.ExitCode
+		}
 	}
 
 	// Do not print the error in case the guest process ran successfully and

@@ -4,10 +4,7 @@
 
 package qemu
 
-import (
-	"errors"
-	"fmt"
-)
+import "errors"
 
 var (
 	// ErrGuestNoExitCodeFound is returned if no exit code matching the [RCFmt]
@@ -48,12 +45,18 @@ func (e *ArgumentError) Is(other error) bool {
 // CommandError wraps any error occurred during Command execution.
 type CommandError struct {
 	Err      error
+	Guest    bool
 	ExitCode int
 }
 
 // Error implements the [error] interface.
 func (e *CommandError) Error() string {
-	return fmt.Sprintf("qemu command error: %v", e.Err)
+	scope := "host"
+	if e.Guest {
+		scope = "guest"
+	}
+
+	return "qemu " + scope + ": " + e.Err.Error()
 }
 
 // Is implements the [errors.Is] interface.

@@ -6,6 +6,7 @@ package qemu_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -17,12 +18,12 @@ import (
 
 func TestStdoutProcessor(t *testing.T) {
 	tests := []struct {
-		name    string
-		verbose bool
-		rc      int
-		input   []string
-		output  []string
-		err     error
+		name        string
+		verbose     bool
+		rc          int
+		input       []string
+		output      []string
+		expectedErr error
 	}{
 		{
 			name: "panic",
@@ -31,8 +32,8 @@ func TestStdoutProcessor(t *testing.T) {
 				"[    0.579013] CPU: 0 PID: 76 Comm: init Not tainted 6.4.3-arch1-1 #1 13c144d261447e0acbf2632534d4009bddc4c3ab",
 				"[    0.579512] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS Arch Linux 1.16.2-1-1 04/01/2014",
 			},
-			output: []string{""},
-			err:    qemu.ErrGuestPanic,
+			output:      []string{""},
+			expectedErr: qemu.ErrGuestPanic,
 		},
 		{
 			name: "oom",
@@ -42,8 +43,8 @@ func TestStdoutProcessor(t *testing.T) {
 				//nolint:lll
 				"[    0.378083] Out of memory: Killed process 116 (main) total-vm:48156kB, anon-rss:43884kB, file-rss:4kB, shmem-rss:2924kB, UID:0 pgtables:140kB oom_score_adj:0",
 			},
-			output: []string{""},
-			err:    qemu.ErrGuestOom,
+			output:      []string{""},
+			expectedErr: qemu.ErrGuestOom,
 		},
 		{
 			name:    "panic verbose",
@@ -59,10 +60,24 @@ func TestStdoutProcessor(t *testing.T) {
 				"[    0.579512] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS Arch Linux 1.16.2-1-1 04/01/2014",
 				"",
 			},
-			err: qemu.ErrGuestPanic,
+			expectedErr: qemu.ErrGuestPanic,
 		},
 		{
-			name: "rc",
+			name: "zero rc",
+			rc:   0,
+			input: []string{
+				"something out",
+				"more out",
+				fmt.Sprintf(qemu.RCFmt, 0),
+			},
+			output: []string{
+				"something out",
+				"more out",
+				"",
+			},
+		},
+		{
+			name: "non zero rc",
 			rc:   4,
 			input: []string{
 				"something out",
@@ -74,6 +89,7 @@ func TestStdoutProcessor(t *testing.T) {
 				"more out",
 				"",
 			},
+			expectedErr: qemu.ErrGuestNonZeroExitCode,
 		},
 		{
 			name: "no rc",
@@ -86,7 +102,7 @@ func TestStdoutProcessor(t *testing.T) {
 				"more out",
 				"",
 			},
-			err: qemu.ErrGuestNoExitCodeFound,
+			expectedErr: qemu.ErrGuestNoExitCodeFound,
 		},
 	}
 
@@ -95,15 +111,20 @@ func TestStdoutProcessor(t *testing.T) {
 			cmdOut := bytes.NewBufferString(strings.Join(tt.input, "\n"))
 			stdOut := bytes.NewBuffer(make([]byte, 0, 512))
 
-			rc, err := qemu.ParseStdout(cmdOut, stdOut, tt.verbose)
+			err := qemu.ParseStdout(cmdOut, stdOut, tt.verbose)
+			require.ErrorIs(t, err, tt.expectedErr)
 
-			if tt.err != nil {
-				assert.ErrorIs(t, err, tt.err)
-				return
+			var (
+				cmdErr *qemu.CommandError
+				rc     int
+			)
+
+			if errors.As(err, &cmdErr) {
+				rc = cmdErr.ExitCode
 			}
 
-			require.NoError(t, err)
 			assert.Equal(t, tt.rc, rc)
+
 		})
 	}
 }

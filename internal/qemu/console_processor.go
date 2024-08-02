@@ -12,19 +12,19 @@ import (
 	"os"
 )
 
-// consoleProcessor is used to process input from a serial console and
+// ConsoleProcessor is used to process input from a serial console and
 // write it into a file.
-type consoleProcessor struct {
+type ConsoleProcessor struct {
 	WritePipe *os.File
 	readPipe  io.ReadCloser
 	output    io.WriteCloser
 	ran       bool
 }
 
-type consoleProcessors []*consoleProcessor
+type ConsoleProcessors []*ConsoleProcessor
 
 // Close closes all running processors.
-func (p *consoleProcessors) Close() error {
+func (p *ConsoleProcessors) Close() error {
 	errs := make([]error, 0)
 
 	for _, p := range *p {
@@ -34,16 +34,16 @@ func (p *consoleProcessors) Close() error {
 	return errors.Join(errs...)
 }
 
-// newConsoleProcessor creates a new consoleProcessor and its required pipes.
+// NewConsoleProcessor creates a new consoleProcessor and its required pipes.
 // It also opens and truncates or creates the output file. Call
 // [ConsoleProcessor.Close] in order to clean up the file descriptors after use.
-func newConsoleProcessor(output io.WriteCloser) (*consoleProcessor, error) {
+func NewConsoleProcessor(output io.WriteCloser) (*ConsoleProcessor, error) {
 	readPipe, writePipe, err := os.Pipe()
 	if err != nil {
 		return nil, fmt.Errorf("pipe: %w", err)
 	}
 
-	processor := &consoleProcessor{
+	processor := &ConsoleProcessor{
 		WritePipe: writePipe,
 		readPipe:  readPipe,
 		output:    output,
@@ -53,7 +53,7 @@ func newConsoleProcessor(output io.WriteCloser) (*consoleProcessor, error) {
 }
 
 // Close closes the file descriptors.
-func (p *consoleProcessor) Close() error {
+func (p *ConsoleProcessor) Close() error {
 	var errs []error
 
 	errs = append(errs, p.WritePipe.Close())
@@ -65,9 +65,9 @@ func (p *consoleProcessor) Close() error {
 	return errors.Join(errs...)
 }
 
-// run process the input. It blocks and returns once [io.EOF] is received,
+// Run process the input. It blocks and returns once [io.EOF] is received,
 // which happens when [ConsoleProcessor.Close] is called.
-func (p *consoleProcessor) run() error {
+func (p *ConsoleProcessor) Run() error {
 	defer p.readPipe.Close()
 	p.ran = true
 
@@ -82,12 +82,12 @@ func (p *consoleProcessor) run() error {
 	return nil
 }
 
-func setupConsoleProcessors(consoles []io.WriteCloser) (consoleProcessors, error) {
+func SetupConsoleProcessors(consoles []io.WriteCloser) (ConsoleProcessors, error) {
 	// Collect processors so they can be easily closed.
-	processors := make([]*consoleProcessor, 0)
+	processors := make([]*ConsoleProcessor, 0)
 
 	for _, console := range consoles {
-		processor, err := newConsoleProcessor(console)
+		processor, err := NewConsoleProcessor(console)
 		if err != nil {
 			return nil, fmt.Errorf("create processor: %w", err)
 		}

@@ -272,7 +272,7 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) error {
 		return err
 	}
 
-	processors, err := setupConsoleProcessors(consoleWriters)
+	processors, err := SetupConsoleProcessors(consoleWriters)
 	if err != nil {
 		return err
 	}
@@ -282,7 +282,7 @@ func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) error {
 
 	for _, processor := range processors {
 		cmd.ExtraFiles = append(cmd.ExtraFiles, processor.WritePipe)
-		processorsGroup.Go(processor.run)
+		processorsGroup.Go(processor.Run)
 	}
 
 	if err := cmd.Start(); err != nil {

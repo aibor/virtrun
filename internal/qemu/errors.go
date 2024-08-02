@@ -24,6 +24,9 @@ var (
 	// ErrGuestNonZeroExitCode is returned if the guest did not return exit
 	// code 0.
 	ErrGuestNonZeroExitCode = errors.New("guest did not return exit code 0")
+
+	// ErrTransportTypeInvalid is returned if a transport type is invalid.
+	ErrTransportTypeInvalid = errors.New("unknown transport type")
 )
 
 // CommandError wraps any error occurred during Command execution.

@@ -10,9 +10,8 @@ import (
 )
 
 var (
-	ErrArchNotSupported     = errors.New("architecture not supported")
-	ErrInvalidTransportType = errors.New("unknown transport type")
-	ErrValueOutsideRange    = errors.New("value is outside of range")
+	ErrArchNotSupported  = errors.New("architecture not supported")
+	ErrValueOutsideRange = errors.New("value is outside of range")
 )
 
 // ParseArgsError wraps errors that occur during argument parsing.

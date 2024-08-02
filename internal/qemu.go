@@ -6,38 +6,9 @@ package internal
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/aibor/virtrun/internal/qemu"
 )
-
-type TransportType struct {
-	qemu.TransportType
-}
-
-// MarshalText implements [encoding.TextMarshaler].
-func (t TransportType) MarshalText() ([]byte, error) {
-	return []byte(t.String()), nil
-}
-
-// UnmarshalText implements [encoding.TextUnmarshaler].
-func (t *TransportType) UnmarshalText(text []byte) error {
-	s := string(text)
-
-	types := []qemu.TransportType{
-		qemu.TransportTypeISA,
-		qemu.TransportTypePCI,
-		qemu.TransportTypeMMIO,
-	}
-	for _, qt := range types {
-		if s == strconv.Itoa(int(qt)) || s == qt.String() {
-			t.TransportType = qt
-			return nil
-		}
-	}
-
-	return ErrInvalidTransportType
-}
 
 type QemuArgs struct {
 	QemuBin             string
@@ -46,7 +17,7 @@ type QemuArgs struct {
 	CPU                 string
 	SMP                 LimitedUintFlag
 	Memory              LimitedUintFlag
-	Transport           TransportType
+	TransportType       qemu.TransportType
 	InitArgs            []string
 	ExtraArgs           []qemu.Argument
 	NoKVM               bool
@@ -63,7 +34,7 @@ func NewQemuCommand(args QemuArgs, initramfsPath string) (*qemu.Command, error) 
 		CPU:           args.CPU,
 		Memory:        args.Memory.Value,
 		SMP:           args.SMP.Value,
-		TransportType: args.Transport.TransportType,
+		TransportType: args.TransportType,
 		InitArgs:      args.InitArgs,
 		ExtraArgs:     args.ExtraArgs,
 		NoKVM:         args.NoKVM,

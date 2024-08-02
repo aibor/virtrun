@@ -215,45 +215,6 @@ func fdPath(fd int) string {
 	return fmt.Sprintf("/dev/fd/%d", fd)
 }
 
-func prepareConsoleArgs(transportType TransportType) []Argument {
-	switch transportType {
-	case TransportTypePCI:
-		return []Argument{
-			RepeatableArg("device", "virtio-serial-pci,max_ports=8"),
-		}
-	case TransportTypeMMIO:
-		return []Argument{
-			RepeatableArg("device", "virtio-serial-device,max_ports=8"),
-		}
-	default: // Ignore invalid transport types.
-		return nil
-	}
-}
-
-func consoleArgsFunc(transportType TransportType) func(int) []Argument {
-	switch transportType {
-	case TransportTypeISA:
-		return func(fd int) []Argument {
-			return []Argument{
-				RepeatableArg("serial", "file:"+fdPath(fd)),
-			}
-		}
-	case TransportTypePCI, TransportTypeMMIO:
-		return func(fd int) []Argument {
-			vcon := fmt.Sprintf("vcon%d", fd)
-			chardev := fmt.Sprintf("file,id=%s,path=%s", vcon, fdPath(fd))
-			device := "virtconsole,chardev=" + vcon
-
-			return []Argument{
-				RepeatableArg("chardev", chardev),
-				RepeatableArg("device", device),
-			}
-		}
-	default: // Ignore invalid transport types.
-		return func(_ int) (_ []Argument) { return }
-	}
-}
-
 // Run the QEMU command with the given context.
 //
 // The final QEMU command is constructed, console processors are setup and the

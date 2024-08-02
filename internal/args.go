@@ -43,30 +43,30 @@ type Args struct {
 
 func NewArgs(arch Arch) (Args, error) {
 	var (
-		qemuBin   string
-		machine   string
-		transport qemu.TransportType
+		qemuBin       string
+		machine       string
+		transportType qemu.TransportType
 	)
 
 	switch arch {
 	case ArchAMD64:
 		qemuBin = "qemu-system-x86_64"
 		machine = "q35"
-		transport = qemu.TransportTypePCI
+		transportType = qemu.TransportTypePCI
 	case ArchARM64:
 		qemuBin = "qemu-system-aarch64"
 		machine = "virt"
-		transport = qemu.TransportTypeMMIO
+		transportType = qemu.TransportTypeMMIO
 	default:
 		return Args{}, fmt.Errorf("arch [%s]: %w", arch, errors.ErrUnsupported)
 	}
 
 	args := Args{
 		QemuArgs: QemuArgs{
-			QemuBin:   qemuBin,
-			Machine:   machine,
-			Transport: TransportType{transport},
-			CPU:       cpuDefault,
+			QemuBin:       qemuBin,
+			Machine:       machine,
+			TransportType: transportType,
+			CPU:           cpuDefault,
 			Memory: LimitedUintFlag{
 				memDefault,
 				memMin,
@@ -136,10 +136,10 @@ func (a *Args) newFlagset(self string) *flag.FlagSet {
 	)
 
 	fs.TextVar(
-		&a.Transport,
+		&a.TransportType,
 		"transport",
-		a.Transport,
-		"io transport type: isa/0, pci/1, mmio/2",
+		a.TransportType,
+		"io transport type: isa, pci, mmio",
 	)
 
 	fs.BoolVar(

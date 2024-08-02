@@ -46,8 +46,8 @@ func TestCommmandAddExtraFile(t *testing.T) {
 	d1 := s.AddConsole("test")
 	d2 := s.AddConsole("real")
 
-	assert.Equal(t, "ttyS1", d1)
-	assert.Equal(t, "ttyS2", d2)
+	assert.Equal(t, "hvc1", d1)
+	assert.Equal(t, "hvc2", d2)
 	assert.Equal(t, []string{"test", "real"}, s.AdditionalConsoles)
 }
 
@@ -84,7 +84,7 @@ func TestProcessGoTestFlags(t *testing.T) {
 			expectedArgs: []string{
 				"-test.paniconexit0",
 				"-test.gocoverdir=/tmp",
-				"-test.coverprofile=/dev/ttyS1",
+				"-test.coverprofile=/dev/hvc1",
 			},
 			expectedFiles: []string{
 				"cover.out",
@@ -103,11 +103,11 @@ func TestProcessGoTestFlags(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"-test.paniconexit0",
-				"-test.blockprofile=/dev/ttyS1",
-				"-test.cpuprofile=/dev/ttyS2",
-				"-test.memprofile=/dev/ttyS3",
-				"-test.mutexprofile=/dev/ttyS4",
-				"-test.trace=/dev/ttyS5",
+				"-test.blockprofile=/dev/hvc1",
+				"-test.cpuprofile=/dev/hvc2",
+				"-test.memprofile=/dev/hvc3",
+				"-test.mutexprofile=/dev/hvc4",
+				"-test.trace=/dev/hvc5",
 				"-test.outputdir=/tmp",
 			},
 			expectedFiles: []string{

@@ -2,25 +2,26 @@
 //
 // SPDX-License-Identifier: MIT
 
-package internal
+package internal_test
 
 import (
 	"io"
 	"testing"
 
+	"github.com/aibor/virtrun/internal"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestArgsParseArgs(t *testing.T) {
-	absBinPath, err := AbsoluteFilePath("bin.test")
+	absBinPath, err := internal.AbsoluteFilePath("bin.test")
 	require.NoError(t, err)
 
 	tests := []struct {
 		name     string
 		args     []string
-		expected Args
+		expected internal.Args
 		errMsg   string
 	}{
 		{
@@ -69,11 +70,11 @@ func TestArgsParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expected: Args{
-				InitramfsArgs: InitramfsArgs{
+			expected: internal.Args{
+				InitramfsArgs: internal.InitramfsArgs{
 					Binary: absBinPath,
 				},
-				QemuArgs: QemuArgs{
+				QemuArgs: internal.QemuArgs{
 					Kernel: "/boot/this",
 					InitArgs: []string{
 						"-test.paniconexit0",
@@ -104,8 +105,8 @@ func TestArgsParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expected: Args{
-				InitramfsArgs: InitramfsArgs{
+			expected: internal.Args{
+				InitramfsArgs: internal.InitramfsArgs{
 					Binary: absBinPath,
 					Files: []string{
 						"/file2",
@@ -114,14 +115,14 @@ func TestArgsParseArgs(t *testing.T) {
 					Standalone:    true,
 					KeepInitramfs: true,
 				},
-				QemuArgs: QemuArgs{
+				QemuArgs: internal.QemuArgs{
 					Kernel:        "/boot/this",
 					CPU:           "host",
 					Machine:       "pc",
 					TransportType: qemu.TransportTypeMMIO,
-					Memory:        LimitedUintFlag{Value: 269},
+					Memory:        internal.LimitedUintFlag{Value: 269},
 					NoKVM:         true,
-					SMP:           LimitedUintFlag{Value: 7},
+					SMP:           internal.LimitedUintFlag{Value: 7},
 					InitArgs: []string{
 						"-test.paniconexit0",
 						"-test.v=true",
@@ -142,11 +143,11 @@ func TestArgsParseArgs(t *testing.T) {
 				"-x",
 				"-standalone",
 			},
-			expected: Args{
-				InitramfsArgs: InitramfsArgs{
+			expected: internal.Args{
+				InitramfsArgs: internal.InitramfsArgs{
 					Binary: absBinPath,
 				},
-				QemuArgs: QemuArgs{
+				QemuArgs: internal.QemuArgs{
 					Kernel: "/boot/this",
 					InitArgs: []string{
 						"-test.paniconexit0",
@@ -161,7 +162,7 @@ func TestArgsParseArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := Args{}
+			args := internal.Args{}
 
 			err := args.ParseArgs("self", tt.args, io.Discard)
 

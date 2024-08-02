@@ -6,94 +6,137 @@ package qemu
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 )
 
-// ConsoleProcessor is used to process input from a serial console and
-// write it into a file.
-type ConsoleProcessor struct {
-	WritePipe *os.File
-	readPipe  io.ReadCloser
-	output    io.WriteCloser
-	ran       bool
+type outputProcessor func() error
+
+// RCFmt is the format string for communicating the test results
+//
+// It is parsed in the qemu wrapper. Not present in the output if the test
+// binary panicked.
+const RCFmt = "INIT_RC: %d"
+
+var (
+	panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
+	oomRE   = regexp.MustCompile(`^\[[0-9. ]+\] Out of memory: `)
+)
+
+// parseStdout returns an [outputProcessor] that parses stdout from the guest.
+//
+// It detects kernel panics, OOM messages and most importantly it detects the
+// exit code communicated by the guest via stdout. The processor stops when
+// the src is closed. It returns a [CommandError] with Guest flag set if either
+// an error is detected or the guest communicated a non zero exit code.
+func parseStdout(dst io.Writer, src io.Reader, verbose bool) outputProcessor {
+	return func() error {
+		var exitCode int
+
+		// guestErr is unset once an exit code is found in the output stream.
+		guestErr := ErrGuestNoExitCodeFound
+
+		scanner := bufio.NewScanner(src)
+		for scanner.Scan() {
+			line := scanner.Text()
+
+			// Parse the output. Keep going after a match has been found, so
+			// the following lines are printed as well and enhance the context
+			// information in case of kernel error messages.
+			switch {
+			case oomRE.MatchString(line):
+				guestErr = ErrGuestOom
+			case panicRE.MatchString(line):
+				guestErr = ErrGuestPanic
+			case guestErr == ErrGuestNoExitCodeFound: //nolint:errorlint
+				_, err := fmt.Sscanf(line, RCFmt, &exitCode)
+				if err != nil {
+					break
+				}
+
+				guestErr = nil
+				if exitCode != 0 {
+					guestErr = ErrGuestNonZeroExitCode
+				}
+
+				// Skip line printing once the init exit code has been found
+				// unless the verbose flag is set.
+				if !verbose {
+					dst = nil
+				}
+			}
+
+			err := writeLn(dst, scanner.Bytes())
+			if err != nil {
+				return err
+			}
+		}
+
+		if scanner.Err() != nil {
+			return scanner.Err()
+		}
+
+		return wrapGuestError(guestErr, exitCode)
+	}
 }
 
-type ConsoleProcessors []*ConsoleProcessor
-
-// Close closes all running processors.
-func (p *ConsoleProcessors) Close() error {
-	errs := make([]error, 0)
-
-	for _, p := range *p {
-		errs = append(errs, p.Close())
+func wrapGuestError(err error, exitCode int) error {
+	if err == nil {
+		return nil
 	}
 
-	return errors.Join(errs...)
+	return &CommandError{
+		Guest:    true,
+		ExitCode: exitCode,
+		Err:      err,
+	}
 }
 
-// NewConsoleProcessor creates a new consoleProcessor and its required pipes.
-// It also opens and truncates or creates the output file. Call
-// [ConsoleProcessor.Close] in order to clean up the file descriptors after use.
-func NewConsoleProcessor(output io.WriteCloser) (*ConsoleProcessor, error) {
+// scrubCR creates a simple [outputProcessor] that just sanitizes line breaks.
+//
+// It returns the processor and a write pipe as *os.File. The caller is
+// responsible to close the writePipe. This terminates the processor.
+func scrubCR(dst io.Writer) (outputProcessor, *os.File, error) {
 	readPipe, writePipe, err := os.Pipe()
 	if err != nil {
-		return nil, fmt.Errorf("pipe: %w", err)
+		return nil, nil, fmt.Errorf("pipe: %w", err)
 	}
 
-	processor := &ConsoleProcessor{
-		WritePipe: writePipe,
-		readPipe:  readPipe,
-		output:    output,
-	}
+	processor := func() error {
+		defer readPipe.Close()
 
-	return processor, nil
-}
-
-// Close closes the file descriptors.
-func (p *ConsoleProcessor) Close() error {
-	var errs []error
-
-	errs = append(errs, p.WritePipe.Close())
-	if !p.ran {
-		errs = append(errs, p.readPipe.Close())
-		errs = append(errs, p.output.Close())
-	}
-
-	return errors.Join(errs...)
-}
-
-// Run process the input. It blocks and returns once [io.EOF] is received,
-// which happens when [ConsoleProcessor.Close] is called.
-func (p *ConsoleProcessor) Run() error {
-	defer p.readPipe.Close()
-	p.ran = true
-
-	scanner := bufio.NewScanner(p.readPipe)
-	for scanner.Scan() {
-		_, err := p.output.Write(append(scanner.Bytes(), byte('\n')))
-		if err != nil {
-			return fmt.Errorf("serial processor run: %w", err)
+		// Carriage returns are removed by [bufio.ScanLines].
+		scanner := bufio.NewScanner(readPipe)
+		for scanner.Scan() {
+			err := writeLn(dst, scanner.Bytes())
+			if err != nil {
+				return err
+			}
 		}
+
+		return scanner.Err()
+	}
+
+	return processor, writePipe, nil
+}
+
+func writeLn(dst io.Writer, data []byte) error {
+	// If the caller did not pass any output writer, discard it.
+	if dst == nil {
+		return nil
+	}
+
+	_, err := dst.Write(data)
+	if err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+
+	_, err = dst.Write([]byte("\n"))
+	if err != nil {
+		return fmt.Errorf("write: %w", err)
 	}
 
 	return nil
-}
-
-func SetupConsoleProcessors(consoles []io.WriteCloser) (ConsoleProcessors, error) {
-	// Collect processors so they can be easily closed.
-	processors := make([]*ConsoleProcessor, 0)
-
-	for _, console := range consoles {
-		processor, err := NewConsoleProcessor(console)
-		if err != nil {
-			return nil, fmt.Errorf("create processor: %w", err)
-		}
-
-		processors = append(processors, processor)
-	}
-
-	return processors, nil
 }

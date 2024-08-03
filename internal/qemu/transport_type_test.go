@@ -12,6 +12,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestCommmandConsoleDeviceName(t *testing.T) {
+	tests := []struct {
+		id            uint8
+		transportType qemu.TransportType
+		expect        string
+	}{
+		{
+			id:            5,
+			transportType: qemu.TransportTypeISA,
+			expect:        "ttyS5",
+		},
+		{
+			id:            3,
+			transportType: qemu.TransportTypePCI,
+			expect:        "hvc3",
+		},
+		{
+			id:            1,
+			transportType: qemu.TransportTypeMMIO,
+			expect:        "hvc1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.expect, func(t *testing.T) {
+			assert.Equal(t, tt.expect, tt.transportType.ConsoleDeviceName(tt.id))
+		})
+	}
+}
+
 func TestTransportType_MarshalText(t *testing.T) {
 	tests := []struct {
 		input       qemu.TransportType
@@ -77,33 +106,6 @@ func TestTransportType_UnmarshalText(t *testing.T) {
 			err := actual.UnmarshalText([]byte(tt.input))
 			require.ErrorIs(t, err, tt.expectedErr)
 
-			assert.Equal(t, tt.expected, actual)
-		})
-	}
-}
-
-func TestTransportType_ConsoleDeviceName(t *testing.T) {
-	tests := []struct {
-		input    qemu.TransportType
-		expected string
-	}{
-		{
-			input:    qemu.TransportTypeISA,
-			expected: "ttyS1",
-		},
-		{
-			input:    qemu.TransportTypePCI,
-			expected: "hvc1",
-		},
-		{
-			input:    qemu.TransportTypeMMIO,
-			expected: "hvc1",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.input), func(t *testing.T) {
-			actual := tt.input.ConsoleDeviceName(1)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}

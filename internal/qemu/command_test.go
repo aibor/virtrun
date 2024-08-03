@@ -11,36 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCommmandConsoleDeviceName(t *testing.T) {
-	tests := []struct {
-		id        uint8
-		transport qemu.TransportType
-		console   string
-	}{
-		{
-			id:        5,
-			transport: qemu.TransportTypeISA,
-			console:   "ttyS5",
-		},
-		{
-			id:        3,
-			transport: qemu.TransportTypePCI,
-			console:   "hvc3",
-		},
-		{
-			id:        1,
-			transport: qemu.TransportTypeMMIO,
-			console:   "hvc1",
-		},
-	}
-	for _, tt := range tests {
-		s := qemu.Command{
-			TransportType: tt.transport,
-		}
-		assert.Equal(t, tt.console, s.TransportType.ConsoleDeviceName(tt.id))
-	}
-}
-
 func TestCommmandAddExtraFile(t *testing.T) {
 	s := qemu.Command{}
 	d1 := s.AddConsole("test")

@@ -13,32 +13,46 @@ import (
 )
 
 func TestBuildArgumentStrings(t *testing.T) {
-	t.Run("builds", func(t *testing.T) {
-		a := []qemu.Argument{
-			qemu.UniqueArg("kernel", "vmlinuz"),
-			qemu.UniqueArg("initrd", "boot"),
-			qemu.UniqueArg("yes"),
-			qemu.RepeatableArg("more", "a"),
-			qemu.RepeatableArg("more", "b"),
-		}
-		e := []string{
-			"-kernel", "vmlinuz",
-			"-initrd", "boot",
-			"-yes",
-			"-more", "a",
-			"-more", "b",
-		}
-		b, err := qemu.BuildArgumentStrings(a)
-		require.NoError(t, err)
-		assert.Equal(t, e, b)
-	})
+	tests := []struct {
+		name         string
+		args         []qemu.Argument
+		expect       []string
+		requireError require.ErrorAssertionFunc
+		assert       assert.ComparisonAssertionFunc
+	}{
+		{
+			name: "builds",
+			args: []qemu.Argument{
+				qemu.UniqueArg("kernel", "vmlinuz"),
+				qemu.UniqueArg("initrd", "boot"),
+				qemu.UniqueArg("yes"),
+				qemu.RepeatableArg("more", "a"),
+				qemu.RepeatableArg("more", "b"),
+			},
+			expect: []string{
+				"-kernel", "vmlinuz",
+				"-initrd", "boot",
+				"-yes",
+				"-more", "a",
+				"-more", "b",
+			},
+			requireError: require.NoError,
+		},
+		{
+			name: "collision",
+			args: []qemu.Argument{
+				qemu.UniqueArg("kernel", "vmlinuz"),
+				qemu.UniqueArg("kernel", "bsd"),
+			},
+			requireError: require.Error,
+		},
+	}
 
-	t.Run("collision", func(t *testing.T) {
-		a := []qemu.Argument{
-			qemu.UniqueArg("kernel", "vmlinuz"),
-			qemu.UniqueArg("kernel", "bsd"),
-		}
-		_, err := qemu.BuildArgumentStrings(a)
-		assert.Error(t, err)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := qemu.BuildArgumentStrings(tt.args)
+			tt.requireError(t, err)
+			assert.Equal(t, tt.expect, actual)
+		})
+	}
 }

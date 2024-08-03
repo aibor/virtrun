@@ -8,122 +8,110 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCommandArgs(t *testing.T) {
-	t.Run("yes-kvm", func(t *testing.T) {
-		cmd := Command{}
-		args := cmd.Args()
-		assert.Contains(t, args, UniqueArg("enable-kvm"))
-	})
-
-	t.Run("no-kvm", func(t *testing.T) {
-		cmd := Command{
-			NoKVM: true,
-		}
-		args := cmd.Args()
-		assert.NotContains(t, args, UniqueArg("enable-kvm"))
-	})
-
-	t.Run("yes-verbose", func(t *testing.T) {
-		cmd := Command{
-			Verbose: true,
-		}
-		args := cmd.Args()
-		assert.NotContains(t, args[len(args)-1].Value(), "quiet")
-	})
-
-	t.Run("no-verbose", func(t *testing.T) {
-		cmd := Command{}
-		args := cmd.Args()
-		assert.Contains(t, args[len(args)-1].Value(), "quiet")
-	})
-
-	t.Run("serial files virtio-mmio", func(t *testing.T) {
-		cmd := Command{
-			AdditionalConsoles: []string{
-				"/output/file1",
-				"/output/file2",
+	tests := []struct {
+		name   string
+		cmd    Command
+		expect any
+		assert assert.ComparisonAssertionFunc
+	}{
+		{
+			name: "machine params",
+			cmd: Command{
+				Machine: "pc4.2",
+				CPU:     "8086",
+				SMP:     23,
+				Memory:  269,
 			},
-			TransportType: TransportTypeMMIO,
-		}
-
-		expected := []Argument{
-			RepeatableArg("chardev", "file,id=vcon1,path=/dev/fd/1"),
-			RepeatableArg("chardev", "file,id=vcon3,path=/dev/fd/3"),
-			RepeatableArg("chardev", "file,id=vcon4,path=/dev/fd/4"),
-		}
-
-		found := 0
-
-		for _, a := range cmd.Args() {
-			if a.Name() != "chardev" {
-				continue
-			}
-
-			if assert.Less(t, found, len(expected), "expected serial files already consumed") {
-				assert.Equal(t, expected[found], a)
-			}
-
-			found++
-		}
-
-		assert.Equal(t, len(expected), found, "all expected serial files should have been found")
-	})
-
-	t.Run("serial files isa-pci", func(t *testing.T) {
-		cmd := Command{
-			AdditionalConsoles: []string{
-				"/output/file1",
-				"/output/file2",
+			expect: []Argument{
+				UniqueArg("machine", "pc4.2"),
+				UniqueArg("cpu", "8086"),
+				UniqueArg("smp", "23"),
+				UniqueArg("m", "269"),
 			},
-			TransportType: TransportTypeISA,
-		}
-
-		expected := []Argument{
-			RepeatableArg("serial", "file:/dev/fd/1"),
-			RepeatableArg("serial", "file:/dev/fd/3"),
-			RepeatableArg("serial", "file:/dev/fd/4"),
-		}
-
-		found := 0
-
-		for _, a := range cmd.Args() {
-			if a.Name() != "serial" {
-				continue
-			}
-
-			if assert.Less(t, found, len(expected), "expected serial files already consumed") {
-				assert.Equal(t, expected[found], a)
-			}
-
-			found++
-		}
-
-		assert.Equal(t, len(expected), found, "all expected serial files should have been found")
-	})
-
-	t.Run("init args", func(t *testing.T) {
-		cmd := Command{
-			InitArgs: []string{
-				"first",
-				"second",
-				"third",
+			assert: assert.Subset,
+		},
+		{
+			name:   "yes-kvm",
+			cmd:    Command{},
+			expect: UniqueArg("enable-kvm"),
+			assert: assert.Contains,
+		},
+		{
+			name: "no-kvm",
+			cmd: Command{
+				NoKVM: true,
 			},
-		}
+			expect: UniqueArg("enable-kvm"),
+			assert: assert.NotContains,
+		},
 
-		expected := " -- first second third"
+		{
+			name: "yes-verbose",
+			cmd: Command{
+				Verbose: true,
+			},
+			expect: "quiet",
+			assert: ArgumentValueAssertionFunc("append", assert.NotContains),
+		},
 
-		var appendValue string
+		{
+			name:   "no-verbose",
+			cmd:    Command{},
+			expect: "quiet",
+			assert: ArgumentValueAssertionFunc("append", assert.Contains),
+		},
+		{
+			name: "init args",
+			cmd: Command{
+				InitArgs: []string{
+					"first",
+					"second",
+					"third",
+				},
+			},
+			expect: " -- first second third",
+			assert: ArgumentValueAssertionFunc("append", assert.Contains),
+		},
+		{
+			name: "serial files virtio-mmio",
+			cmd: Command{
+				AdditionalConsoles: []string{
+					"/output/file1",
+					"/output/file2",
+				},
+				TransportType: TransportTypeMMIO,
+			},
+			expect: []Argument{
+				RepeatableArg("chardev", "file,id=vcon1,path=/dev/fd/1"),
+				RepeatableArg("chardev", "file,id=vcon3,path=/dev/fd/3"),
+				RepeatableArg("chardev", "file,id=vcon4,path=/dev/fd/4"),
+			},
+			assert: assert.Subset,
+		},
+		{
+			name: "serial files isa-pci",
+			cmd: Command{
+				AdditionalConsoles: []string{
+					"/output/file1",
+					"/output/file2",
+				},
+				TransportType: TransportTypeISA,
+			},
+			expect: []Argument{
+				RepeatableArg("serial", "file:/dev/fd/1"),
+				RepeatableArg("serial", "file:/dev/fd/3"),
+				RepeatableArg("serial", "file:/dev/fd/4"),
+			},
+			assert: assert.Subset,
+		},
+	}
 
-		for _, a := range cmd.Args() {
-			if a.Name() == "append" {
-				appendValue = a.Value()
-			}
-		}
-
-		require.NotEmpty(t, appendValue, "append value must be found")
-		assert.Contains(t, appendValue, expected, "append value should contain init args")
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.assert(t, tt.cmd.Args(), tt.expect)
+		})
+	}
 }

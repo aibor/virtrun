@@ -30,52 +30,47 @@ func TestArgsUniqueName(t *testing.T) {
 
 func TestArgsEqual(t *testing.T) {
 	tests := []struct {
-		name  string
-		a     Argument
-		b     Argument
-		equal bool
+		name        string
+		a           Argument
+		b           Argument
+		assertEqual assert.BoolAssertionFunc
 	}{
 		{
-			name:  "both empty",
-			a:     Argument{},
-			b:     Argument{},
-			equal: true,
+			name:        "both empty",
+			a:           Argument{},
+			b:           Argument{},
+			assertEqual: assert.True,
 		},
 		{
-			name:  "one empty",
-			a:     Argument{name: "t"},
-			b:     Argument{},
-			equal: false,
+			name:        "one empty",
+			a:           Argument{name: "t"},
+			b:           Argument{},
+			assertEqual: assert.False,
 		},
 		{
-			name:  "same name",
-			a:     Argument{name: "t", value: "5"},
-			b:     Argument{name: "t", value: "6"},
-			equal: true,
+			name:        "same name",
+			a:           Argument{name: "t", value: "5"},
+			b:           Argument{name: "t", value: "6"},
+			assertEqual: assert.True,
 		},
 		{
-			name:  "same non-unique name",
-			a:     Argument{name: "t", value: "5", nonUniqueName: true},
-			b:     Argument{name: "t", value: "6", nonUniqueName: true},
-			equal: false,
+			name:        "same non-unique name",
+			a:           Argument{name: "t", value: "5", nonUniqueName: true},
+			b:           Argument{name: "t", value: "6", nonUniqueName: true},
+			assertEqual: assert.False,
 		},
 		{
-			name:  "same non-unique name and value",
-			a:     Argument{name: "t", value: "5", nonUniqueName: true},
-			b:     Argument{name: "t", value: "5", nonUniqueName: true},
-			equal: true,
+			name:        "same non-unique name and value",
+			a:           Argument{name: "t", value: "5", nonUniqueName: true},
+			b:           Argument{name: "t", value: "5", nonUniqueName: true},
+			assertEqual: assert.True,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.equal {
-				assert.True(t, tt.a.Equal(tt.b), "a")
-				assert.True(t, tt.b.Equal(tt.a), "b")
-			} else {
-				assert.False(t, tt.a.Equal(tt.b), "a")
-				assert.False(t, tt.b.Equal(tt.a), "b")
-			}
+			tt.assertEqual(t, tt.a.Equal(tt.b), "a")
+			tt.assertEqual(t, tt.b.Equal(tt.a), "b")
 		})
 	}
 }

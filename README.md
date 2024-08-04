@@ -16,15 +16,19 @@ isolated system.
 The package uses itself for testing, so see the guest tests in
 [testing/guest_test.go](testing/guest_test.go) for a real life example.
 
+Supported architectures:
+* amd64 (x86_64)
+* arm64 (aarch64)
+* riscv64
 
 ## Requirements
 
 ### QEMU
 
 The binaries for running QEMU for the architecture matching the kernel and
-binary you want to use, either `qemu-system-x86_64` or `qemu-system-aarch64`.
-If not in `$PATH`, you can specify the path to the binary with the flag
-`-qemu-bin`.
+binary you want to use, either `qemu-system-x86_64`, `qemu-system-aarch64` or 
+`qemu-system-riscv64`. If not in `$PATH`, you can specify the path to the
+binary with the flag `-qemu-bin`.
 
 ### Linux Kernel
 
@@ -37,9 +41,10 @@ The absolute path to the kernel must be given by flag `-kernel`. Make sure the
 kernel matches the architecture of your binaries and the QEMU binary.
 
 By default, the most likely correct IO transport is chosen automatically. It
-can be set manually with the flag `-transport`. With x86 `pci` is usually the
-right now. With arm64 it is `mmio`. `isa` can be tried as a fallback, in case
-there is no output ("Error: run: guest did not print init exit code").
+can be set manually with the flag `-transport`. With amd64 `pci` is usually
+the right one. With arm64 and riscv64 it is `mmio`. `isa` can be tried as a
+fallback, in case there is no output ("Error: run: guest did not print init
+exit code").
 
 The Ubuntu kernels work out of the box and have all necessary features compiled
 in.
@@ -148,7 +153,7 @@ $ export VIRTRUN_ARGS="-kernel /boot/vmlinuz-linux"
 $ go test -exec virtrun .
 ```
 
-Use arm64 kernel on a amd64 host:
+Use arm64 kernel on an amd64 host:
 
 ```console
 $ export VIRTRUN_ARGS="-kernel /absolute/path/to/vmlinuz-arm64"

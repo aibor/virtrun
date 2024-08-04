@@ -135,6 +135,7 @@ func TestIntegration(t *testing.T) {
 			args: []string{
 				verboseFlag(),
 				"-test.gocoverdir=/tmp/",
+				"-test.coverprofile=/tmp/cover.out",
 			},
 			requireErr: require.NoError,
 		},

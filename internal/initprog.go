@@ -20,7 +20,7 @@ import (
 
 // Embed pre-compiled init programs explicitly to trigger build time errors.
 //
-//go:embed bin/amd64 bin/arm64
+//go:embed bin/*
 var _inits embed.FS
 
 // initProgFor returns the pre-built init binary for the arch. The init binary

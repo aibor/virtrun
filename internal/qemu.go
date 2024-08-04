@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/sysinit"
 )
 
 type QemuArgs struct {
@@ -39,6 +40,7 @@ func NewQemuCommand(args QemuArgs, initramfsPath string) (*qemu.Command, error) 
 		ExtraArgs:     args.ExtraArgs,
 		NoKVM:         args.NoKVM,
 		Verbose:       args.Verbose,
+		ExitCodeFmt:   sysinit.ExitCodeFmt,
 	}
 
 	// In order to be useful with "go test -exec", rewrite the file based flags

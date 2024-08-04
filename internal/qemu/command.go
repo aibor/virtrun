@@ -57,8 +57,12 @@ type Command struct {
 	// Arguments to pass to the init binary.
 	InitArgs []string
 	// Print qemu command before running, increase guest kernel logging and
-	// do not stop printing stdout when our RC string is found.
+	// do not stop printing stdout when our exit code string is found.
 	Verbose bool
+	// ExitCodeFmt defines the format of the line communicating the exit code
+	// from the guest. It must contain exactly one integer verb
+	// (probably "%d").
+	ExitCodeFmt string
 }
 
 // AddConsole adds an additional file to the QEMU command. This will be
@@ -251,11 +255,17 @@ func (c *Command) newCmd(ctx context.Context, stdout, stderr io.Writer) (*comman
 		return nil, fmt.Errorf("stdout pipe: %w", err)
 	}
 
+	if c.ExitCodeFmt == "" {
+		return nil, &ArgumentError{"ExitDodeFmt must not be empty"}
+	}
+
 	// Process output until the outPipe closes which happens automatically
 	// at program termination. Error should be reported, but should not
 	// terminate immediately. There might be more severe errors that following,
 	// like process execution or persistent IO errors.
-	cmd.processors = []outputProcessor{parseStdout(stdout, outPipe, c.Verbose)}
+	cmd.processors = []outputProcessor{
+		parseStdout(stdout, outPipe, c.ExitCodeFmt, c.Verbose),
+	}
 
 	// Create console output processors that fix line endings by stripping "\r".
 	// Append the write end of the console processor pipe as extra file, so it
@@ -294,7 +304,7 @@ func (c *command) close() {
 // Run the QEMU command with the given context.
 //
 // The final QEMU command is constructed, console processors are setup and the
-// command is executed. A return code is returned. It can only be 0 if the
+// command is executed. An exit code is returned. It can only be 0 if the
 // guest system correctly communicated a 0 value via stdout. In any other case,
 // a non 0 value is returned. If no error is returned, the value was received
 // by the guest system.

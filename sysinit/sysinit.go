@@ -10,8 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
-
-	"github.com/aibor/virtrun/internal/qemu"
 )
 
 const sysFileMode = 0o600
@@ -19,30 +17,6 @@ const sysFileMode = 0o600
 // ErrNotPidOne may be returned if the process is expected to be run as PID 1
 // but is not.
 var ErrNotPidOne = errors.New("process does not have ID 1")
-
-// PrintRC prints the magic string communicating the return code of
-// the tests.
-func PrintRC(ret int) {
-	// Ensure newlines before and after to avoid other writes messing up the
-	// rc communication as much as possible.
-	msgFmt := "\n" + qemu.RCFmt + "\n"
-	fmt.Fprintf(os.Stdout, msgFmt, ret)
-}
-
-// PrintErrorAndRC examines the given error, prints it and sets the return code
-// to the given errRC. If there is no error, the given rc is printed.
-func PrintErrorAndRC(err error, errRC, rc int) {
-	// Always print the error before printing the RC, since output
-	// processing stops once RC line is found and we want to make sure the
-	// error can be seen by the user.
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		// Always return a non zero return code in case of error.
-		rc = errRC
-	}
-
-	PrintRC(rc)
-}
 
 // IsPidOne returns true if the running process has PID 1.
 func IsPidOne() bool {
@@ -109,34 +83,43 @@ func DefaultConfig() Config {
 // [os.Exit] itself since the program would not be able to ensure a correct
 // system termination.
 //
-// After that, a return code is sent to stdout for consumption by the host
-// process. The return code returned by the function is used, unless it
-// returned with an error. If the error is an [exec.ExitError], it is
-// parsed and its return code is used. Otherwise the return code is 127 in case
-// it was never set or 126 in case there was an error.
+// After that, an exit code is sent to stdout for consumption by the host
+// process. The exit code returned by the function is used, unless it returned
+// with an error. If the error is an [exec.ExitError], it is parsed and its
+// exit code is used. Otherwise the exit code is 127 in case it was never set
+// or 126 in case there was an error.
 func Run(cfg Config, fn func() (int, error)) error {
 	if !IsPidOne() {
 		return ErrNotPidOne
 	}
 
-	// From here on we can assume we are a systems's init program. Termination
+	// From here on we can assume we are a system's init program. Termination
 	// will lead to system shutdown, or kernel panic, if we do not shutdown
 	// correctly.
 	defer Poweroff()
 
 	var (
-		// Set fallthrough rc to non zero value, so it must be set to zero
-		// explicitly by the callers function later.
-		rc      = 127 // Fallthrough return code.
-		errRC   = 126 // Return code that is used in case of errors.
-		err     error
-		exitErr *exec.ExitError
+		// Set fall through exit code to non zero value, so it must be set to
+		// zero explicitly by the callers function later.
+		exitCode    = 127 // Fall through exit code.
+		errExitCode = 126 // Exit code that is used in case of errors.
+		err         error
+		exitErr     *exec.ExitError
 	)
 
-	// Setup the error and return code printing so it is always printed. In
+	// Setup the error and exit code printing so it is always printed. In
 	// case of setup errors, the failure is communicated properly as well.
 	defer func() {
-		PrintErrorAndRC(err, errRC, rc)
+		if err != nil {
+			// Always print the error before printing the exit code, since
+			// output processing stops once exit code line is found and we want
+			// to make sure the error can be seen by the user.
+			PrintError(os.Stderr, err)
+			// Always return a non zero exit code in case of error.
+			exitCode = errExitCode
+		}
+
+		PrintExitCode(os.Stdout, exitCode)
 	}()
 
 	// Setup the system.
@@ -160,11 +143,11 @@ func Run(cfg Config, fn func() (int, error)) error {
 		return err
 	}
 
-	// Run callers function. The returned rc is irrelevant if any error is
-	// returned, because the deferred error handling will override it.
-	rc, err = fn()
+	// Run callers function. The returned exit code is irrelevant if any error
+	// is returned, because the deferred error handling will override it.
+	exitCode, err = fn()
 	if errors.As(err, &exitErr) {
-		rc = exitErr.ExitCode()
+		exitCode = exitErr.ExitCode()
 		err = nil
 	}
 

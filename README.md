@@ -39,7 +39,7 @@ kernel matches the architecture of your binaries and the QEMU binary.
 By default, the most likely correct IO transport is chosen automatically. It
 can be set manually with the flag `-transport`. With x86 `pci` is usually the
 right now. With arm64 it is `mmio`. `isa` can be tried as a fallback, in case
-there is no output ("Error: run: guest did not print init return code").
+there is no output ("Error: run: guest did not print init exit code").
 
 The Ubuntu kernels work out of the box and have all necessary features compiled
 in.
@@ -215,7 +215,7 @@ ones. See `sysinit.RunTests` for the steps it does.
 
 ## Internals
 
-### Return Code Communication
+### Exit Code Communication
 
 Virtrun wraps QEMU and runs an init program that runs and communicates its exit
 code via a defined formatted string on stdout that is parsed by the virtrun.

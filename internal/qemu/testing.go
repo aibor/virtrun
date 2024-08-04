@@ -24,7 +24,6 @@ func ArgumentValueAssertionFunc(
 			}
 
 			return assertion(t, arg.value, arg2, arg3...)
-
 		}
 
 		return assert.Fail(t, "Argument not found")

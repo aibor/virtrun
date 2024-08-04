@@ -116,34 +116,34 @@ func handleRunError(err error, errWriter io.Writer) int {
 		return 0
 	}
 
-	rc := -1
+	exitCode := -1
 
 	// ParseArgs already prints errors, so we just exit without an error.
 	if errors.Is(err, &internal.ParseArgsError{}) {
-		return rc
+		return exitCode
 	}
 
 	var qemuCmdErr *qemu.CommandError
 
 	if errors.As(err, &qemuCmdErr) {
 		if qemuCmdErr.ExitCode != 0 {
-			rc = qemuCmdErr.ExitCode
+			exitCode = qemuCmdErr.ExitCode
 		}
 	}
 
 	// Do not print the error in case the guest process ran successfully and
 	// the guest properly communicated a non-zero exit code.
 	if errors.Is(err, qemu.ErrGuestNonZeroExitCode) {
-		return rc
+		return exitCode
 	}
 
 	fmt.Fprintf(errWriter, "Error: %v\n", err)
 
-	return rc
+	return exitCode
 }
 
 func main() {
 	err := run()
-	rc := handleRunError(err, os.Stderr)
-	os.Exit(rc)
+	exitCode := handleRunError(err, os.Stderr)
+	os.Exit(exitCode)
 }

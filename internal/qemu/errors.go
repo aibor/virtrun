@@ -7,8 +7,9 @@ package qemu
 import "errors"
 
 var (
-	// ErrGuestNoExitCodeFound is returned if no exit code matching the [RCFmt]
-	// is printed by the guest and no other error is found.
+	// ErrGuestNoExitCodeFound is returned if no exit code matching the
+	// [Command.ExitCodeFmt] is printed by the guest and no other error is
+	// found.
 	ErrGuestNoExitCodeFound = errors.New("guest did not print init exit code")
 
 	// ErrGuestPanic is returned if a kernel panic occurred in the guest

@@ -19,8 +19,7 @@ func TestTestdata(t *testing.T) {
 	cmd := exec.Command("testdata/bin/main")
 	require.ErrorAs(t, cmd.Run(), &cmdErr)
 
-	// 73 is the return code of the test binary if everything is properly
-	// linked.
+	// 73 is the exit code of the test binary if everything is properly linked.
 	assert.Equal(t, 73, cmdErr.ExitCode())
 }
 

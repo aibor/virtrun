@@ -6,7 +6,6 @@ package sysinit
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"testing"
 )
@@ -22,12 +21,12 @@ func RunTests(m *testing.M, cfg Config) {
 		return m.Run(), nil
 	})
 
-	rc := 1
+	exitCode := 126
 	if errors.Is(err, ErrNotPidOne) {
-		rc = 127
+		exitCode = 127
 	}
 
-	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	PrintError(os.Stderr, err)
 
-	os.Exit(rc)
+	os.Exit(exitCode)
 }

@@ -8,7 +8,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 
@@ -35,13 +34,13 @@ func main() {
 		return 0, cmd.Run()
 	})
 	if err != nil {
-		rc := 126
+		exitCode := 126
 		if errors.Is(err, sysinit.ErrNotPidOne) {
-			rc = 127
+			exitCode = 127
 		}
 
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		sysinit.PrintError(os.Stderr, err)
 
-		os.Exit(rc)
+		os.Exit(exitCode)
 	}
 }

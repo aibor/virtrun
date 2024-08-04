@@ -12,18 +12,12 @@ import (
 	"regexp"
 )
 
-type outputProcessor func() error
-
-// RCFmt is the format string for communicating the test results
-//
-// It is parsed in the qemu wrapper. Not present in the output if the test
-// binary panicked.
-const RCFmt = "INIT_RC: %d"
-
 var (
 	panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
 	oomRE   = regexp.MustCompile(`^\[[0-9. ]+\] Out of memory: `)
 )
+
+type outputProcessor func() error
 
 // parseStdout returns an [outputProcessor] that parses stdout from the guest.
 //
@@ -31,7 +25,12 @@ var (
 // exit code communicated by the guest via stdout. The processor stops when
 // the src is closed. It returns a [CommandError] with Guest flag set if either
 // an error is detected or the guest communicated a non zero exit code.
-func parseStdout(dst io.Writer, src io.Reader, verbose bool) outputProcessor {
+func parseStdout(
+	dst io.Writer,
+	src io.Reader,
+	exitCodeFmt string,
+	verbose bool,
+) outputProcessor {
 	return func() error {
 		var exitCode int
 
@@ -51,7 +50,7 @@ func parseStdout(dst io.Writer, src io.Reader, verbose bool) outputProcessor {
 			case panicRE.MatchString(line):
 				guestErr = ErrGuestPanic
 			case guestErr == ErrGuestNoExitCodeFound: //nolint:errorlint
-				_, err := fmt.Sscanf(line, RCFmt, &exitCode)
+				_, err := fmt.Sscanf(line, exitCodeFmt, &exitCode)
 				if err != nil {
 					break
 				}

@@ -69,6 +69,8 @@ func TestScrubCR(t *testing.T) {
 }
 
 func TestParseExitCode(t *testing.T) {
+	exitCodeFmt := "exit code: %d"
+
 	tests := []struct {
 		name        string
 		verbose     bool
@@ -110,11 +112,11 @@ func TestParseExitCode(t *testing.T) {
 			expectedErr: ErrGuestPanic,
 		},
 		{
-			name:     "zero rc",
+			name:     "zero exit code",
 			exitCode: 0,
 			input: []string{
 				"something out",
-				fmt.Sprintf(RCFmt, 0),
+				fmt.Sprintf(exitCodeFmt, 0),
 				"more after",
 			},
 			expected: []string{
@@ -123,27 +125,27 @@ func TestParseExitCode(t *testing.T) {
 			},
 		},
 		{
-			name:     "zero rc verbose",
+			name:     "zero exit code verbose",
 			verbose:  true,
 			exitCode: 0,
 			input: []string{
 				"something out",
-				fmt.Sprintf(RCFmt, 0),
+				fmt.Sprintf(exitCodeFmt, 0),
 				"more after",
 			},
 			expected: []string{
 				"something out",
-				fmt.Sprintf(RCFmt, 0),
+				fmt.Sprintf(exitCodeFmt, 0),
 				"more after",
 				"",
 			},
 		},
 		{
-			name:     "non zero rc",
+			name:     "non zero exit code",
 			exitCode: 4,
 			input: []string{
 				"something out",
-				fmt.Sprintf(RCFmt, 4),
+				fmt.Sprintf(exitCodeFmt, 4),
 				"more after",
 			},
 			expected: []string{
@@ -153,24 +155,24 @@ func TestParseExitCode(t *testing.T) {
 			expectedErr: ErrGuestNonZeroExitCode,
 		},
 		{
-			name:     "non zero rc verbose",
+			name:     "non zero exit code verbose",
 			verbose:  true,
 			exitCode: 4,
 			input: []string{
 				"something out",
-				fmt.Sprintf(RCFmt, 4),
+				fmt.Sprintf(exitCodeFmt, 4),
 				"more after",
 			},
 			expected: []string{
 				"something out",
-				fmt.Sprintf(RCFmt, 4),
+				fmt.Sprintf(exitCodeFmt, 4),
 				"more after",
 				"",
 			},
 			expectedErr: ErrGuestNonZeroExitCode,
 		},
 		{
-			name: "no rc",
+			name: "no exit code",
 			input: []string{
 				"something out",
 				"more out",
@@ -190,19 +192,19 @@ func TestParseExitCode(t *testing.T) {
 
 			cmdOut := bytes.NewBufferString(strings.Join(tt.input, "\n"))
 
-			err := parseStdout(&stdOut, cmdOut, tt.verbose)()
+			err := parseStdout(&stdOut, cmdOut, exitCodeFmt, tt.verbose)()
 			require.ErrorIs(t, err, tt.expectedErr)
 
 			var (
-				cmdErr *CommandError
-				rc     int
+				cmdErr   *CommandError
+				exitCode int
 			)
 
 			if errors.As(err, &cmdErr) {
-				rc = cmdErr.ExitCode
+				exitCode = cmdErr.ExitCode
 			}
 
-			assert.Equal(t, tt.exitCode, rc)
+			assert.Equal(t, tt.exitCode, exitCode)
 			assert.Equal(t, tt.expected, strings.Split(stdOut.String(), "\n"))
 		})
 	}

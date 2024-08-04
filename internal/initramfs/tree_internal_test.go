@@ -13,12 +13,81 @@ import (
 )
 
 func TestTreeIsRoot(t *testing.T) {
-	for _, p := range []string{"", ".", "/", "//"} {
-		assert.True(t, isRoot(p), p)
+	tests := []struct {
+		name   string
+		path   string
+		assert assert.BoolAssertionFunc
+	}{
+		{
+			name:   "empty",
+			assert: assert.True,
+		},
+		{
+			name:   "dot",
+			path:   ".",
+			assert: assert.True,
+		},
+		{
+			name:   "dot with trailing slash",
+			path:   "./",
+			assert: assert.True,
+		},
+		{
+			name:   "double dot",
+			path:   "..",
+			assert: assert.True,
+		},
+		{
+			name:   "slash",
+			path:   "/",
+			assert: assert.True,
+		},
+		{
+			name:   "double slash",
+			path:   "//",
+			assert: assert.True,
+		},
+		{
+			name:   "hyphen",
+			path:   "-",
+			assert: assert.False,
+		},
+		{
+			name:   "underscore",
+			path:   "_",
+			assert: assert.False,
+		},
+		{
+			name:   "backslash",
+			path:   "\\",
+			assert: assert.False,
+		},
+		{
+			name:   "letter",
+			path:   "a",
+			assert: assert.False,
+		},
+		{
+			name:   "letter with trailing slash",
+			path:   "a/",
+			assert: assert.False,
+		},
+		{
+			name:   "subdir",
+			path:   "/dir",
+			assert: assert.False,
+		},
+		{
+			name:   "subdir with trailing slash",
+			path:   "/dir/",
+			assert: assert.False,
+		},
 	}
 
-	for _, p := range []string{"-", "_", "\\", "a", "/dir", "/d/"} {
-		assert.False(t, isRoot(p), p)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.assert(t, isRoot(tt.path))
+		})
 	}
 }
 
@@ -50,17 +119,33 @@ func TestTreeGetNode(t *testing.T) {
 		},
 	}
 
-	r, err := tree.GetNode("")
-	require.NoError(t, err)
-	assert.Equal(t, tree.root, r)
-
-	l, err := tree.GetNode(filepath.Join("dir", "leaf"))
-	require.NoError(t, err)
-	assert.Equal(t, &leafNode, l)
-
-	d, err := tree.GetNode("/dir")
-	require.NoError(t, err)
-	assert.Equal(t, &dirNode, d)
+	tests := []struct {
+		name   string
+		path   string
+		expect *TreeNode
+	}{
+		{
+			name:   "root",
+			expect: tree.root,
+		},
+		{
+			name:   "leaf node",
+			path:   filepath.Join("dir", "leaf"),
+			expect: &leafNode,
+		},
+		{
+			name:   "dir node",
+			path:   "/dir",
+			expect: &dirNode,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := tree.GetNode(tt.path)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expect, actual)
+		})
+	}
 }
 
 func TestTreeMkdir(t *testing.T) {

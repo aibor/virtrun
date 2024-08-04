@@ -19,7 +19,7 @@ type Tree struct {
 
 func isRoot(path string) bool {
 	switch filepath.Clean(path) {
-	case "", ".", string(filepath.Separator):
+	case "", ".", "..", string(filepath.Separator):
 		return true
 	default:
 		return false

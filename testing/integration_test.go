@@ -148,24 +148,24 @@ func TestIntegration(t *testing.T) {
 			binary, err := internal.AbsoluteFilePath(tt.bin)
 			require.NoError(t, err)
 
-			args, err := internal.NewArgs(KernelArch)
+			config, err := internal.NewConfig(KernelArch)
 			require.NoError(t, err)
 
-			args.Kernel = KernelPath
-			args.Verbose = Verbose
-			args.Binary = binary
-			args.Memory.Value = 128
-			args.Standalone = tt.standalone
-			args.InitArgs = tt.args
+			config.Qemu.Kernel = KernelPath
+			config.Qemu.Verbose = Verbose
+			config.Qemu.Memory.Value = 128
+			config.Qemu.InitArgs = tt.args
+			config.Initramfs.Binary = binary
+			config.Initramfs.StandaloneInit = tt.standalone
 
-			irfs, err := internal.NewInitramfsArchive(args.InitramfsArgs)
+			irfs, err := internal.NewInitramfsArchive(config.Initramfs)
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = irfs.Cleanup() })
 
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			t.Cleanup(cancel)
 
-			cmd, err := internal.NewQemuCommand(ctx, args.QemuArgs, irfs.Path)
+			cmd, err := internal.NewQemuCommand(ctx, config.Qemu, irfs.Path)
 			require.NoError(t, err)
 
 			t.Log(cmd.String())

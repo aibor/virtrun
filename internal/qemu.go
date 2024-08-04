@@ -12,8 +12,8 @@ import (
 	"github.com/aibor/virtrun/sysinit"
 )
 
-type QemuArgs struct {
-	QemuBin             string
+type QemuConfig struct {
+	Executable          string
 	Kernel              FilePath
 	Machine             string
 	CPU                 string
@@ -29,28 +29,28 @@ type QemuArgs struct {
 
 func NewQemuCommand(
 	ctx context.Context,
-	args QemuArgs,
+	cfg QemuConfig,
 	initramfsPath string,
 ) (*qemu.Command, error) {
 	spec := qemu.CommandSpec{
-		Executable:    args.QemuBin,
-		Kernel:        string(args.Kernel),
+		Executable:    cfg.Executable,
+		Kernel:        string(cfg.Kernel),
 		Initramfs:     initramfsPath,
-		Machine:       args.Machine,
-		CPU:           args.CPU,
-		Memory:        args.Memory.Value,
-		SMP:           args.SMP.Value,
-		TransportType: args.TransportType,
-		InitArgs:      args.InitArgs,
-		ExtraArgs:     args.ExtraArgs,
-		NoKVM:         args.NoKVM,
-		Verbose:       args.Verbose,
+		Machine:       cfg.Machine,
+		CPU:           cfg.CPU,
+		Memory:        cfg.Memory.Value,
+		SMP:           cfg.SMP.Value,
+		TransportType: cfg.TransportType,
+		InitArgs:      cfg.InitArgs,
+		ExtraArgs:     cfg.ExtraArgs,
+		NoKVM:         cfg.NoKVM,
+		Verbose:       cfg.Verbose,
 		ExitCodeFmt:   sysinit.ExitCodeFmt,
 	}
 
 	// In order to be useful with "go test -exec", rewrite the file based flags
 	// so the output can be passed from guest to kernel via consoles.
-	if !args.NoGoTestFlagRewrite {
+	if !cfg.NoGoTestFlagRewrite {
 		spec.ProcessGoTestFlags()
 	}
 

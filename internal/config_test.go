@@ -5,6 +5,7 @@
 package internal_test
 
 import (
+	"flag"
 	"io"
 	"testing"
 
@@ -14,43 +15,43 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestArgsParseArgs(t *testing.T) {
+func TestConfigParseArgs(t *testing.T) {
 	absBinPath, err := internal.AbsoluteFilePath("bin.test")
 	require.NoError(t, err)
 
 	tests := []struct {
-		name     string
-		args     []string
-		expected internal.Args
-		errMsg   string
+		name        string
+		args        []string
+		expected    internal.Config
+		expecterErr error
 	}{
 		{
 			name: "help",
 			args: []string{
 				"-help",
 			},
-			errMsg: "flag: help requested",
+			expecterErr: flag.ErrHelp,
 		},
 		{
 			name: "version",
 			args: []string{
 				"-version",
 			},
-			errMsg: "flag: help requested",
+			expecterErr: flag.ErrHelp,
 		},
 		{
 			name: "no kernel",
 			args: []string{
 				"bin.test",
 			},
-			errMsg: "no kernel given",
+			expecterErr: &internal.ParseArgsError{},
 		},
 		{
 			name: "no binary",
 			args: []string{
 				"-kernel=/boot/this",
 			},
-			errMsg: "no binary given",
+			expecterErr: &internal.ParseArgsError{},
 		},
 		{
 			name: "additional file is empty",
@@ -59,7 +60,7 @@ func TestArgsParseArgs(t *testing.T) {
 				"-addFile=",
 				"bin.test",
 			},
-			errMsg: "file path must not be empty",
+			expecterErr: &internal.ParseArgsError{},
 		},
 		{
 			name: "simple go test invocation",
@@ -70,11 +71,11 @@ func TestArgsParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expected: internal.Args{
-				InitramfsArgs: internal.InitramfsArgs{
+			expected: internal.Config{
+				Initramfs: internal.InitramfsConfig{
 					Binary: absBinPath,
 				},
-				QemuArgs: internal.QemuArgs{
+				Qemu: internal.QemuConfig{
 					Kernel: "/boot/this",
 					InitArgs: []string{
 						"-test.paniconexit0",
@@ -105,17 +106,17 @@ func TestArgsParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expected: internal.Args{
-				InitramfsArgs: internal.InitramfsArgs{
+			expected: internal.Config{
+				Initramfs: internal.InitramfsConfig{
 					Binary: absBinPath,
 					Files: []string{
 						"/file2",
 						"/dir/file3",
 					},
-					Standalone:    true,
-					KeepInitramfs: true,
+					StandaloneInit: true,
+					Keep:           true,
 				},
-				QemuArgs: internal.QemuArgs{
+				Qemu: internal.QemuConfig{
 					Kernel:        "/boot/this",
 					CPU:           "host",
 					Machine:       "pc",
@@ -143,11 +144,11 @@ func TestArgsParseArgs(t *testing.T) {
 				"-x",
 				"-standalone",
 			},
-			expected: internal.Args{
-				InitramfsArgs: internal.InitramfsArgs{
+			expected: internal.Config{
+				Initramfs: internal.InitramfsConfig{
 					Binary: absBinPath,
 				},
-				QemuArgs: internal.QemuArgs{
+				Qemu: internal.QemuConfig{
 					Kernel: "/boot/this",
 					InitArgs: []string{
 						"-test.paniconexit0",
@@ -162,17 +163,16 @@ func TestArgsParseArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := internal.Args{}
+			cfg := internal.Config{}
 
-			err := args.ParseArgs("self", tt.args, io.Discard)
+			err := cfg.ParseArgs("self", tt.args, io.Discard)
+			require.ErrorIs(t, err, tt.expecterErr)
 
-			if tt.errMsg != "" {
-				assert.ErrorContains(t, err, tt.errMsg)
+			if tt.expecterErr != nil {
 				return
 			}
 
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, args)
+			assert.Equal(t, tt.expected, cfg)
 		})
 	}
 }

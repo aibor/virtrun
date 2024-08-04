@@ -34,38 +34,38 @@ var (
 	date    = "unknown" //nolint:gochecknoglobals
 )
 
-type Args struct {
-	QemuArgs
-	InitramfsArgs
-	Version bool
-	Debug   bool
+type Config struct {
+	Qemu      QemuConfig
+	Initramfs InitramfsConfig
+	Version   bool
+	Debug     bool
 }
 
-func NewArgs(arch Arch) (Args, error) {
+func NewConfig(arch Arch) (Config, error) {
 	var (
-		qemuBin       string
-		machine       string
-		transportType qemu.TransportType
+		qemuExecutable    string
+		qemuMachine       string
+		qemuTransportType qemu.TransportType
 	)
 
 	switch arch {
 	case ArchAMD64:
-		qemuBin = "qemu-system-x86_64"
-		machine = "q35"
-		transportType = qemu.TransportTypePCI
+		qemuExecutable = "qemu-system-x86_64"
+		qemuMachine = "q35"
+		qemuTransportType = qemu.TransportTypePCI
 	case ArchARM64:
-		qemuBin = "qemu-system-aarch64"
-		machine = "virt"
-		transportType = qemu.TransportTypeMMIO
+		qemuExecutable = "qemu-system-aarch64"
+		qemuMachine = "virt"
+		qemuTransportType = qemu.TransportTypeMMIO
 	default:
-		return Args{}, fmt.Errorf("arch [%s]: %w", arch, errors.ErrUnsupported)
+		return Config{}, fmt.Errorf("arch [%s]: %w", arch, errors.ErrUnsupported)
 	}
 
-	args := Args{
-		QemuArgs: QemuArgs{
-			QemuBin:       qemuBin,
-			Machine:       machine,
-			TransportType: transportType,
+	args := Config{
+		Qemu: QemuConfig{
+			Executable:    qemuExecutable,
+			Machine:       qemuMachine,
+			TransportType: qemuTransportType,
 			CPU:           cpuDefault,
 			Memory: LimitedUintFlag{
 				memDefault,
@@ -88,7 +88,7 @@ func NewArgs(arch Arch) (Args, error) {
 				qemu.UniqueArg("no-user-config", ""),
 			},
 		},
-		InitramfsArgs: InitramfsArgs{
+		Initramfs: InitramfsConfig{
 			Arch: arch,
 		},
 	}
@@ -96,126 +96,126 @@ func NewArgs(arch Arch) (Args, error) {
 	return args, nil
 }
 
-func (a *Args) newFlagset(self string) *flag.FlagSet {
+func (c *Config) newFlagset(self string) *flag.FlagSet {
 	fsName := self + " [flags...] binary [initargs...]"
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 
 	fs.StringVar(
-		&a.QemuBin,
+		&c.Qemu.Executable,
 		"qemu-bin",
-		a.QemuBin,
+		c.Qemu.Executable,
 		"QEMU binary to use",
 	)
 
 	fs.TextVar(
-		&a.Kernel,
+		&c.Qemu.Kernel,
 		"kernel",
-		a.Kernel,
+		c.Qemu.Kernel,
 		"path to kernel to use",
 	)
 
 	fs.StringVar(
-		&a.Machine,
+		&c.Qemu.Machine,
 		"machine",
-		a.Machine,
+		c.Qemu.Machine,
 		"QEMU machine type to use",
 	)
 
 	fs.StringVar(
-		&a.CPU,
+		&c.Qemu.CPU,
 		"cpu",
-		a.CPU,
+		c.Qemu.CPU,
 		"QEMU CPU type to use",
 	)
 
 	fs.BoolVar(
-		&a.NoKVM,
+		&c.Qemu.NoKVM,
 		"nokvm",
-		a.NoKVM,
+		c.Qemu.NoKVM,
 		"disable hardware support",
 	)
 
 	fs.TextVar(
-		&a.TransportType,
+		&c.Qemu.TransportType,
 		"transport",
-		a.TransportType,
+		c.Qemu.TransportType,
 		"io transport type: isa, pci, mmio",
 	)
 
 	fs.BoolVar(
-		&a.Verbose,
+		&c.Qemu.Verbose,
 		"verbose",
-		a.Verbose,
+		c.Qemu.Verbose,
 		"enable verbose guest system output",
 	)
 
 	fs.TextVar(
-		&a.Memory,
+		&c.Qemu.Memory,
 		"memory",
-		a.Memory,
+		c.Qemu.Memory,
 		"memory (in MB) for the QEMU VM",
 	)
 
 	fs.TextVar(
-		&a.SMP,
+		&c.Qemu.SMP,
 		"smp",
-		a.SMP,
+		c.Qemu.SMP,
 		"number of CPUs for the QEMU VM",
 	)
 
 	fs.BoolVar(
-		&a.Standalone,
+		&c.Initramfs.StandaloneInit,
 		"standalone",
-		a.Standalone,
+		c.Initramfs.StandaloneInit,
 		"run first given file as init itself. Use this if it has virtrun support built in.",
 	)
 
 	fs.BoolVar(
-		&a.NoGoTestFlagRewrite,
+		&c.Qemu.NoGoTestFlagRewrite,
 		"noGoTestFlagRewrite",
-		a.NoGoTestFlagRewrite,
+		c.Qemu.NoGoTestFlagRewrite,
 		"disable automatic go test flag rewrite for file based output.",
 	)
 
 	fs.BoolVar(
-		&a.KeepInitramfs,
+		&c.Initramfs.Keep,
 		"keepInitramfs",
-		a.KeepInitramfs,
+		c.Initramfs.Keep,
 		"do not delete initramfs once qemu is done. Intended for debugging. "+
 			"The path to the file is printed on stderr",
 	)
 
 	fs.Var(
-		&a.Files,
+		&c.Initramfs.Files,
 		"addFile",
 		"file to add to guest's /data dir. Flag may be used more than once.",
 	)
 
 	fs.Var(
-		&a.Modules,
+		&c.Initramfs.Modules,
 		"addModule",
 		"kernel module to add to guest. Flag may be used more than once.",
 	)
 
 	fs.BoolVar(
-		&a.Version,
+		&c.Version,
 		"version",
-		a.Version,
+		c.Version,
 		"show version and exit",
 	)
 
 	fs.BoolVar(
-		&a.Debug,
+		&c.Debug,
 		"debug",
-		a.Debug,
+		c.Debug,
 		"enable debug output",
 	)
 
 	return fs
 }
 
-func (a *Args) ParseArgs(name string, args []string, output io.Writer) error {
-	fs := a.newFlagset(name)
+func (c *Config) ParseArgs(name string, args []string, output io.Writer) error {
+	fs := c.newFlagset(name)
 	fs.SetOutput(output)
 
 	// Parses arguments up to the first one that is not prefixed with a "-" or
@@ -242,14 +242,14 @@ func (a *Args) ParseArgs(name string, args []string, output io.Writer) error {
 
 	// With version flag, just print the version and exit. Using [flag.ErrHelp]
 	// the main binary is supposed to return with a non error exit code.
-	if a.Version {
+	if c.Version {
 		msgFmt := "virtrun %s\n  commit %s\n  built at %s"
 		printf(msgFmt, version, commit, date)
 
 		return &ParseArgsError{err: flag.ErrHelp}
 	}
 
-	if a.Kernel == "" {
+	if c.Qemu.Kernel == "" {
 		return failf("no kernel given (use -kernel)")
 	}
 
@@ -263,45 +263,45 @@ func (a *Args) ParseArgs(name string, args []string, output io.Writer) error {
 		return failf("binary path: %w", err)
 	}
 
-	a.Binary = binary
+	c.Initramfs.Binary = binary
 
 	// All further positional arguments after the binary file will be passed to
 	// the guest system's init program.
-	a.InitArgs = fs.Args()[1:]
+	c.Qemu.InitArgs = fs.Args()[1:]
 
 	return nil
 }
 
-func (a *Args) Validate() error {
+func (c *Config) Validate() error {
 	// Check files are actually present.
-	if _, err := exec.LookPath(a.QemuBin); err != nil {
+	if _, err := exec.LookPath(c.Qemu.Executable); err != nil {
 		return fmt.Errorf("check qemu binary: %w", err)
 	}
 
-	if err := a.Kernel.check(); err != nil {
+	if err := c.Qemu.Kernel.check(); err != nil {
 		return fmt.Errorf("check kernel file: %w", err)
 	}
 
-	for _, file := range a.Files {
+	for _, file := range c.Initramfs.Files {
 		if err := FilePath(file).check(); err != nil {
 			return fmt.Errorf("check file: %w", err)
 		}
 	}
 
-	for _, file := range a.Modules {
+	for _, file := range c.Initramfs.Modules {
 		if err := FilePath(file).check(); err != nil {
 			return fmt.Errorf("check module: %w", err)
 		}
 	}
 
 	// Do some deeper validation for the main binary.
-	elfFile, err := elf.Open(string(a.Binary))
+	elfFile, err := elf.Open(string(c.Initramfs.Binary))
 	if err != nil {
 		return fmt.Errorf("check main binary: %w", err)
 	}
 	defer elfFile.Close()
 
-	if err := validateELF(elfFile.FileHeader, a.Arch); err != nil {
+	if err := validateELF(elfFile.FileHeader, c.Initramfs.Arch); err != nil {
 		return fmt.Errorf("check main binary: %w", err)
 	}
 

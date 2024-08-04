@@ -12,22 +12,22 @@ import (
 	"github.com/aibor/virtrun/internal/initramfs"
 )
 
-type InitramfsArgs struct {
-	Arch          Arch
-	Binary        FilePath
-	Files         FilePathList
-	Modules       FilePathList
-	Standalone    bool
-	KeepInitramfs bool
+type InitramfsConfig struct {
+	Arch           Arch
+	Binary         FilePath
+	Files          FilePathList
+	Modules        FilePathList
+	StandaloneInit bool
+	Keep           bool
 }
 
-func NewInitramfsArchive(args InitramfsArgs) (*InitramfsArchive, error) {
-	irfs, err := newInitramfs(string(args.Binary), args.Standalone, args.Arch)
+func NewInitramfsArchive(cfg InitramfsConfig) (*InitramfsArchive, error) {
+	irfs, err := newInitramfs(string(cfg.Binary), cfg.StandaloneInit, cfg.Arch)
 	if err != nil {
 		return nil, fmt.Errorf("new: %w", err)
 	}
 
-	err = irfs.AddFiles("data", args.Files...)
+	err = irfs.AddFiles("data", cfg.Files...)
 	if err != nil {
 		return nil, fmt.Errorf("add files: %w", err)
 	}
@@ -37,7 +37,7 @@ func NewInitramfsArchive(args InitramfsArgs) (*InitramfsArchive, error) {
 		return nil, fmt.Errorf("add libs: %w", err)
 	}
 
-	for idx, module := range args.Modules {
+	for idx, module := range cfg.Modules {
 		name := fmt.Sprintf("%04d-%s", idx, filepath.Base(module))
 
 		err = irfs.AddFile("lib/modules", name, module)
@@ -53,7 +53,7 @@ func NewInitramfsArchive(args InitramfsArgs) (*InitramfsArchive, error) {
 
 	a := &InitramfsArchive{
 		Path: path,
-		keep: args.KeepInitramfs,
+		keep: cfg.Keep,
 	}
 
 	return a, nil

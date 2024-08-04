@@ -39,12 +39,12 @@ func run() error {
 		return fmt.Errorf("get arch: %w", err)
 	}
 
-	args, err := internal.NewArgs(arch)
+	cfg, err := internal.NewConfig(arch)
 	if err != nil {
 		return fmt.Errorf("new args: %w", err)
 	}
 
-	err = args.ParseArgs(
+	err = cfg.ParseArgs(
 		os.Args[0],
 		internal.PrependEnvArgs(os.Args[1:]),
 		os.Stderr,
@@ -53,15 +53,15 @@ func run() error {
 		return fmt.Errorf("parse args: %w", err)
 	}
 
-	setupLogging(args.Debug)
+	setupLogging(cfg.Debug)
 
-	err = args.Validate()
+	err = cfg.Validate()
 	if err != nil {
 		return fmt.Errorf("validate args: %w", err)
 	}
 
 	// Build initramfs for the run.
-	irfs, err := internal.NewInitramfsArchive(args.InitramfsArgs)
+	irfs, err := internal.NewInitramfsArchive(cfg.Initramfs)
 	if err != nil {
 		return fmt.Errorf("initramfs: %w", err)
 	}
@@ -87,7 +87,7 @@ func run() error {
 	)
 	defer cancel()
 
-	cmd, err := internal.NewQemuCommand(ctx, args.QemuArgs, irfs.Path)
+	cmd, err := internal.NewQemuCommand(ctx, cfg.Qemu, irfs.Path)
 	if err != nil {
 		return fmt.Errorf("build qemu command: %w", err)
 	}

@@ -13,13 +13,13 @@ import (
 func TestCommandArgs(t *testing.T) {
 	tests := []struct {
 		name   string
-		cmd    Command
+		cmd    CommandSpec
 		expect any
 		assert assert.ComparisonAssertionFunc
 	}{
 		{
 			name: "machine params",
-			cmd: Command{
+			cmd: CommandSpec{
 				Machine: "pc4.2",
 				CPU:     "8086",
 				SMP:     23,
@@ -35,13 +35,13 @@ func TestCommandArgs(t *testing.T) {
 		},
 		{
 			name:   "yes-kvm",
-			cmd:    Command{},
+			cmd:    CommandSpec{},
 			expect: UniqueArg("enable-kvm"),
 			assert: assert.Contains,
 		},
 		{
 			name: "no-kvm",
-			cmd: Command{
+			cmd: CommandSpec{
 				NoKVM: true,
 			},
 			expect: UniqueArg("enable-kvm"),
@@ -50,7 +50,7 @@ func TestCommandArgs(t *testing.T) {
 
 		{
 			name: "yes-verbose",
-			cmd: Command{
+			cmd: CommandSpec{
 				Verbose: true,
 			},
 			expect: "quiet",
@@ -59,13 +59,13 @@ func TestCommandArgs(t *testing.T) {
 
 		{
 			name:   "no-verbose",
-			cmd:    Command{},
+			cmd:    CommandSpec{},
 			expect: "quiet",
 			assert: ArgumentValueAssertionFunc("append", assert.Contains),
 		},
 		{
 			name: "init args",
-			cmd: Command{
+			cmd: CommandSpec{
 				InitArgs: []string{
 					"first",
 					"second",
@@ -77,7 +77,7 @@ func TestCommandArgs(t *testing.T) {
 		},
 		{
 			name: "serial files virtio-mmio",
-			cmd: Command{
+			cmd: CommandSpec{
 				AdditionalConsoles: []string{
 					"/output/file1",
 					"/output/file2",
@@ -93,7 +93,7 @@ func TestCommandArgs(t *testing.T) {
 		},
 		{
 			name: "serial files isa-pci",
-			cmd: Command{
+			cmd: CommandSpec{
 				AdditionalConsoles: []string{
 					"/output/file1",
 					"/output/file2",
@@ -111,7 +111,7 @@ func TestCommandArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.assert(t, tt.cmd.Args(), tt.expect)
+			tt.assert(t, tt.cmd.arguments(), tt.expect)
 		})
 	}
 }

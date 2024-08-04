@@ -12,7 +12,7 @@ import (
 
 // Argument is a QEMU argument with or without value.
 //
-// Its name might be marked to be unique in a list of [Arguments].
+// Its name might be marked to be unique in a list of [CommandSpec].
 type Argument struct {
 	name          string
 	value         string
@@ -40,7 +40,7 @@ func (a Argument) Value() string {
 }
 
 // UniqueName returns if the name of the [Argument] must be unique in an
-// [Arguments] list.
+// [CommandSpec] list.
 func (a Argument) UniqueName() bool {
 	return !a.nonUniqueName
 }
@@ -62,7 +62,7 @@ func (a Argument) Equal(b Argument) bool {
 }
 
 // UniqueArg returns a new [Argument] with the given name that is marked as
-// unique and so can be used in [Arguments] only once.
+// unique and so can be used in [CommandSpec] only once.
 func UniqueArg(name string, value ...string) Argument {
 	return Argument{
 		name:  name,
@@ -71,7 +71,7 @@ func UniqueArg(name string, value ...string) Argument {
 }
 
 // RepeatableArg returns a new [Argument] with the given name that is not
-// unique and so can be used in [Arguments] multiple times.
+// unique and so can be used in [CommandSpec] multiple times.
 func RepeatableArg(name string, value ...string) Argument {
 	return Argument{
 		name:          name,

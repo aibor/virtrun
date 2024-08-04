@@ -21,44 +21,56 @@ import (
 
 const minAdditionalFileDescriptor = 3
 
-// Command defines the parameters for a single virtualized run.
-type Command struct {
+// CommandSpec defines the parameters for a [Command].
+type CommandSpec struct {
 	// Path to the qemu-system binary
 	Executable string
+
 	// Path to the kernel to boot. The kernel should have Virtio-MMIO support
 	// compiled in. If not, set the NoVirtioMMIO flag.
 	Kernel string
+
 	// Path to the initramfs to boot with. This is supposed to be a Initramfs
 	// built with the initramfs sub package with an init that is built with
 	// the sysinit sub package.
 	Initramfs string
+
 	// QEMU machine type to use. Depends on the QEMU binary used.
 	Machine string
+
 	// CPU type to use. Depends on machine type and QEMU binary used.
 	CPU string
+
 	// Number of CPUs for the guest.
 	SMP uint
+
 	// Memory for the machine in MB.
 	Memory uint
+
 	// Disable KVM support.
 	NoKVM bool
+
 	// Transport type for IO. This depends on machine type and the kernel.
 	// TransportTypeIsa should always work, but will give only one slot for
 	// microvm machine type. ARM type virt does not support ISA type at all.
 	TransportType TransportType
+
 	// ExtraArgs are  extra arguments that are passed to the QEMU command.
-	// They may not interfere with the essential arguments set by the command
+	// They must not interfere with the essential arguments set by the command
 	// itself or an error will be returned on [Command.Run].
 	ExtraArgs []Argument
+
 	// Additional files attached to consoles besides the default one used for
 	// stdout. They will be present in the guest system as "/dev/ttySx" or
 	// "/dev/hvcx" where x is the index of the slice + 1.
 	AdditionalConsoles []string
+
 	// Arguments to pass to the init binary.
 	InitArgs []string
-	// Print qemu command before running, increase guest kernel logging and
-	// do not stop printing stdout when our exit code string is found.
+
+	// Increase guest kernel logging.
 	Verbose bool
+
 	// ExitCodeFmt defines the format of the line communicating the exit code
 	// from the guest. It must contain exactly one integer verb
 	// (probably "%d").
@@ -68,13 +80,13 @@ type Command struct {
 // AddConsole adds an additional file to the QEMU command. This will be
 // writable from the guest via the device name returned by this command.
 // Console device number is starting at 1, as console 0 is the default stdout.
-func (c *Command) AddConsole(file string) string {
+func (c *CommandSpec) AddConsole(file string) string {
 	c.AdditionalConsoles = append(c.AdditionalConsoles, file)
 	return c.TransportType.ConsoleDeviceName(uint8(len(c.AdditionalConsoles)))
 }
 
 // Validate checks for known incompatibilities.
-func (c *Command) Validate() error {
+func (c *CommandSpec) Validate() error {
 	if !c.TransportType.isKnown() {
 		return &ArgumentError{
 			"unknown transport type: " + c.TransportType.String(),
@@ -107,17 +119,17 @@ func (c *Command) Validate() error {
 }
 
 // ProcessGoTestFlags processes file related go test flags in
-// [Command.InitArgs] and changes them, so the guest system's writes end up in
+// [CommandSpec.InitArgs] and changes them, so the guest system's writes end up in
 // the host systems file paths.
 //
-// It scans [Command.InitArgs] for coverage and profile related paths and
+// It scans [CommandSpec.InitArgs] for coverage and profile related paths and
 // replaces them with console path. The original paths are added as additional
-// file descriptors to the [Command].
+// file descriptors to the [CommandSpec].
 //
 // It is required that the flags are prefixed with "test" and value is
 // separated form the flag by "=". This is the format the "go test" tool
 // invokes the test binary with.
-func (c *Command) ProcessGoTestFlags() {
+func (c *CommandSpec) ProcessGoTestFlags() {
 	// Only coverprofile has a relative path to the test pwd and can be
 	// replaced immediately. All other profile files are relative to the actual
 	// test running and need to be prefixed with -test.outputdir. So, collect
@@ -159,56 +171,56 @@ func (c *Command) ProcessGoTestFlags() {
 	}
 }
 
-// Args compiles the argument list for the QEMU command.
-func (c *Command) Args() []Argument {
-	a := []Argument{
+// arguments compiles the argument list for the QEMU command.
+func (c *CommandSpec) arguments() []Argument {
+	args := []Argument{
 		UniqueArg("kernel", c.Kernel),
 		UniqueArg("initrd", c.Initramfs),
 	}
 
 	if c.Machine != "" {
-		a = append(a, UniqueArg("machine", c.Machine))
+		args = append(args, UniqueArg("machine", c.Machine))
 	}
 
 	if c.CPU != "" {
-		a = append(a, UniqueArg("cpu", c.CPU))
+		args = append(args, UniqueArg("cpu", c.CPU))
 	}
 
 	if c.SMP != 0 {
-		a = append(a, UniqueArg("smp", strconv.Itoa(int(c.SMP))))
+		args = append(args, UniqueArg("smp", strconv.Itoa(int(c.SMP))))
 	}
 
 	if c.Memory != 0 {
-		a = append(a, UniqueArg("m", strconv.Itoa(int(c.Memory))))
+		args = append(args, UniqueArg("m", strconv.Itoa(int(c.Memory))))
 	}
 
 	if !c.NoKVM {
-		a = append(a, UniqueArg("enable-kvm", ""))
+		args = append(args, UniqueArg("enable-kvm", ""))
 	}
 
-	a = append(a, prepareConsoleArgs(c.TransportType)...)
+	args = append(args, prepareConsoleArgs(c.TransportType)...)
 	addConsoleArgs := consoleArgsFunc(c.TransportType)
 
 	// Add stdout console.
-	a = append(a, addConsoleArgs(1)...)
+	args = append(args, addConsoleArgs(1)...)
 
 	// Write console output to file descriptors. Those are provided by the
 	// [exec.Cmd.ExtraFiles].
 	for idx := range c.AdditionalConsoles {
 		// FDs 0, 1, 2 are standard in, out, err, so start at 3.
-		a = append(a, addConsoleArgs(minAdditionalFileDescriptor+idx)...)
+		args = append(args, addConsoleArgs(minAdditionalFileDescriptor+idx)...)
 	}
 
-	a = append(a, c.ExtraArgs...)
+	args = append(args, c.ExtraArgs...)
 
 	kernelCmdline := strings.Join(c.kernelCmdlineArgs(), " ")
-	a = append(a, RepeatableArg("append", kernelCmdline))
+	args = append(args, RepeatableArg("append", kernelCmdline))
 
-	return a
+	return args
 }
 
 // kernelCmdlineArgs reruns the kernel cmdline arguments.
-func (c *Command) kernelCmdlineArgs() []string {
+func (c *CommandSpec) kernelCmdlineArgs() []string {
 	cmdline := []string{
 		"console=" + c.TransportType.ConsoleDeviceName(0),
 		"panic=-1",
@@ -226,74 +238,81 @@ func (c *Command) kernelCmdlineArgs() []string {
 	return cmdline
 }
 
-func fdPath(fd int) string {
-	return fmt.Sprintf("/dev/fd/%d", fd)
-}
+type Command struct {
+	cmd *exec.Cmd
 
-type command struct {
-	*exec.Cmd
-
-	processors []outputProcessor
+	verbose       bool
+	exitCodeFmt   string
+	consoleOutput []string
 
 	closer []io.Closer
 }
 
-func (c *Command) newCmd(ctx context.Context, stdout, stderr io.Writer) (*command, error) {
-	args, err := BuildArgumentStrings(c.Args())
+// NewCommand compiles the final [Command] and is constructed, console processors are setup and the
+// command is executed. An exit code is returned. It can only be 0 if the
+// guest system correctly communicated a 0 value via stdout. In any other case,
+// a non 0 value is returned. If no error is returned, the value was received
+// by the guest system.
+func NewCommand(ctx context.Context, spec CommandSpec) (*Command, error) {
+	// Do some simple input validation to catch most obvious issues.
+	err := spec.Validate()
 	if err != nil {
 		return nil, err
 	}
 
-	cmd := &command{
-		Cmd: exec.CommandContext(ctx, c.Executable, args...),
-	}
-
-	cmd.Stderr = stderr
-
-	outPipe, err := cmd.StdoutPipe()
+	cmdArgs, err := BuildArgumentStrings(spec.arguments())
 	if err != nil {
-		return nil, fmt.Errorf("stdout pipe: %w", err)
+		return nil, err
 	}
 
-	if c.ExitCodeFmt == "" {
-		return nil, &ArgumentError{"ExitDodeFmt must not be empty"}
+	if spec.ExitCodeFmt == "" {
+		return nil, &ArgumentError{"ExitCodeFmt must not be empty"}
 	}
 
-	// Process output until the outPipe closes which happens automatically
-	// at program termination. Error should be reported, but should not
-	// terminate immediately. There might be more severe errors that following,
-	// like process execution or persistent IO errors.
-	cmd.processors = []outputProcessor{
-		parseStdout(stdout, outPipe, c.ExitCodeFmt, c.Verbose),
-	}
-
-	// Create console output processors that fix line endings by stripping "\r".
-	// Append the write end of the console processor pipe as extra file, so it
-	// is present as additional file descriptor which can be used with the
-	// "file" backend for QEMU console devices. [consoleProcessor.run] reads
-	// from the read end of the pipe, cleans the output and writes it into
-	// the actual target file on the host.
-	for _, path := range c.AdditionalConsoles {
-		f, err := os.Create(path)
-		if err != nil {
-			return nil, fmt.Errorf("open console output: %w", err)
-		}
-
-		processor, writePipe, err := scrubCR(f)
-		if err != nil {
-			cmd.close()
-			return nil, fmt.Errorf("processor %s: %w", path, err)
-		}
-
-		cmd.processors = append(cmd.processors, processor)
-		cmd.ExtraFiles = append(cmd.ExtraFiles, writePipe)
-		cmd.closer = append(cmd.closer, writePipe)
+	cmd := &Command{
+		cmd:           exec.CommandContext(ctx, spec.Executable, cmdArgs...),
+		verbose:       spec.Verbose,
+		exitCodeFmt:   spec.ExitCodeFmt,
+		consoleOutput: spec.AdditionalConsoles,
 	}
 
 	return cmd, nil
 }
 
-func (c *command) close() {
+// String prints the human readable string representation of the command.
+//
+// It just wraps [exec.Command.String].
+func (c *Command) String() string {
+	return c.cmd.String()
+}
+
+// consoleProcessor opens the console output file at path and returns the
+// processor function that cleans the output form carriage returns.
+func (c *Command) consoleProcessor(path string) (outputProcessor, error) {
+	f, err := os.Create(path)
+	if err != nil {
+		return nil, fmt.Errorf("open console output: %w", err)
+	}
+
+	c.closer = append(c.closer, f)
+
+	processor, writePipe, err := scrubCR(f)
+	if err != nil {
+		return nil, fmt.Errorf("processor %s: %w", path, err)
+	}
+
+	// Append the write end of the console processor pipe as extra file, so it
+	// is present as additional file descriptor which can be used with the
+	// "file" backend for QEMU console devices. The processor reads from the
+	// read end of the pipe, cleans the output and writes it into the actual
+	// target file on the host.
+	c.cmd.ExtraFiles = append(c.cmd.ExtraFiles, writePipe)
+	c.closer = append(c.closer, writePipe)
+
+	return processor, nil
+}
+
+func (c *Command) close() {
 	slices.Reverse(c.closer)
 
 	for _, closer := range c.closer {
@@ -301,37 +320,54 @@ func (c *command) close() {
 	}
 }
 
-// Run the QEMU command with the given context.
+// Run the [Command].
 //
-// The final QEMU command is constructed, console processors are setup and the
-// command is executed. An exit code is returned. It can only be 0 if the
-// guest system correctly communicated a 0 value via stdout. In any other case,
-// a non 0 value is returned. If no error is returned, the value was received
-// by the guest system.
-func (c *Command) Run(ctx context.Context, stdout, stderr io.Writer) error {
-	cmd, err := c.newCmd(ctx, stdout, stderr)
-	if err != nil {
-		return err
-	}
-	defer cmd.close()
+// Output processors are setup and the command is executed. Returns without
+// error only if the guest system correctly communicated exit code 0. In any
+// other case, an error is returned. If the QEMU command itself failed,
+// a [CommandError] with the guest flag unset is returned. If the guest
+// returned an error or failed a [CommandError] with guest flag set is
+// returned.
+func (c *Command) Run(stdout, stderr io.Writer) error {
+	defer c.close()
 
 	var processors errgroup.Group
 
-	for _, processor := range cmd.processors {
+	// Create console output processors that fix line endings by stripping "\r".
+	for _, path := range c.consoleOutput {
+		processor, err := c.consoleProcessor(path)
+		if err != nil {
+			return err
+		}
+
 		processors.Go(processor)
 	}
 
-	if err := cmd.Start(); err != nil {
+	c.cmd.Stderr = stderr
+
+	outPipe, err := c.cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("stdout pipe: %w", err)
+	}
+
+	processors.Go(parseStdout(
+		stdout,
+		outPipe,
+		c.exitCodeFmt,
+		c.verbose,
+	))
+
+	if err := c.cmd.Start(); err != nil {
 		return fmt.Errorf("start: %w", err)
 	}
 
 	// Collect process information.
-	if err := cmd.Wait(); err != nil {
+	if err := c.cmd.Wait(); err != nil {
 		return wrapExitError(err)
 	}
 
 	// Close all FDs so processors stop.
-	cmd.close()
+	c.close()
 
 	err = processors.Wait()
 	if err != nil && !errors.Is(err, &CommandError{}) {

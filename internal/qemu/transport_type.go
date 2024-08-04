@@ -115,3 +115,7 @@ func consoleArgsFunc(transportType TransportType) func(int) []Argument {
 		return func(_ int) (_ []Argument) { return }
 	}
 }
+
+func fdPath(fd int) string {
+	return fmt.Sprintf("/dev/fd/%d", fd)
+}

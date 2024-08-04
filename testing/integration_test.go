@@ -162,17 +162,17 @@ func TestIntegration(t *testing.T) {
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = irfs.Cleanup() })
 
-			cmd, err := internal.NewQemuCommand(args.QemuArgs, irfs.Path)
-			require.NoError(t, err)
-
-			t.Log(cmd.Args())
-
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			t.Cleanup(cancel)
 
+			cmd, err := internal.NewQemuCommand(ctx, args.QemuArgs, irfs.Path)
+			require.NoError(t, err)
+
+			t.Log(cmd.String())
+
 			var stdOut, stdErr bytes.Buffer
 
-			err = cmd.Run(ctx, &stdOut, &stdErr)
+			err = cmd.Run(&stdOut, &stdErr)
 
 			t.Log(stdOut.String())
 			t.Log(stdErr.String())

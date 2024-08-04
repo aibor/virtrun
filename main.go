@@ -77,16 +77,6 @@ func run() error {
 		slog.Debug("Initramfs cleaned up", slog.String("path", irfs.Path))
 	}()
 
-	cmd, err := internal.NewQemuCommand(args.QemuArgs, irfs.Path)
-	if err != nil {
-		return fmt.Errorf("build qemu command: %w", err)
-	}
-
-	slog.Debug("QEMU command",
-		slog.String("qemu", cmd.Executable),
-		slog.Any("args", cmd.Args()),
-	)
-
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),
 		syscall.SIGABRT,
@@ -97,7 +87,16 @@ func run() error {
 	)
 	defer cancel()
 
-	err = cmd.Run(ctx, os.Stdout, os.Stderr)
+	cmd, err := internal.NewQemuCommand(ctx, args.QemuArgs, irfs.Path)
+	if err != nil {
+		return fmt.Errorf("build qemu command: %w", err)
+	}
+
+	slog.Debug("QEMU command",
+		slog.String("command", cmd.String()),
+	)
+
+	err = cmd.Run(os.Stdout, os.Stderr)
 	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}

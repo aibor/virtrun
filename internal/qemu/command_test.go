@@ -12,7 +12,7 @@ import (
 )
 
 func TestCommmandAddExtraFile(t *testing.T) {
-	s := qemu.Command{}
+	s := qemu.CommandSpec{}
 	d1 := s.AddConsole("test")
 	d2 := s.AddConsole("real")
 
@@ -92,7 +92,7 @@ func TestProcessGoTestFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := qemu.Command{
+			cmd := qemu.CommandSpec{
 				InitArgs: tt.inputArgs,
 			}
 			cmd.ProcessGoTestFlags()

@@ -5,6 +5,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aibor/virtrun/internal/qemu"
@@ -26,8 +27,12 @@ type QemuArgs struct {
 	NoGoTestFlagRewrite bool
 }
 
-func NewQemuCommand(args QemuArgs, initramfsPath string) (*qemu.Command, error) {
-	cmd := &qemu.Command{
+func NewQemuCommand(
+	ctx context.Context,
+	args QemuArgs,
+	initramfsPath string,
+) (*qemu.Command, error) {
+	spec := qemu.CommandSpec{
 		Executable:    args.QemuBin,
 		Kernel:        string(args.Kernel),
 		Initramfs:     initramfsPath,
@@ -46,13 +51,12 @@ func NewQemuCommand(args QemuArgs, initramfsPath string) (*qemu.Command, error) 
 	// In order to be useful with "go test -exec", rewrite the file based flags
 	// so the output can be passed from guest to kernel via consoles.
 	if !args.NoGoTestFlagRewrite {
-		cmd.ProcessGoTestFlags()
+		spec.ProcessGoTestFlags()
 	}
 
-	// Do some simple input validation to catch most obvious issues.
-	err := cmd.Validate()
+	cmd, err := qemu.NewCommand(ctx, spec)
 	if err != nil {
-		return nil, fmt.Errorf("validate qemu command: %w", err)
+		return nil, fmt.Errorf("build command: %w", err)
 	}
 
 	return cmd, nil

@@ -16,6 +16,7 @@ import (
 //
 //go:generate env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -trimpath -ldflags "-s -w" -o bin/amd64 ./init/
 //go:generate env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -buildvcs=false -trimpath -ldflags "-s -w" -o bin/arm64 ./init/
+//go:generate env CGO_ENABLED=0 GOOS=linux GOARCH=riscv64 go build -buildvcs=false -trimpath -ldflags "-s -w" -o bin/riscv64 ./init/
 
 // Embed pre-compiled init programs explicitly to trigger build time errors.
 //
@@ -26,7 +27,7 @@ var _inits embed.FS
 // is supposed to set up the system and execute the file "/main".
 func initProgFor(arch Arch) (fs.File, error) {
 	switch arch {
-	case ArchAMD64, ArchARM64:
+	case AMD64, ARM64, RISCV64:
 		f, err := _inits.Open(filepath.Join("bin", arch.String()))
 		if err != nil {
 			return nil, fmt.Errorf("open: %w", err)

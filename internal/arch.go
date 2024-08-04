@@ -13,9 +13,10 @@ import (
 type Arch string
 
 const (
-	ArchAMD64  Arch = "amd64"
-	ArchARM64  Arch = "arm64"
-	ArchNative Arch = Arch(runtime.GOARCH)
+	AMD64   Arch = "amd64"
+	ARM64   Arch = "arm64"
+	RISCV64 Arch = "riscv64"
+	Native  Arch = Arch(runtime.GOARCH)
 )
 
 func (a Arch) String() string {
@@ -23,7 +24,7 @@ func (a Arch) String() string {
 }
 
 func (a Arch) IsNative() bool {
-	return ArchNative == a
+	return Native == a
 }
 
 func (a Arch) KVMAvailable() bool {
@@ -35,12 +36,12 @@ func (a Arch) MarshalText() ([]byte, error) {
 }
 
 func (a *Arch) UnmarshalText(text []byte) error {
-	arch := Arch(string(text))
-	if arch != ArchAMD64 && arch != ArchARM64 {
+	switch Arch(text) {
+	case AMD64, ARM64, RISCV64:
+		*a = Arch(text)
+	default:
 		return ErrArchNotSupported
 	}
-
-	*a = arch
 
 	return nil
 }

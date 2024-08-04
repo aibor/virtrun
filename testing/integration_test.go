@@ -27,7 +27,7 @@ import (
 //nolint:gochecknoglobals
 var (
 	KernelPath = internal.FilePath("/kernels/vmlinuz")
-	KernelArch = internal.ArchNative
+	KernelArch = internal.Native
 	Verbose    bool
 )
 

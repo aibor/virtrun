@@ -11,7 +11,7 @@ import (
 
 // GetArch gets the architecture to use for the command.
 func GetArch() (Arch, error) {
-	arch := ArchNative
+	arch := Native
 
 	// Allow user to specify architecture by dedicated env var VIRTRUN_ARCH. It
 	// can be empty, to suppress the GOARCH lookup and enforce the fallback to

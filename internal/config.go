@@ -6,7 +6,6 @@ package internal
 
 import (
 	"debug/elf"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -49,16 +48,20 @@ func NewConfig(arch Arch) (Config, error) {
 	)
 
 	switch arch {
-	case ArchAMD64:
+	case AMD64:
 		qemuExecutable = "qemu-system-x86_64"
 		qemuMachine = "q35"
 		qemuTransportType = qemu.TransportTypePCI
-	case ArchARM64:
+	case ARM64:
 		qemuExecutable = "qemu-system-aarch64"
 		qemuMachine = "virt"
 		qemuTransportType = qemu.TransportTypeMMIO
+	case RISCV64:
+		qemuExecutable = "qemu-system-riscv64"
+		qemuMachine = "virt"
+		qemuTransportType = qemu.TransportTypeMMIO
 	default:
-		return Config{}, fmt.Errorf("arch [%s]: %w", arch, errors.ErrUnsupported)
+		return Config{}, ErrArchNotSupported
 	}
 
 	args := Config{
@@ -321,9 +324,11 @@ func validateELF(hdr elf.FileHeader, arch Arch) error {
 
 	switch hdr.Machine {
 	case elf.EM_X86_64:
-		archReq = ArchAMD64
+		archReq = AMD64
 	case elf.EM_AARCH64:
-		archReq = ArchARM64
+		archReq = ARM64
+	case elf.EM_RISCV:
+		archReq = RISCV64
 	default:
 		return fmt.Errorf("machine type not supported: %s", hdr.Machine)
 	}

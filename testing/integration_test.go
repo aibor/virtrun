@@ -56,6 +56,14 @@ func init() {
 func TestIntegration(t *testing.T) {
 	t.Parallel()
 
+	verboseFlag := func() string {
+		if Verbose {
+			return "-test.v"
+		}
+
+		return ""
+	}
+
 	tests := []struct {
 		name       string
 		bin        string
@@ -116,8 +124,7 @@ func TestIntegration(t *testing.T) {
 			name: "guest test",
 			bin:  "bin/guest.test",
 			args: []string{
-				"-test.v",
-				"-test.gocoverdir=/tmp/",
+				verboseFlag(),
 			},
 			requireErr: require.NoError,
 		},
@@ -126,7 +133,7 @@ func TestIntegration(t *testing.T) {
 			bin:        "bin/guest.standalone.test",
 			standalone: true,
 			args: []string{
-				"-test.v",
+				verboseFlag(),
 				"-test.gocoverdir=/tmp/",
 			},
 			requireErr: require.NoError,

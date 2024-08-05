@@ -41,28 +41,31 @@ jobs:
         run: go vet -tags integration,integration_guest,standalone ./...
 
       - name: Run go tests
-        run: go test -race -v -cover -covermode=atomic ./...
+        run: |
+          go test -v \
+            -race \
+            -cover \
+            -covermode=atomic \
+            ./...
 
   integration-tests:
     name: Run integration tests
     runs-on: ubuntu-latest
+    container:
+      image: alpine:3.20
     needs:
       - lint-and-test
     strategy:
       matrix:
-        kernel_version:
-          - "6.9"
-          - "6.6"
-          - "6.1"
-        kernel_arch:
-          - "amd64"
-        include:
-          - kernel_version: "6.9"
-            kernel_arch: "arm64"
-    env:
-      KERNELVERSION: "${{ matrix.kernel_version }}"
-      KERNELARCH: "${{ matrix.kernel_arch }}"
+        arch:
+          - go: amd64
+            apk: x86_64
+          - go: arm64
+            apk: aarch64
     steps:
+      - name: Install packages
+        run: apk add tar "qemu-system-${{ matrix.arch.apk }}" gcc musl-dev
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -71,21 +74,28 @@ jobs:
         with:
           go-version: "${{ env.GOVERSION }}"
 
-      - name: Fetch kernel
+      - name: Run go generate testdata
+        run: go generate -tags testdata ./...
+
+      - name: Run go generate integration tests
         env:
-          CONTAINERBIN: docker
+          GOARCH: ${{ matrix.arch.go }}
+        run: go generate -tags integration ./testing/...
+
+      - name: Fetch kernel files
         run: |
-          ./testing/fetch_kernel.sh ${{ env.KERNELVERSION }} ${{ env.KERNELARCH }} "${{ github.workspace }}/vmlinuz"
+          sed -i "s/x86_64/${{ matrix.arch.apk }}/" /etc/apk/arch
+          apk fetch --no-cache --allow-untrusted linux-virt
+          tar xf linux-virt-* --wildcards -C / boot/vmlinuz-virt
 
       - name: Run tests
-        uses: ./testing
-        with:
-          cmd: |
-            go generate -tags testdata ./...
-            GOARCH=${{ env.KERNELARCH }} go generate -tags integration ./testing/...
-            go test -race -v -tags integration ./testing/ \
-              -kernel.path "/github/workspace/vmlinuz" \
-              -kernel.arch ${{ env.KERNELARCH }}
+        run: |
+          go test -v \
+            -tags integration \
+            ./testing/ \
+            -kernel.path "/boot/vmlinuz-virt" \
+            -kernel.arch ${{ matrix.arch.go }} \
+            -force-pci
 
   integration-tests-modules:
     name: Run integration tests for kernel modules
@@ -134,7 +144,8 @@ jobs:
         run: |
           sed -i "s/x86_64/${{ matrix.arch.apk }}/" /etc/apk/arch
           apk fetch --no-cache --allow-untrusted linux-virt
-          tar xf linux-virt-* --wildcards -C / boot/vmlinuz-virt \
+          tar xf linux-virt-* --wildcards -C / \
+            boot/vmlinuz-virt \
             lib/modules/*/kernel/drivers/net/veth.ko.gz \
             lib/modules/*/kernel/drivers/net/tun.ko.gz
           ln -s /lib/modules/*/kernel /lib/modules/

@@ -90,11 +90,29 @@ jobs:
   integration-tests-modules:
     name: Run integration tests for kernel modules
     runs-on: ubuntu-latest
+    container: 
+      image: alpine:3.20
     needs:
       - lint-and-test
     env:
-      GOCOVERDIR: "${{ github.workspace }}/gocoverdir"
+      GOCOVERDIR: "/tmp/gocoverdir"
+      VIRTRUN_ARCH: "${{ matrix.arch.go }}"
+      VIRTRUN_ARGS: "-kernel /boot/vmlinuz-virt \
+                     -addModule /lib/modules/kernel/drivers/net/tun.ko.gz \
+                     -addModule /lib/modules/kernel/drivers/net/veth.ko.gz \
+                     -transport pci \
+                     -debug"
+    strategy:
+      matrix:
+        arch:
+          - go: amd64
+            apk: x86_64
+          - go: arm64
+            apk: aarch64
     steps:
+      - name: Install packages
+        run: apk add tar "qemu-system-${{ matrix.arch.apk }}"
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -104,27 +122,35 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
 
       - name: Create gocoverdir
-        run: mkdir "${{ env.GOCOVERDIR }}"
+        run: mkdir -pv "${{ env.GOCOVERDIR }}"
 
-      - name: Run module test
-        uses: ./testing
-        with:
-          cmd: |
-            apk add linux-virt
-            ln -s /lib/modules/*/kernel /lib/modules/
-            go generate ./...
-            go build -cover -covermode atomic -o /virtrun .
-            go test -v \
-              -tags integration_guest \
-              -exec "/virtrun \
-                -kernel /boot/vmlinuz-virt \
-                -addModule /lib/modules/kernel/drivers/net/tun.ko.gz \
-                -addModule /lib/modules/kernel/drivers/net/veth.ko.gz" \
-              -cover \
-              -covermode atomic \
-              -coverprofile /tmp/cover.out \
-              ./testing/guest/ \
-              -testModules tun,veth
+      - name: Run go generate
+        run: go generate ./...
+
+      - name: Build virtrun
+        run: go build -cover -covermode atomic -o /virtrun .
+
+      - name: Fetch kernel files
+        run: |
+          sed -i "s/x86_64/${{ matrix.arch.apk }}/" /etc/apk/arch
+          apk fetch --no-cache --allow-untrusted linux-virt
+          tar xf linux-virt-* --wildcards -C / boot/vmlinuz-virt \
+            lib/modules/*/kernel/drivers/net/veth.ko.gz \
+            lib/modules/*/kernel/drivers/net/tun.ko.gz
+          ln -s /lib/modules/*/kernel /lib/modules/
+
+      - name: Run test
+        env:
+          GOARCH: "${{ matrix.arch.go }}"
+        run: |
+          go test -v \
+            -tags integration_guest \
+            -exec "env GOCOVERDIR=${{ env.GOCOVERDIR }} /virtrun" \
+            -cover \
+            -covermode atomic \
+            -coverprofile /tmp/cover.out \
+            ./testing/guest/ \
+            -testModules tun,veth
 
       - name: Run covdata
         run: go tool covdata percent -i "${{ env.GOCOVERDIR }}"

@@ -26,9 +26,10 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	KernelPath = internal.FilePath("/kernels/vmlinuz")
-	KernelArch = internal.Native
-	Verbose    bool
+	KernelPath            = internal.FilePath("/kernels/vmlinuz")
+	KernelArch            = internal.Native
+	ForceTransportTypePCI bool
+	Verbose               bool
 )
 
 //nolint:gochecknoinits
@@ -44,6 +45,12 @@ func init() {
 		"kernel.arch",
 		KernelArch,
 		"architecture of the kernel",
+	)
+	flag.BoolVar(
+		&ForceTransportTypePCI,
+		"force-pci",
+		ForceTransportTypePCI,
+		"force transport type virtio-pci instead of arch default",
 	)
 	flag.BoolVar(
 		&Verbose,
@@ -157,6 +164,10 @@ func TestIntegration(t *testing.T) {
 			config.Qemu.InitArgs = tt.args
 			config.Initramfs.Binary = binary
 			config.Initramfs.StandaloneInit = tt.standalone
+
+			if ForceTransportTypePCI {
+				config.Qemu.TransportType = qemu.TransportTypePCI
+			}
 
 			irfs, err := internal.NewInitramfsArchive(config.Initramfs)
 			require.NoError(t, err)

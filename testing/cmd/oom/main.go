@@ -19,6 +19,11 @@ func main() {
 		panic("invalid input")
 	}
 
+	// Try to ensure the expected OOM task dump message is printed.
+	_ = os.WriteFile("/proc/sys/vm/oom_dump_tasks", []byte("0"), 0)
+	_ = os.WriteFile("/proc/sys/vm/panic_on_oom", []byte("0"), 0)
+	_ = os.WriteFile("/proc/sys/kernel/printk", []byte("4"), 0)
+
 	for range memMB {
 		grow = append(grow, make([]byte, megaByte)...)
 	}

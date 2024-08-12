@@ -5,9 +5,8 @@
 package internal
 
 import (
+	"os"
 	"runtime"
-
-	"github.com/aibor/virtrun/internal/qemu"
 )
 
 type Arch string
@@ -27,8 +26,16 @@ func (a Arch) IsNative() bool {
 	return Native == a
 }
 
+// KVMAvailable checks if KVM support is available for the given architecture.
 func (a Arch) KVMAvailable() bool {
-	return qemu.KVMAvailableFor(a.String())
+	if !a.IsNative() {
+		return false
+	}
+
+	f, err := os.OpenFile("/dev/kvm", os.O_WRONLY, 0)
+	_ = f.Close()
+
+	return err == nil
 }
 
 func (a Arch) MarshalText() ([]byte, error) {

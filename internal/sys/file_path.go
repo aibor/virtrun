@@ -2,13 +2,19 @@
 //
 // SPDX-License-Identifier: MIT
 
-package virtrun
+package sys
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+)
+
+var (
+	ErrEmptyFilePath  = errors.New("file path must not be empty")
+	ErrNotRegularFile = errors.New("not a regular file")
 )
 
 type FilePath string
@@ -24,7 +30,7 @@ func (f *FilePath) UnmarshalText(text []byte) error {
 	return err
 }
 
-func (f FilePath) check() error {
+func (f FilePath) Check() error {
 	stat, err := os.Stat(string(f))
 	if err != nil {
 		return fmt.Errorf("stat: %w", err)

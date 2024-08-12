@@ -9,11 +9,7 @@ import (
 	"fmt"
 )
 
-var (
-	ErrValueOutOfRange = errors.New("value is outside of range")
-	ErrNotRegularFile  = errors.New("not a regular file")
-	ErrEmptyFilePath   = errors.New("file path must not be empty")
-)
+var ErrValueOutOfRange = errors.New("value is outside of range")
 
 // ParseArgsError wraps errors that occur during argument parsing.
 type ParseArgsError struct {

@@ -262,7 +262,7 @@ func (c *Virtrun) ParseArgs(name string, args []string, output io.Writer) error 
 		return failf("no binary given")
 	}
 
-	binary, err := AbsoluteFilePath(fs.Args()[0])
+	binary, err := sys.AbsoluteFilePath(fs.Args()[0])
 	if err != nil {
 		return failf("binary path: %w", err)
 	}
@@ -282,18 +282,18 @@ func (c *Virtrun) Validate() error {
 		return fmt.Errorf("check qemu binary: %w", err)
 	}
 
-	if err := c.Qemu.Kernel.check(); err != nil {
+	if err := c.Qemu.Kernel.Check(); err != nil {
 		return fmt.Errorf("check kernel file: %w", err)
 	}
 
 	for _, file := range c.Initramfs.Files {
-		if err := FilePath(file).check(); err != nil {
+		if err := sys.FilePath(file).Check(); err != nil {
 			return fmt.Errorf("check file: %w", err)
 		}
 	}
 
 	for _, file := range c.Initramfs.Modules {
-		if err := FilePath(file).check(); err != nil {
+		if err := sys.FilePath(file).Check(); err != nil {
 			return fmt.Errorf("check module: %w", err)
 		}
 	}

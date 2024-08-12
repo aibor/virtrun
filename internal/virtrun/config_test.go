@@ -10,13 +10,14 @@ import (
 	"testing"
 
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/internal/virtrun"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestConfigParseArgs(t *testing.T) {
-	absBinPath, err := virtrun.AbsoluteFilePath("bin.test")
+	absBinPath, err := sys.AbsoluteFilePath("bin.test")
 	require.NoError(t, err)
 
 	tests := []struct {

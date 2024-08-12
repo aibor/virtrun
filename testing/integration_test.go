@@ -27,7 +27,7 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	KernelPath            = virtrun.FilePath("/kernels/vmlinuz")
+	KernelPath            = sys.FilePath("/kernels/vmlinuz")
 	KernelArch            = sys.Native
 	ForceTransportTypePCI bool
 	Verbose               bool
@@ -153,7 +153,7 @@ func TestIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			binary, err := virtrun.AbsoluteFilePath(tt.bin)
+			binary, err := sys.AbsoluteFilePath(tt.bin)
 			require.NoError(t, err)
 
 			config, err := virtrun.New(KernelArch)

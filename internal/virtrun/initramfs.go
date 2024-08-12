@@ -15,9 +15,9 @@ import (
 
 type Initramfs struct {
 	Arch           sys.Arch
-	Binary         FilePath
-	Files          FilePathList
-	Modules        FilePathList
+	Binary         sys.FilePath
+	Files          sys.FilePathList
+	Modules        sys.FilePathList
 	StandaloneInit bool
 	Keep           bool
 }

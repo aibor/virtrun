@@ -2,13 +2,14 @@
 //
 // SPDX-License-Identifier: MIT
 
-package virtrun_test
+package cmd_test
 
 import (
 	"flag"
 	"io"
 	"testing"
 
+	"github.com/aibor/virtrun/internal/cmd"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/internal/virtrun"
@@ -16,14 +17,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConfigParseArgs(t *testing.T) {
+func TestParseArgs(t *testing.T) {
 	absBinPath, err := sys.AbsoluteFilePath("bin.test")
 	require.NoError(t, err)
 
 	tests := []struct {
 		name        string
 		args        []string
-		expected    virtrun.Virtrun
+		expected    *virtrun.Virtrun
 		expecterErr error
 	}{
 		{
@@ -45,14 +46,14 @@ func TestConfigParseArgs(t *testing.T) {
 			args: []string{
 				"bin.test",
 			},
-			expecterErr: &virtrun.ParseArgsError{},
+			expecterErr: &cmd.ParseArgsError{},
 		},
 		{
 			name: "no binary",
 			args: []string{
 				"-kernel=/boot/this",
 			},
-			expecterErr: &virtrun.ParseArgsError{},
+			expecterErr: &cmd.ParseArgsError{},
 		},
 		{
 			name: "additional file is empty",
@@ -61,7 +62,7 @@ func TestConfigParseArgs(t *testing.T) {
 				"-addFile=",
 				"bin.test",
 			},
-			expecterErr: &virtrun.ParseArgsError{},
+			expecterErr: &cmd.ParseArgsError{},
 		},
 		{
 			name: "simple go test invocation",
@@ -72,7 +73,7 @@ func TestConfigParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expected: virtrun.Virtrun{
+			expected: &virtrun.Virtrun{
 				Initramfs: virtrun.Initramfs{
 					Binary: absBinPath,
 				},
@@ -107,7 +108,7 @@ func TestConfigParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expected: virtrun.Virtrun{
+			expected: &virtrun.Virtrun{
 				Initramfs: virtrun.Initramfs{
 					Binary: absBinPath,
 					Files: []string{
@@ -145,7 +146,7 @@ func TestConfigParseArgs(t *testing.T) {
 				"-x",
 				"-standalone",
 			},
-			expected: virtrun.Virtrun{
+			expected: &virtrun.Virtrun{
 				Initramfs: virtrun.Initramfs{
 					Binary: absBinPath,
 				},
@@ -164,9 +165,9 @@ func TestConfigParseArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := virtrun.Virtrun{}
+			cfg := &virtrun.Virtrun{}
 
-			err := cfg.ParseArgs("self", tt.args, io.Discard)
+			err := cmd.ParseArgs(cfg, "self", tt.args, io.Discard)
 			require.ErrorIs(t, err, tt.expecterErr)
 
 			if tt.expecterErr != nil {

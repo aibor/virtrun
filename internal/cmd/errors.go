@@ -2,14 +2,11 @@
 //
 // SPDX-License-Identifier: MIT
 
-package virtrun
+package cmd
 
 import (
-	"errors"
 	"fmt"
 )
-
-var ErrValueOutOfRange = errors.New("value is outside of range")
 
 // ParseArgsError wraps errors that occur during argument parsing.
 type ParseArgsError struct {

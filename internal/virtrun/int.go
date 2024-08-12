@@ -5,9 +5,12 @@
 package virtrun
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 )
+
+var ErrValueOutOfRange = errors.New("value is outside of range")
 
 type LimitedUintFlag struct {
 	Value    uint

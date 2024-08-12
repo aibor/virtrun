@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package virtrun
+package cmd
 
 import (
 	"fmt"

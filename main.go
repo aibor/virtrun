@@ -15,8 +15,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/aibor/virtrun/internal"
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/internal/virtrun"
 )
 
 func setupLogging(debug bool) {
@@ -34,19 +34,19 @@ func setupLogging(debug bool) {
 }
 
 func run() error {
-	arch, err := internal.GetArch()
+	arch, err := virtrun.GetArch()
 	if err != nil {
 		return fmt.Errorf("get arch: %w", err)
 	}
 
-	cfg, err := internal.NewConfig(arch)
+	cfg, err := virtrun.New(arch)
 	if err != nil {
 		return fmt.Errorf("new args: %w", err)
 	}
 
 	err = cfg.ParseArgs(
 		os.Args[0],
-		internal.PrependEnvArgs(os.Args[1:]),
+		virtrun.PrependEnvArgs(os.Args[1:]),
 		os.Stderr,
 	)
 	if err != nil {
@@ -61,7 +61,7 @@ func run() error {
 	}
 
 	// Build initramfs for the run.
-	irfs, err := internal.NewInitramfsArchive(cfg.Initramfs)
+	irfs, err := virtrun.NewInitramfsArchive(cfg.Initramfs)
 	if err != nil {
 		return fmt.Errorf("initramfs: %w", err)
 	}
@@ -87,7 +87,7 @@ func run() error {
 	)
 	defer cancel()
 
-	cmd, err := internal.NewQemuCommand(ctx, cfg.Qemu, irfs.Path)
+	cmd, err := virtrun.NewQemuCommand(ctx, cfg.Qemu, irfs.Path)
 	if err != nil {
 		return fmt.Errorf("build qemu command: %w", err)
 	}
@@ -118,7 +118,7 @@ func handleRunError(err error, errWriter io.Writer) int {
 	exitCode := -1
 
 	// ParseArgs already prints errors, so we just exit without an error.
-	if errors.Is(err, &internal.ParseArgsError{}) {
+	if errors.Is(err, &virtrun.ParseArgsError{}) {
 		return exitCode
 	}
 

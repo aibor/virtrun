@@ -19,15 +19,15 @@ import (
 	"testing"
 	"time"
 
-	internal "github.com/aibor/virtrun/internal"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
+	"github.com/aibor/virtrun/internal/virtrun"
 	"github.com/stretchr/testify/require"
 )
 
 //nolint:gochecknoglobals
 var (
-	KernelPath            = internal.FilePath("/kernels/vmlinuz")
+	KernelPath            = virtrun.FilePath("/kernels/vmlinuz")
 	KernelArch            = sys.Native
 	ForceTransportTypePCI bool
 	Verbose               bool
@@ -153,10 +153,10 @@ func TestIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			binary, err := internal.AbsoluteFilePath(tt.bin)
+			binary, err := virtrun.AbsoluteFilePath(tt.bin)
 			require.NoError(t, err)
 
-			config, err := internal.NewConfig(KernelArch)
+			config, err := virtrun.New(KernelArch)
 			require.NoError(t, err)
 
 			config.Qemu.Kernel = KernelPath
@@ -170,14 +170,14 @@ func TestIntegration(t *testing.T) {
 				config.Qemu.TransportType = qemu.TransportTypePCI
 			}
 
-			irfs, err := internal.NewInitramfsArchive(config.Initramfs)
+			irfs, err := virtrun.NewInitramfsArchive(config.Initramfs)
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = irfs.Cleanup() })
 
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			t.Cleanup(cancel)
 
-			cmd, err := internal.NewQemuCommand(ctx, config.Qemu, irfs.Path)
+			cmd, err := virtrun.NewQemuCommand(ctx, config.Qemu, irfs.Path)
 			require.NoError(t, err)
 
 			t.Log(cmd.String())

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package internal
+package virtrun
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 	"github.com/aibor/virtrun/internal/sys"
 )
 
-type InitramfsConfig struct {
+type Initramfs struct {
 	Arch           sys.Arch
 	Binary         FilePath
 	Files          FilePathList
@@ -22,7 +22,7 @@ type InitramfsConfig struct {
 	Keep           bool
 }
 
-func NewInitramfsArchive(cfg InitramfsConfig) (*InitramfsArchive, error) {
+func NewInitramfsArchive(cfg Initramfs) (*InitramfsArchive, error) {
 	irfs, err := newInitramfs(string(cfg.Binary), cfg.StandaloneInit, cfg.Arch)
 	if err != nil {
 		return nil, fmt.Errorf("new: %w", err)

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package internal
+package virtrun
 
 import (
 	"debug/elf"
@@ -34,14 +34,14 @@ var (
 	date    = "unknown" //nolint:gochecknoglobals
 )
 
-type Config struct {
-	Qemu      QemuConfig
-	Initramfs InitramfsConfig
+type Virtrun struct {
+	Qemu      Qemu
+	Initramfs Initramfs
 	Version   bool
 	Debug     bool
 }
 
-func NewConfig(arch sys.Arch) (Config, error) {
+func New(arch sys.Arch) (Virtrun, error) {
 	var (
 		qemuExecutable    string
 		qemuMachine       string
@@ -62,11 +62,11 @@ func NewConfig(arch sys.Arch) (Config, error) {
 		qemuMachine = "virt"
 		qemuTransportType = qemu.TransportTypeMMIO
 	default:
-		return Config{}, sys.ErrArchNotSupported
+		return Virtrun{}, sys.ErrArchNotSupported
 	}
 
-	args := Config{
-		Qemu: QemuConfig{
+	args := Virtrun{
+		Qemu: Qemu{
 			Executable:    qemuExecutable,
 			Machine:       qemuMachine,
 			TransportType: qemuTransportType,
@@ -92,7 +92,7 @@ func NewConfig(arch sys.Arch) (Config, error) {
 				qemu.UniqueArg("no-user-config", ""),
 			},
 		},
-		Initramfs: InitramfsConfig{
+		Initramfs: Initramfs{
 			Arch: arch,
 		},
 	}
@@ -100,7 +100,7 @@ func NewConfig(arch sys.Arch) (Config, error) {
 	return args, nil
 }
 
-func (c *Config) newFlagset(self string) *flag.FlagSet {
+func (c *Virtrun) newFlagset(self string) *flag.FlagSet {
 	fsName := self + " [flags...] binary [initargs...]"
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 
@@ -218,7 +218,7 @@ func (c *Config) newFlagset(self string) *flag.FlagSet {
 	return fs
 }
 
-func (c *Config) ParseArgs(name string, args []string, output io.Writer) error {
+func (c *Virtrun) ParseArgs(name string, args []string, output io.Writer) error {
 	fs := c.newFlagset(name)
 	fs.SetOutput(output)
 
@@ -276,7 +276,7 @@ func (c *Config) ParseArgs(name string, args []string, output io.Writer) error {
 	return nil
 }
 
-func (c *Config) Validate() error {
+func (c *Virtrun) Validate() error {
 	// Check files are actually present.
 	if _, err := exec.LookPath(c.Qemu.Executable); err != nil {
 		return fmt.Errorf("check qemu binary: %w", err)

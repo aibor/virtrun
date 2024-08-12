@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-package internal
+package virtrun
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/aibor/virtrun/sysinit"
 )
 
-type QemuConfig struct {
+type Qemu struct {
 	Executable          string
 	Kernel              FilePath
 	Machine             string
@@ -29,7 +29,7 @@ type QemuConfig struct {
 
 func NewQemuCommand(
 	ctx context.Context,
-	cfg QemuConfig,
+	cfg Qemu,
 	initramfsPath string,
 ) (*qemu.Command, error) {
 	spec := qemu.CommandSpec{

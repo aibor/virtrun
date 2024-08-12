@@ -5,13 +5,16 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"strings"
+
+	"github.com/aibor/virtrun/internal/sys"
 )
 
 // GetArch gets the architecture to use for the command.
-func GetArch() (Arch, error) {
-	arch := Native
+func GetArch() (sys.Arch, error) {
+	arch := sys.Native
 
 	// Allow user to specify architecture by dedicated env var VIRTRUN_ARCH. It
 	// can be empty, to suppress the GOARCH lookup and enforce the fallback to
@@ -23,7 +26,7 @@ func GetArch() (Arch, error) {
 			if v != "" {
 				err := arch.UnmarshalText([]byte(v))
 				if err != nil {
-					return "", err
+					return "", fmt.Errorf("unmarshal arch: %w", err)
 				}
 			}
 

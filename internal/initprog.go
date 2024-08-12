@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+
+	"github.com/aibor/virtrun/internal/sys"
 )
 
 // Pre-compile init programs for all supported architectures. Statically linked
@@ -25,9 +27,9 @@ var _inits embed.FS
 
 // initProgFor returns the pre-built init binary for the arch. The init binary
 // is supposed to set up the system and execute the file "/main".
-func initProgFor(arch Arch) (fs.File, error) {
+func initProgFor(arch sys.Arch) (fs.File, error) {
 	switch arch {
-	case AMD64, ARM64, RISCV64:
+	case sys.AMD64, sys.ARM64, sys.RISCV64:
 		f, err := _inits.Open(filepath.Join("bin", arch.String()))
 		if err != nil {
 			return nil, fmt.Errorf("open: %w", err)

@@ -9,13 +9,14 @@ import (
 	"io"
 	"testing"
 
+	"github.com/aibor/virtrun/internal/sys"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestInits(t *testing.T) {
 	tests := []struct {
-		arch    Arch
+		arch    sys.Arch
 		machine elf.Machine
 		errMsg  string
 	}{

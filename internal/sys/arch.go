@@ -2,9 +2,10 @@
 //
 // SPDX-License-Identifier: MIT
 
-package internal
+package sys
 
 import (
+	"errors"
 	"os"
 	"runtime"
 )
@@ -17,6 +18,8 @@ const (
 	RISCV64 Arch = "riscv64"
 	Native  Arch = Arch(runtime.GOARCH)
 )
+
+var ErrArchNotSupported = errors.New("architecture not supported")
 
 func (a Arch) String() string {
 	return string(a)

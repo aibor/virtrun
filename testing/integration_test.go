@@ -19,15 +19,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aibor/virtrun/internal"
+	internal "github.com/aibor/virtrun/internal"
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/internal/sys"
 	"github.com/stretchr/testify/require"
 )
 
 //nolint:gochecknoglobals
 var (
 	KernelPath            = internal.FilePath("/kernels/vmlinuz")
-	KernelArch            = internal.Native
+	KernelArch            = sys.Native
 	ForceTransportTypePCI bool
 	Verbose               bool
 )

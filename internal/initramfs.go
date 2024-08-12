@@ -10,10 +10,11 @@ import (
 	"path/filepath"
 
 	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/aibor/virtrun/internal/sys"
 )
 
 type InitramfsConfig struct {
-	Arch           Arch
+	Arch           sys.Arch
 	Binary         FilePath
 	Files          FilePathList
 	Modules        FilePathList
@@ -81,7 +82,7 @@ func (a *InitramfsArchive) Cleanup() error {
 func newInitramfs(
 	mainBinary string,
 	standalone bool,
-	arch Arch,
+	arch sys.Arch,
 ) (*initramfs.Initramfs, error) {
 	// In standalone mode, the first file (which might be the only one)
 	// is supposed to work as an init matching our requirements.
@@ -94,7 +95,7 @@ func newInitramfs(
 
 func newInitramfsWithInit(
 	mainBinary string,
-	arch Arch,
+	arch sys.Arch,
 ) (*initramfs.Initramfs, error) {
 	// In the default wrapped mode a pre-compiled init is used that just
 	// executes "/main".

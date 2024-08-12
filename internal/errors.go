@@ -10,10 +10,9 @@ import (
 )
 
 var (
-	ErrArchNotSupported = errors.New("architecture not supported")
-	ErrValueOutOfRange  = errors.New("value is outside of range")
-	ErrNotRegularFile   = errors.New("not a regular file")
-	ErrEmptyFilePath    = errors.New("file path must not be empty")
+	ErrValueOutOfRange = errors.New("value is outside of range")
+	ErrNotRegularFile  = errors.New("not a regular file")
+	ErrEmptyFilePath   = errors.New("file path must not be empty")
 )
 
 // ParseArgsError wraps errors that occur during argument parsing.

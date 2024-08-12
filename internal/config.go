@@ -12,6 +12,7 @@ import (
 	"os/exec"
 
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/internal/sys"
 )
 
 const (
@@ -40,7 +41,7 @@ type Config struct {
 	Debug     bool
 }
 
-func NewConfig(arch Arch) (Config, error) {
+func NewConfig(arch sys.Arch) (Config, error) {
 	var (
 		qemuExecutable    string
 		qemuMachine       string
@@ -48,20 +49,20 @@ func NewConfig(arch Arch) (Config, error) {
 	)
 
 	switch arch {
-	case AMD64:
+	case sys.AMD64:
 		qemuExecutable = "qemu-system-x86_64"
 		qemuMachine = "q35"
 		qemuTransportType = qemu.TransportTypePCI
-	case ARM64:
+	case sys.ARM64:
 		qemuExecutable = "qemu-system-aarch64"
 		qemuMachine = "virt"
 		qemuTransportType = qemu.TransportTypeMMIO
-	case RISCV64:
+	case sys.RISCV64:
 		qemuExecutable = "qemu-system-riscv64"
 		qemuMachine = "virt"
 		qemuTransportType = qemu.TransportTypeMMIO
 	default:
-		return Config{}, ErrArchNotSupported
+		return Config{}, sys.ErrArchNotSupported
 	}
 
 	args := Config{
@@ -304,37 +305,8 @@ func (c *Config) Validate() error {
 	}
 	defer elfFile.Close()
 
-	if err := validateELF(elfFile.FileHeader, c.Initramfs.Arch); err != nil {
+	if err := sys.ValidateELF(elfFile.FileHeader, c.Initramfs.Arch); err != nil {
 		return fmt.Errorf("check main binary: %w", err)
-	}
-
-	return nil
-}
-
-// validateELF validates that ELF attributes match the requested architecture.
-func validateELF(hdr elf.FileHeader, arch Arch) error {
-	switch hdr.OSABI {
-	case elf.ELFOSABI_NONE, elf.ELFOSABI_LINUX:
-		// supported, pass
-	default:
-		return fmt.Errorf("OSABI not supported: %s", hdr.OSABI)
-	}
-
-	var archReq Arch
-
-	switch hdr.Machine {
-	case elf.EM_X86_64:
-		archReq = AMD64
-	case elf.EM_AARCH64:
-		archReq = ARM64
-	case elf.EM_RISCV:
-		archReq = RISCV64
-	default:
-		return fmt.Errorf("machine type not supported: %s", hdr.Machine)
-	}
-
-	if archReq != arch {
-		return fmt.Errorf("machine %s not supported for %s", hdr.Machine, arch)
 	}
 
 	return nil

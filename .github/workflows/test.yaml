@@ -92,6 +92,9 @@ jobs:
         run: |
           go test -v \
             -tags integration \
+            -covermode atomic \
+            -coverpkg "$(go list ./internal/... | tr '\n' ,)" \
+            -coverprofile /tmp/cover.testing.out \
             ./testing/ \
             -kernel.path "/boot/vmlinuz-virt" \
             -kernel.arch ${{ matrix.arch.go }} \

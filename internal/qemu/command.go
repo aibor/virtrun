@@ -42,10 +42,10 @@ type CommandSpec struct {
 	CPU string
 
 	// Number of CPUs for the guest.
-	SMP uint
+	SMP uint64
 
 	// Memory for the machine in MB.
-	Memory uint
+	Memory uint64
 
 	// Disable KVM support.
 	NoKVM bool
@@ -187,11 +187,11 @@ func (c *CommandSpec) arguments() []Argument {
 	}
 
 	if c.SMP != 0 {
-		args = append(args, UniqueArg("smp", strconv.Itoa(int(c.SMP))))
+		args = append(args, UniqueArg("smp", strconv.FormatUint(c.SMP, 10)))
 	}
 
 	if c.Memory != 0 {
-		args = append(args, UniqueArg("m", strconv.Itoa(int(c.Memory))))
+		args = append(args, UniqueArg("m", strconv.FormatUint(c.Memory, 10)))
 	}
 
 	if !c.NoKVM {

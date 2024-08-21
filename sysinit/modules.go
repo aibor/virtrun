@@ -109,7 +109,10 @@ func finitModule(f *os.File, params string) error {
 		flags |= unix.MODULE_INIT_COMPRESSED_FILE
 	}
 
-	err := unix.FinitModule(int(f.Fd()), params, flags)
+	//nolint:gosec
+	fd := int(f.Fd())
+
+	err := unix.FinitModule(fd, params, flags)
 	if err != nil {
 		// If finit_module is not available, an EOPNOTSUPP is returned.
 		if errors.Is(err, syscall.EOPNOTSUPP) {

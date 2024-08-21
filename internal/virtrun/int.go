@@ -13,13 +13,13 @@ import (
 var ErrValueOutOfRange = errors.New("value is outside of range")
 
 type LimitedUintFlag struct {
-	Value    uint
+	Value    uint64
 	min, max uint64
 	unit     string
 }
 
 func (u LimitedUintFlag) MarshalText() ([]byte, error) {
-	return []byte(strconv.Itoa(int(u.Value)) + u.unit), nil
+	return []byte(strconv.FormatUint(u.Value, 10) + u.unit), nil
 }
 
 func (u *LimitedUintFlag) UnmarshalText(text []byte) error {
@@ -36,7 +36,7 @@ func (u *LimitedUintFlag) UnmarshalText(text []byte) error {
 		return fmt.Errorf("%d > %d: %w", value, u.max, ErrValueOutOfRange)
 	}
 
-	u.Value = uint(value)
+	u.Value = value
 
 	return nil
 }

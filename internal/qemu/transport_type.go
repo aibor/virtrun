@@ -68,7 +68,7 @@ func (t *TransportType) UnmarshalText(text []byte) error {
 }
 
 // ConsoleDeviceName returns the name of the console device in the guest.
-func (t *TransportType) ConsoleDeviceName(num uint8) string {
+func (t *TransportType) ConsoleDeviceName(num uint) string {
 	f := "hvc%d"
 	if *t == TransportTypeISA {
 		f = "ttyS%d"

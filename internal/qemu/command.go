@@ -82,7 +82,7 @@ type CommandSpec struct {
 // Console device number is starting at 1, as console 0 is the default stdout.
 func (c *CommandSpec) AddConsole(file string) string {
 	c.AdditionalConsoles = append(c.AdditionalConsoles, file)
-	return c.TransportType.ConsoleDeviceName(uint8(len(c.AdditionalConsoles)))
+	return c.TransportType.ConsoleDeviceName(uint(len(c.AdditionalConsoles)))
 }
 
 // Validate checks for known incompatibilities.

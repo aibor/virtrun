@@ -14,7 +14,7 @@ import (
 
 func TestCommmandConsoleDeviceName(t *testing.T) {
 	tests := []struct {
-		id            uint8
+		id            uint
 		transportType qemu.TransportType
 		expect        string
 	}{

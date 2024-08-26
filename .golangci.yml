@@ -6,7 +6,6 @@ linters:
   enable-all: true
   disable:
     - depguard
-    - err113
     - execinquery
     - exhaustruct
     - exportloopref
@@ -42,3 +41,6 @@ issues:
     - linters:
         - errcheck
       source: "^\\s+defer \\S+\\.Close()"
+    - linters:
+        - err113
+      path: ".*_test.go"

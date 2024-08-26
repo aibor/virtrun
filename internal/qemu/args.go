@@ -89,8 +89,13 @@ func BuildArgumentStrings(args []Argument) ([]string, error) {
 	s := make([]string, 0, len(args))
 
 	for idx, arg := range args {
-		if slices.ContainsFunc(args[:idx], arg.Equal) {
-			return nil, fmt.Errorf("colliding args: %s", arg.name)
+		if i := slices.IndexFunc(args[:idx], arg.Equal); i != -1 {
+			return nil, fmt.Errorf(
+				"%w: %s, %s",
+				ErrArgumentCollision,
+				arg.String(),
+				args[i].String(),
+			)
 		}
 
 		s = append(s, "-"+arg.name)

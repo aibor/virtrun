@@ -6,7 +6,13 @@ package sys
 
 import (
 	"debug/elf"
+	"errors"
 	"fmt"
+)
+
+var (
+	ErrOSABINotSupported   = errors.New("OSABI not supported")
+	ErrMachineNotSupported = errors.New("machine not supported")
 )
 
 // ValidateELF validates that ELF attributes match the requested architecture.
@@ -15,7 +21,7 @@ func ValidateELF(hdr elf.FileHeader, arch Arch) error {
 	case elf.ELFOSABI_NONE, elf.ELFOSABI_LINUX:
 		// supported, pass
 	default:
-		return fmt.Errorf("OSABI not supported: %s", hdr.OSABI)
+		return fmt.Errorf("%w: %s", ErrOSABINotSupported, hdr.OSABI)
 	}
 
 	var archReq Arch
@@ -28,11 +34,16 @@ func ValidateELF(hdr elf.FileHeader, arch Arch) error {
 	case elf.EM_RISCV:
 		archReq = RISCV64
 	default:
-		return fmt.Errorf("machine type not supported: %s", hdr.Machine)
+		return fmt.Errorf("%w: %s", ErrMachineNotSupported, hdr.Machine)
 	}
 
 	if archReq != arch {
-		return fmt.Errorf("machine %s not supported for %s", hdr.Machine, arch)
+		return fmt.Errorf(
+			"%w: %s on %s",
+			ErrMachineNotSupported,
+			hdr.Machine,
+			arch,
+		)
 	}
 
 	return nil

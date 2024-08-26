@@ -37,6 +37,6 @@ func initProgFor(arch sys.Arch) (fs.File, error) {
 
 		return f, nil
 	default:
-		return nil, fmt.Errorf("arch not supported: %s", arch)
+		return nil, fmt.Errorf("%w: %s", sys.ErrArchNotSupported, arch)
 	}
 }

@@ -119,7 +119,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 
 	t.Run("unknown file type", func(t *testing.T) {
 		err := test(&TreeNode{Type: FileType(99)}, &MockWriter{})
-		assert.ErrorContains(t, err, "unknown file type 99")
+		require.ErrorIs(t, err, ErrFileTypeUnknown)
 	})
 
 	t.Run("nonexisting source", func(t *testing.T) {

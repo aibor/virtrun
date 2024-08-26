@@ -16,9 +16,9 @@ import (
 
 func TestInits(t *testing.T) {
 	tests := []struct {
-		arch    sys.Arch
-		machine elf.Machine
-		errMsg  string
+		arch        sys.Arch
+		machine     elf.Machine
+		expectedErr error
 	}{
 		{
 			arch:    "amd64",
@@ -29,21 +29,23 @@ func TestInits(t *testing.T) {
 			machine: elf.EM_AARCH64,
 		},
 		{
-			arch:   "unsupported",
-			errMsg: "arch not supported",
+			arch:        "unsupported",
+			expectedErr: sys.ErrArchNotSupported,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(string(tt.arch), func(t *testing.T) {
 			file, err := initProgFor(tt.arch)
-			if tt.errMsg != "" {
-				assert.ErrorContains(t, err, tt.errMsg)
-				return
+			if file != nil {
+				t.Cleanup(func() { _ = file.Close() })
 			}
 
-			require.NoError(t, err)
-			t.Cleanup(func() { _ = file.Close() })
+			require.ErrorIs(t, err, tt.expectedErr)
+
+			if tt.expectedErr != nil {
+				return
+			}
 
 			seekFile, ok := file.(io.ReaderAt)
 			require.True(t, ok, "must implement io.ReaderAt")

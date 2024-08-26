@@ -21,6 +21,9 @@ var (
 
 	// ErrNotRegularFile is returned if the source is not a regular file.
 	ErrNotRegularFile = errors.New("source is not a regular file")
+
+	// ErrFileTypeUnknown is returned if the file type is unknown.
+	ErrFileTypeUnknown = errors.New("unknown file type")
 )
 
 // ArchiveError is returned if there is an error writing the archive.

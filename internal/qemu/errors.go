@@ -25,6 +25,9 @@ var (
 
 	// ErrTransportTypeInvalid is returned if a transport type is invalid.
 	ErrTransportTypeInvalid = errors.New("unknown transport type")
+
+	// ErrArgumentCollision is returned if two [Argument]s are considered equal.
+	ErrArgumentCollision = errors.New("colliding args")
 )
 
 // ArgumentError indicates an issue with an input argument.

@@ -231,7 +231,7 @@ func (i *Initramfs) writeTo(writer Writer, sourceFS fs.FS) error {
 		case FileTypeVirtual:
 			return writer.WriteRegular(path, node.Source, fileMode)
 		default:
-			return fmt.Errorf("unknown file type %d", node.Type)
+			return fmt.Errorf("%w: %d", ErrFileTypeUnknown, node.Type)
 		}
 	})
 }

@@ -49,7 +49,7 @@ func parseStdout(
 				guestErr = ErrGuestOom
 			case panicRE.MatchString(line):
 				guestErr = ErrGuestPanic
-			case guestErr == ErrGuestNoExitCodeFound: //nolint:errorlint
+			case guestErr == ErrGuestNoExitCodeFound: //nolint:errorlint,err113
 				_, err := fmt.Sscanf(line, exitCodeFmt, &exitCode)
 				if err != nil {
 					break

@@ -81,16 +81,14 @@ func TestParseExitCode(t *testing.T) {
 	}{
 		{
 			name: "oom",
+			//nolint:lll
 			input: []string{
-				//nolint:lll
 				"[    0.378012] oom-kill:constraint=CONSTRAINT_NONE,nodemask=(null),cpuset=/,mems_allowed=0,global_oom,task_memcg=/,task=main,pid=116,uid=0",
-				//nolint:lll
 				"[    0.378083] Out of memory: Killed process 116 (main) total-vm:48156kB, anon-rss:43884kB, file-rss:4kB, shmem-rss:2924kB, UID:0 pgtables:140kB oom_score_adj:0",
 			},
+			//nolint:lll
 			expected: []string{
-				//nolint:lll
 				"[    0.378012] oom-kill:constraint=CONSTRAINT_NONE,nodemask=(null),cpuset=/,mems_allowed=0,global_oom,task_memcg=/,task=main,pid=116,uid=0",
-				//nolint:lll
 				"[    0.378083] Out of memory: Killed process 116 (main) total-vm:48156kB, anon-rss:43884kB, file-rss:4kB, shmem-rss:2924kB, UID:0 pgtables:140kB oom_score_adj:0",
 				"",
 			},
@@ -98,11 +96,13 @@ func TestParseExitCode(t *testing.T) {
 		},
 		{
 			name: "panic",
+			//nolint:lll
 			input: []string{
 				"[    0.578502] Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000100",
 				"[    0.579013] CPU: 0 PID: 76 Comm: init Not tainted 6.4.3-arch1-1 #1 13c144d261447e0acbf2632534d4009bddc4c3ab",
 				"[    0.579512] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS Arch Linux 1.16.2-1-1 04/01/2014",
 			},
+			//nolint:lll
 			expected: []string{
 				"[    0.578502] Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000100",
 				"[    0.579013] CPU: 0 PID: 76 Comm: init Not tainted 6.4.3-arch1-1 #1 13c144d261447e0acbf2632534d4009bddc4c3ab",

@@ -98,7 +98,8 @@ func (c *CommandSpec) Validate() error {
 		switch {
 		case c.TransportType == TransportTypePCI:
 			return &ArgumentError{"microvm does not support pci transport"}
-		case c.TransportType == TransportTypeISA && len(c.AdditionalConsoles) > 0:
+		case c.TransportType == TransportTypeISA &&
+			len(c.AdditionalConsoles) > 0:
 			return &ArgumentError{
 				"microvm supports only one isa serial port, used for stdio",
 			}
@@ -119,8 +120,8 @@ func (c *CommandSpec) Validate() error {
 }
 
 // ProcessGoTestFlags processes file related go test flags in
-// [CommandSpec.InitArgs] and changes them, so the guest system's writes end up in
-// the host systems file paths.
+// [CommandSpec.InitArgs] and changes them, so the guest system's writes end up
+// in the host systems file paths.
 //
 // It scans [CommandSpec.InitArgs] for coverage and profile related paths and
 // replaces them with console path. The original paths are added as additional
@@ -248,11 +249,7 @@ type Command struct {
 	closer []io.Closer
 }
 
-// NewCommand compiles the final [Command] and is constructed, console processors are setup and the
-// command is executed. An exit code is returned. It can only be 0 if the
-// guest system correctly communicated a 0 value via stdout. In any other case,
-// a non 0 value is returned. If no error is returned, the value was received
-// by the guest system.
+// NewCommand builds the final [Command] with the given [CommandSpec].
 func NewCommand(ctx context.Context, spec CommandSpec) (*Command, error) {
 	// Do some simple input validation to catch most obvious issues.
 	err := spec.Validate()

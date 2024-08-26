@@ -99,7 +99,11 @@ func (w *CPIOWriter) WriteLink(path, target string) error {
 }
 
 // WriteRegular copies the exisiting file from source into the archive.
-func (w *CPIOWriter) WriteRegular(path string, source fs.File, mode fs.FileMode) error {
+func (w *CPIOWriter) WriteRegular(
+	path string,
+	source fs.File,
+	mode fs.FileMode,
+) error {
 	info, err := source.Stat()
 	if err != nil {
 		return &ArchiveError{

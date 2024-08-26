@@ -22,7 +22,11 @@ type MockWriter struct {
 	Err         error
 }
 
-func (m *MockWriter) WriteRegular(path string, source fs.File, mode fs.FileMode) error {
+func (m *MockWriter) WriteRegular(
+	path string,
+	source fs.File,
+	mode fs.FileMode,
+) error {
 	m.Path = path
 	m.Source = source
 	m.Mode = mode

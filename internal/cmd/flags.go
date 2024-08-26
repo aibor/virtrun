@@ -91,7 +91,8 @@ func newFlagset(cfg *virtrun.Virtrun, self string) *flag.FlagSet {
 		&cfg.Initramfs.StandaloneInit,
 		"standalone",
 		cfg.Initramfs.StandaloneInit,
-		"run first given file as init itself. Use this if it has virtrun support built in.",
+		"run first given file as init itself. Use this if it has virtrun"+
+			" support built in.",
 	)
 
 	fs.BoolVar(

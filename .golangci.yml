@@ -25,6 +25,9 @@ linters-settings:
   nlreturn:
     block-size: 2
 
+  lll:
+    line-length: 80
+
 issues:
   include:
     - EXC0002

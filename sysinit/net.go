@@ -10,8 +10,8 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-// ConfigureLoopbackInterface brings the loopback interface up. Kernel should configure
-// address already automatically.
+// ConfigureLoopbackInterface brings the loopback interface up. Kernel should
+// configure address already automatically.
 func ConfigureLoopbackInterface() error {
 	link, err := netlink.LinkByName("lo")
 	if err != nil {

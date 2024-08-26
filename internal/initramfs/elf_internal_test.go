@@ -65,6 +65,7 @@ func TestLdInfosParseFrom(t *testing.T) {
 	}{
 		{
 			name: "testdata",
+			//nolint:lll
 			// $ LD_LIBRARY_PATH=internal/files/testdata/lib/ ldd internal/files/testdata/bin/main
 			lines: []string{
 				"	linux-vdso.so.1 (0x00007ffeb67ab000)",
@@ -80,6 +81,7 @@ func TestLdInfosParseFrom(t *testing.T) {
 		},
 		{
 			name: "env",
+			//nolint:lll
 			// $ ldd /usr/bin/env
 			lines: []string{
 				"	linux-vdso.so.1 (0x00007fffec7d1000)",

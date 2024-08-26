@@ -82,15 +82,15 @@ func TestInitramfsAddFile(t *testing.T) {
 func TestInitramfsAddFiles(t *testing.T) {
 	archive := New(WithRealInitFile("first"))
 
-	require.NoError(t, archive.AddFiles("dir", "second", "rel/third", "/abs/fourth"))
+	require.NoError(t, archive.AddFiles("dir", "2nd", "rel/3rd", "/abs/4th"))
 	require.NoError(t, archive.AddFiles("dir", "fifth"))
 	require.NoError(t, archive.AddFiles("dir"))
 
 	expected := map[string]string{
-		"second": "second",
-		"third":  "rel/third",
-		"fourth": "/abs/fourth",
-		"fifth":  "fifth",
+		"2nd":   "2nd",
+		"3rd":   "rel/3rd",
+		"4th":   "/abs/4th",
+		"fifth": "fifth",
 	}
 
 	for file, relPath := range expected {

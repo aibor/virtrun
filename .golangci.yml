@@ -7,8 +7,9 @@ linters:
   disable:
     - depguard
     - err113
-    - exhaustruct
     - execinquery
+    - exhaustruct
+    - exportloopref
     - funlen
     - gomnd
     - paralleltest

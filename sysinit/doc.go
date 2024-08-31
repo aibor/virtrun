@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 // Package sysinit provides functions for building a simple init binary that
 // sets up system virtual file system mount points, sets up correct shutdown

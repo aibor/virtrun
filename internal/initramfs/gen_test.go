@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //go:build testdata
 

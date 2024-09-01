@@ -50,7 +50,7 @@ nfpms:
     homepage: https://github.com/aibor/virtrun
     maintainer: Tobias Böhm <code@aibor.de>
     description: Run commands in a minimal QEMU guest. Bring your own kernel.
-    license: MIT
+    license: GPL-3.0-or-later
     formats:
       - deb
       - rpm

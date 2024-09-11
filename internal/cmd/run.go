@@ -123,7 +123,7 @@ func handleRunError(err error, errWriter io.Writer) int {
 		return exitCode
 	}
 
-	fmt.Fprintf(errWriter, "Error: %v\n", err)
+	fmt.Fprintf(errWriter, "Error [virtrun]: %v\n", err)
 
 	return exitCode
 }

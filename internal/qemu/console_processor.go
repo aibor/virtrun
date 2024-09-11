@@ -26,6 +26,8 @@ type outputProcessor func() error
 // exit code communicated by the guest via stdout. The processor stops when
 // the src is closed. It returns a [CommandError] with Guest flag set if either
 // an error is detected or the guest communicated a non zero exit code.
+//
+//nolint:cyclop
 func parseStdout(
 	dst io.Writer,
 	src io.Reader,

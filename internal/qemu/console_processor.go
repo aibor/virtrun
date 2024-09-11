@@ -6,6 +6,7 @@ package qemu
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -73,7 +74,7 @@ func parseStdout(
 			}
 		}
 
-		if scanner.Err() != nil {
+		if scanner.Err() != nil && !errors.Is(scanner.Err(), os.ErrClosed) {
 			return scanner.Err()
 		}
 
@@ -115,7 +116,11 @@ func scrubCR(dst io.Writer) (outputProcessor, *os.File, error) {
 			}
 		}
 
-		return scanner.Err()
+		if scanner.Err() != nil && !errors.Is(scanner.Err(), os.ErrClosed) {
+			return scanner.Err()
+		}
+
+		return nil
 	}
 
 	return processor, writePipe, nil

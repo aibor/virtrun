@@ -10,138 +10,59 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 )
 
-var (
-	panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
-	oomRE   = regexp.MustCompile(`^\[[0-9. ]+\] Out of memory: `)
-)
+type lineParseFunc func([]byte) []byte
 
-type outputProcessor func() error
-
-// parseStdout returns an [outputProcessor] that parses stdout from the guest.
+// consoleProcessor is a generic processor of serial console output.
 //
-// It detects kernel panics, OOM messages and most importantly it detects the
-// exit code communicated by the guest via stdout. The processor stops when
-// the src is closed. It returns a [CommandError] with Guest flag set if either
-// an error is detected or the guest communicated a non zero exit code.
+// For each line read from src the given [lineParseFunc] is called. If the
+// function returns non-nil data and dst is set, the output is written to dst.
 //
-//nolint:cyclop
-func parseStdout(
-	dst io.Writer,
-	src io.Reader,
-	exitCodeFmt string,
-	verbose bool,
-) outputProcessor {
-	return func() error {
-		var exitCode int
-
-		// guestErr is unset once an exit code is found in the output stream.
-		guestErr := ErrGuestNoExitCodeFound
-
-		scanner := bufio.NewScanner(src)
-		for scanner.Scan() {
-			line := scanner.Text()
-
-			// Parse the output. Keep going after a match has been found, so
-			// the following lines are printed as well and enhance the context
-			// information in case of kernel error messages.
-			switch {
-			case oomRE.MatchString(line):
-				guestErr = ErrGuestOom
-			case panicRE.MatchString(line):
-				guestErr = ErrGuestPanic
-			case guestErr == ErrGuestNoExitCodeFound: //nolint:errorlint,err113
-				_, err := fmt.Sscanf(line, exitCodeFmt, &exitCode)
-				if err != nil {
-					break
-				}
-
-				guestErr = nil
-				if exitCode != 0 {
-					guestErr = ErrGuestNonZeroExitCode
-				}
-
-				// Skip line printing once the init exit code has been found
-				// unless the verbose flag is set.
-				if !verbose {
-					dst = nil
-				}
-			}
-
-			err := writeLn(dst, scanner.Bytes())
-			if err != nil {
-				return err
-			}
-		}
-
-		if scanner.Err() != nil && !errors.Is(scanner.Err(), os.ErrClosed) {
-			return scanner.Err()
-		}
-
-		return wrapGuestError(guestErr, exitCode)
-	}
+// It can be used without a parse function set to just sanitize line endings.
+type consoleProcessor struct {
+	dst io.Writer
+	src io.Reader
+	fn  lineParseFunc
 }
 
-func wrapGuestError(err error, exitCode int) error {
-	if err == nil {
+func (p consoleProcessor) run() error {
+	scanner := bufio.NewScanner(p.src)
+	for scanner.Scan() {
+		data := scanner.Bytes()
+
+		if p.fn != nil {
+			data = p.fn(data)
+		}
+
+		err := p.writeLn(data)
+		if err != nil {
+			return err
+		}
+	}
+
+	if scanner.Err() != nil && !errors.Is(scanner.Err(), os.ErrClosed) {
+		//nolint:wrapcheck
+		return scanner.Err()
+	}
+
+	return nil
+}
+
+func (p consoleProcessor) writeLn(data []byte) error {
+	// If the there is no output writer or the passed data is nil, discard it.
+	if p.dst == nil || data == nil {
 		return nil
 	}
 
-	return &CommandError{
-		Guest:    true,
-		ExitCode: exitCode,
-		Err:      err,
-	}
-}
-
-// scrubCR creates a simple [outputProcessor] that just sanitizes line breaks.
-//
-// It returns the processor and a write pipe as *os.File. The caller is
-// responsible to close the writePipe. This terminates the processor.
-func scrubCR(dst io.Writer) (outputProcessor, *os.File, error) {
-	readPipe, writePipe, err := os.Pipe()
+	_, err := p.dst.Write(data)
 	if err != nil {
-		return nil, nil, fmt.Errorf("pipe: %w", err)
+		return fmt.Errorf("write data: %w", err)
 	}
 
-	processor := func() error {
-		defer readPipe.Close()
-
-		// Carriage returns are removed by [bufio.ScanLines].
-		scanner := bufio.NewScanner(readPipe)
-		for scanner.Scan() {
-			err := writeLn(dst, scanner.Bytes())
-			if err != nil {
-				return err
-			}
-		}
-
-		if scanner.Err() != nil && !errors.Is(scanner.Err(), os.ErrClosed) {
-			return scanner.Err()
-		}
-
-		return nil
-	}
-
-	return processor, writePipe, nil
-}
-
-func writeLn(dst io.Writer, data []byte) error {
-	// If the caller did not pass any output writer, discard it.
-	if dst == nil {
-		return nil
-	}
-
-	_, err := dst.Write(data)
+	_, err = p.dst.Write([]byte("\n"))
 	if err != nil {
-		return fmt.Errorf("write: %w", err)
-	}
-
-	_, err = dst.Write([]byte("\n"))
-	if err != nil {
-		return fmt.Errorf("write: %w", err)
+		return fmt.Errorf("write newline: %w", err)
 	}
 
 	return nil

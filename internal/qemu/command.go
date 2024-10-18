@@ -240,10 +240,9 @@ func (c *CommandSpec) kernelCmdlineArgs() []string {
 }
 
 type Command struct {
-	cmd *exec.Cmd
+	cmd          *exec.Cmd
+	stdoutParser stdoutParser
 
-	verbose       bool
-	exitCodeFmt   string
 	consoleOutput []string
 
 	closer []io.Closer
@@ -268,9 +267,11 @@ func NewCommand(ctx context.Context, spec CommandSpec) (*Command, error) {
 
 	cmd := &Command{
 		cmd:           exec.CommandContext(ctx, spec.Executable, cmdArgs...),
-		verbose:       spec.Verbose,
-		exitCodeFmt:   spec.ExitCodeFmt,
 		consoleOutput: spec.AdditionalConsoles,
+		stdoutParser: stdoutParser{
+			ExitCodeFmt: spec.ExitCodeFmt,
+			Verbose:     spec.Verbose,
+		},
 	}
 
 	return cmd, nil
@@ -283,19 +284,40 @@ func (c *Command) String() string {
 	return c.cmd.String()
 }
 
+// stdoutProcessor creates a new [consoleProcessor] with the command's
+// [stdoutParser].
+func (c *Command) stdoutProcessor(dst io.Writer) (*consoleProcessor, error) {
+	outPipe, err := c.cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("stdout pipe: %w", err)
+	}
+
+	processor := &consoleProcessor{
+		dst: dst,
+		src: outPipe,
+		fn:  c.stdoutParser.Parse,
+	}
+
+	return processor, nil
+}
+
 // consoleProcessor opens the console output file at path and returns the
-// processor function that cleans the output form carriage returns.
-func (c *Command) consoleProcessor(path string) (outputProcessor, error) {
+// processor function that cleans the output from carriage returns.
+func (c *Command) consoleProcessor(path string) (*consoleProcessor, error) {
 	f, err := os.Create(path)
 	if err != nil {
 		return nil, fmt.Errorf("open console output: %w", err)
 	}
 
-	c.closer = append(c.closer, f)
-
-	processor, writePipe, err := scrubCR(f)
+	readPipe, writePipe, err := os.Pipe()
 	if err != nil {
-		return nil, fmt.Errorf("processor %s: %w", path, err)
+		_ = f.Close()
+		return nil, fmt.Errorf("pipe: %w", err)
+	}
+
+	processor := &consoleProcessor{
+		dst: f,
+		src: readPipe,
 	}
 
 	// Append the write end of the console processor pipe as extra file, so it
@@ -304,15 +326,13 @@ func (c *Command) consoleProcessor(path string) (outputProcessor, error) {
 	// read end of the pipe, cleans the output and writes it into the actual
 	// target file on the host.
 	c.cmd.ExtraFiles = append(c.cmd.ExtraFiles, writePipe)
-	c.closer = append(c.closer, writePipe)
+	c.closer = append(c.closer, f, writePipe)
 
 	return processor, nil
 }
 
 func (c *Command) close() {
-	slices.Reverse(c.closer)
-
-	for _, closer := range c.closer {
+	for _, closer := range slices.Backward(c.closer) {
 		_ = closer.Close()
 	}
 }
@@ -330,48 +350,45 @@ func (c *Command) Run(stdout, stderr io.Writer) error {
 
 	var processors errgroup.Group
 
-	// Create console output processors that fix line endings by stripping "\r".
 	for _, path := range c.consoleOutput {
 		processor, err := c.consoleProcessor(path)
 		if err != nil {
 			return err
 		}
 
-		processors.Go(processor)
+		processors.Go(processor.run)
 	}
 
 	c.cmd.Stderr = stderr
 
-	outPipe, err := c.cmd.StdoutPipe()
+	stdoutProcessor, err := c.stdoutProcessor(stdout)
 	if err != nil {
-		return fmt.Errorf("stdout pipe: %w", err)
+		return err
 	}
-
-	processors.Go(parseStdout(
-		stdout,
-		outPipe,
-		c.exitCodeFmt,
-		c.verbose,
-	))
 
 	if err := c.cmd.Start(); err != nil {
 		return fmt.Errorf("start: %w", err)
 	}
 
-	// Collect process information.
+	if err := stdoutProcessor.run(); err != nil {
+		return fmt.Errorf("stdout parser: %w", err)
+	}
+
 	if err := c.cmd.Wait(); err != nil {
 		return wrapExitError(err)
 	}
 
 	// Close all FDs so processors stop.
-	c.close()
+	for _, f := range c.cmd.ExtraFiles {
+		_ = f.Close()
+	}
 
 	err = processors.Wait()
-	if err != nil && !errors.Is(err, &CommandError{}) {
+	if err != nil {
 		return fmt.Errorf("processor wait: %w", err)
 	}
 
-	return err //nolint:wrapcheck
+	return c.stdoutParser.GuestSuccessful()
 }
 
 func wrapExitError(err error) error {

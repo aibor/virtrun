@@ -23,13 +23,6 @@ import (
 
 const lddTimeoutSeconds = 5
 
-var (
-	// ErrNoInterpreter is returned if no interpreter is found in an ELF file.
-	ErrNoInterpreter = errors.New("no interpreter in ELF file")
-	// ErrNotELFFile is returned if the file does not have an ELF magic number.
-	ErrNotELFFile = errors.New("is not an ELF file")
-)
-
 // Ldd gathers the required shared objects of the ELF file with the given path.
 // The path must point to an ELF file. [ErrNotELFFile] is returned if it is not
 // an ELF file. [ErrNoInterpreter] is returned if no interpreter path is found

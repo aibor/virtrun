@@ -147,13 +147,14 @@ func (i *Initramfs) collectLibs() (map[string]bool, error) {
 	// interpreter). Collect the absolute paths of the found shared objects
 	// deduplicated in a set.
 	if err := i.fileTree.Walk(func(path string, node *TreeNode) error {
-		if node.Type != FileTypeRegular {
+		if node.Type != TreeNodeTypeRegular {
 			return nil
 		}
 
 		paths, err := Ldd(node.RelatedPath)
 		if err != nil {
-			if errors.Is(err, ErrNotELFFile) || errors.Is(err, ErrNoInterpreter) {
+			if errors.Is(err, ErrNotELFFile) ||
+				errors.Is(err, ErrNoInterpreter) {
 				return nil
 			}
 
@@ -184,7 +185,7 @@ func (i *Initramfs) addLinkToLibDir(path string) error {
 	}
 
 	err := i.fileTree.Ln(i.libDir, path)
-	if err != nil && !errors.Is(err, ErrNodeExists) {
+	if err != nil && !errors.Is(err, ErrTreeNodeExists) {
 		return fmt.Errorf("add link for %s: %w", path, err)
 	}
 
@@ -225,7 +226,7 @@ func (i *Initramfs) WriteInto(writer io.Writer) error {
 func (i *Initramfs) writeTo(writer Writer, sourceFS fs.FS) error {
 	return i.fileTree.Walk(func(path string, node *TreeNode) error {
 		switch node.Type {
-		case FileTypeRegular:
+		case TreeNodeTypeRegular:
 			// Cut leading / since fs.FS considers it invalid.
 			relPath := strings.TrimPrefix(node.RelatedPath, "/")
 
@@ -236,14 +237,14 @@ func (i *Initramfs) writeTo(writer Writer, sourceFS fs.FS) error {
 			defer source.Close()
 
 			return writer.WriteRegular(path, source, fileMode)
-		case FileTypeDirectory:
+		case TreeNodeTypeDirectory:
 			return writer.WriteDirectory(path)
-		case FileTypeLink:
+		case TreeNodeTypeLink:
 			return writer.WriteLink(path, node.RelatedPath)
-		case FileTypeVirtual:
+		case TreeNodeTypeVirtual:
 			return writer.WriteRegular(path, node.Source, fileMode)
 		default:
-			return fmt.Errorf("%w: %d", ErrFileTypeUnknown, node.Type)
+			return fmt.Errorf("%w: %d", ErrTreeNodeTypeUnknown, node.Type)
 		}
 	})
 }

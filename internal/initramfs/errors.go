@@ -9,22 +9,22 @@ import (
 )
 
 var (
-	// ErrNodeNotDir is returned if a tree node is supposed to be a directory
+	// ErrTreeNodeNotDir is returned if a tree node is supposed to be a directory
 	// but is not.
-	ErrNodeNotDir = errors.New("tree node is not a directory")
+	ErrTreeNodeNotDir = errors.New("tree node is not a directory")
 
-	// ErrNodeNotExists is returned if a tree node that is looked up does not
+	// ErrTreeNodeNotExists is returned if a tree node that is looked up does not
 	// exist.
-	ErrNodeNotExists = errors.New("tree node does not exist")
+	ErrTreeNodeNotExists = errors.New("tree node does not exist")
 
-	// ErrNodeExists is returned if a tree node exists that was not expected.
-	ErrNodeExists = errors.New("tree node already exists")
+	// ErrTreeNodeExists is returned if a tree node exists that was not expected.
+	ErrTreeNodeExists = errors.New("tree node already exists")
+
+	// ErrTreeNodeTypeUnknown is returned if the [TreeNodeType] is unknown.
+	ErrTreeNodeTypeUnknown = errors.New("unknown tree node type")
 
 	// ErrNotRegularFile is returned if the source is not a regular file.
 	ErrNotRegularFile = errors.New("source is not a regular file")
-
-	// ErrFileTypeUnknown is returned if the file type is unknown.
-	ErrFileTypeUnknown = errors.New("unknown file type")
 )
 
 // ArchiveError is returned if there is an error writing the archive.

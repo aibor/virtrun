@@ -30,7 +30,7 @@ func isRoot(path string) bool {
 func (t *Tree) GetRoot() *TreeNode {
 	if t.root == nil {
 		t.root = &TreeNode{
-			Type: FileTypeDirectory,
+			Type: TreeNodeTypeDirectory,
 		}
 	}
 
@@ -71,7 +71,7 @@ func (t *Tree) Mkdir(path string) (*TreeNode, error) {
 	}
 
 	node, err := parent.AddDirectory(name)
-	if errors.Is(err, ErrNodeExists) && node.IsDir() {
+	if errors.Is(err, ErrTreeNodeExists) && node.IsDir() {
 		err = nil
 	}
 
@@ -89,7 +89,7 @@ func (t *Tree) Ln(target string, path string) error {
 	}
 
 	if l, err := dirNode.AddLink(name, target); err != nil {
-		if !errors.Is(err, ErrNodeExists) || !l.IsLink() {
+		if !errors.Is(err, ErrTreeNodeExists) || !l.IsLink() {
 			return err
 		}
 	}

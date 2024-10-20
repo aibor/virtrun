@@ -13,7 +13,7 @@ import (
 // TreeNode is a single file tree node.
 type TreeNode struct {
 	// Type of this node.
-	Type FileType
+	Type TreeNodeType
 	// Related path depending on the file type. Empty for directories,
 	// target path for links, source files for regular files.
 	RelatedPath string
@@ -26,18 +26,18 @@ type TreeNode struct {
 // String returns a string representation of the TreeNode.
 func (e *TreeNode) String() string {
 	switch e.Type {
-	case FileTypeRegular:
+	case TreeNodeTypeRegular:
 		return "File from: " + e.RelatedPath
-	case FileTypeDirectory:
+	case TreeNodeTypeDirectory:
 		keys := make([]string, 0, len(e.children))
 		for key := range e.children {
 			keys = append(keys, key)
 		}
 
 		return fmt.Sprintf("Dir with entries: % s", keys)
-	case FileTypeLink:
+	case TreeNodeTypeLink:
 		return "Link to: " + e.RelatedPath
-	case FileTypeVirtual:
+	case TreeNodeTypeVirtual:
 		return "File virtual"
 	default:
 		return "invalid type"
@@ -46,28 +46,28 @@ func (e *TreeNode) String() string {
 
 // IsDir returns true if the [TreeNode] is a directory.
 func (e *TreeNode) IsDir() bool {
-	return e.Type == FileTypeDirectory
+	return e.Type == TreeNodeTypeDirectory
 }
 
 // IsLink returns true if the [TreeNode] is a link.
 func (e *TreeNode) IsLink() bool {
-	return e.Type == FileTypeLink
+	return e.Type == TreeNodeTypeLink
 }
 
 // IsRegular returns true if the [TreeNode] is a regular file.
 func (e *TreeNode) IsRegular() bool {
-	return e.Type == FileTypeRegular
+	return e.Type == TreeNodeTypeRegular
 }
 
 // IsVirtual returns true if the [TreeNode] is a virtual regular file.
 func (e *TreeNode) IsVirtual() bool {
-	return e.Type == FileTypeVirtual
+	return e.Type == TreeNodeTypeVirtual
 }
 
 // AddRegular adds a new regular file [TreeNode] children.
 func (e *TreeNode) AddRegular(name, relatedPath string) (*TreeNode, error) {
 	node := &TreeNode{
-		Type:        FileTypeRegular,
+		Type:        TreeNodeTypeRegular,
 		RelatedPath: relatedPath,
 	}
 
@@ -77,7 +77,7 @@ func (e *TreeNode) AddRegular(name, relatedPath string) (*TreeNode, error) {
 // AddDirectory adds a new directory [TreeNode] children.
 func (e *TreeNode) AddDirectory(name string) (*TreeNode, error) {
 	node := &TreeNode{
-		Type: FileTypeDirectory,
+		Type: TreeNodeTypeDirectory,
 	}
 
 	return e.AddNode(name, node)
@@ -86,7 +86,7 @@ func (e *TreeNode) AddDirectory(name string) (*TreeNode, error) {
 // AddLink adds a new link [TreeNode] children.
 func (e *TreeNode) AddLink(name, relatedPath string) (*TreeNode, error) {
 	node := &TreeNode{
-		Type:        FileTypeLink,
+		Type:        TreeNodeTypeLink,
 		RelatedPath: relatedPath,
 	}
 
@@ -96,7 +96,7 @@ func (e *TreeNode) AddLink(name, relatedPath string) (*TreeNode, error) {
 // AddVirtual adds a new virtual file [TreeNode] children.
 func (e *TreeNode) AddVirtual(name string, source fs.File) (*TreeNode, error) {
 	node := &TreeNode{
-		Type:   FileTypeVirtual,
+		Type:   TreeNodeTypeVirtual,
 		Source: source,
 	}
 
@@ -107,11 +107,11 @@ func (e *TreeNode) AddVirtual(name string, source fs.File) (*TreeNode, error) {
 // for using only valid [Type]s and according fields.
 func (e *TreeNode) AddNode(name string, node *TreeNode) (*TreeNode, error) {
 	if !e.IsDir() {
-		return nil, ErrNodeNotDir
+		return nil, ErrTreeNodeNotDir
 	}
 
 	if ee, exists := e.children[name]; exists {
-		return ee, ErrNodeExists
+		return ee, ErrTreeNodeExists
 	}
 
 	if e.children == nil {
@@ -127,12 +127,12 @@ func (e *TreeNode) AddNode(name string, node *TreeNode) (*TreeNode, error) {
 // it doesn't exist.
 func (e *TreeNode) GetNode(name string) (*TreeNode, error) {
 	if !e.IsDir() {
-		return nil, ErrNodeNotDir
+		return nil, ErrTreeNodeNotDir
 	}
 
 	node, exists := e.children[name]
 	if !exists {
-		return nil, ErrNodeNotExists
+		return nil, ErrTreeNodeNotExists
 	}
 
 	return node, nil

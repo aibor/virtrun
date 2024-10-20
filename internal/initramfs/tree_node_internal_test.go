@@ -13,10 +13,10 @@ import (
 )
 
 func TestIsRegular(t *testing.T) {
-	fileNode := TreeNode{Type: FileTypeRegular}
-	dirNode := TreeNode{Type: FileTypeDirectory}
-	linkNode := TreeNode{Type: FileTypeLink}
-	virtualNode := TreeNode{Type: FileTypeVirtual}
+	fileNode := TreeNode{Type: TreeNodeTypeRegular}
+	dirNode := TreeNode{Type: TreeNodeTypeDirectory}
+	linkNode := TreeNode{Type: TreeNodeTypeLink}
+	virtualNode := TreeNode{Type: TreeNodeTypeVirtual}
 
 	assert.True(t, fileNode.IsRegular())
 	assert.False(t, dirNode.IsRegular())
@@ -25,10 +25,10 @@ func TestIsRegular(t *testing.T) {
 }
 
 func TestIsDir(t *testing.T) {
-	fileNode := TreeNode{Type: FileTypeRegular}
-	dirNode := TreeNode{Type: FileTypeDirectory}
-	linkNode := TreeNode{Type: FileTypeLink}
-	virtualNode := TreeNode{Type: FileTypeVirtual}
+	fileNode := TreeNode{Type: TreeNodeTypeRegular}
+	dirNode := TreeNode{Type: TreeNodeTypeDirectory}
+	linkNode := TreeNode{Type: TreeNodeTypeLink}
+	virtualNode := TreeNode{Type: TreeNodeTypeVirtual}
 
 	assert.False(t, fileNode.IsDir())
 	assert.True(t, dirNode.IsDir())
@@ -37,10 +37,10 @@ func TestIsDir(t *testing.T) {
 }
 
 func TestIsLink(t *testing.T) {
-	fileNode := TreeNode{Type: FileTypeRegular}
-	dirNode := TreeNode{Type: FileTypeDirectory}
-	linkNode := TreeNode{Type: FileTypeLink}
-	virtualNode := TreeNode{Type: FileTypeVirtual}
+	fileNode := TreeNode{Type: TreeNodeTypeRegular}
+	dirNode := TreeNode{Type: TreeNodeTypeDirectory}
+	linkNode := TreeNode{Type: TreeNodeTypeLink}
+	virtualNode := TreeNode{Type: TreeNodeTypeVirtual}
 
 	assert.False(t, fileNode.IsLink())
 	assert.False(t, dirNode.IsLink())
@@ -49,10 +49,10 @@ func TestIsLink(t *testing.T) {
 }
 
 func TestIsVirtual(t *testing.T) {
-	fileNode := TreeNode{Type: FileTypeRegular}
-	dirNode := TreeNode{Type: FileTypeDirectory}
-	linkNode := TreeNode{Type: FileTypeLink}
-	virtualNode := TreeNode{Type: FileTypeVirtual}
+	fileNode := TreeNode{Type: TreeNodeTypeRegular}
+	dirNode := TreeNode{Type: TreeNodeTypeDirectory}
+	linkNode := TreeNode{Type: TreeNodeTypeLink}
+	virtualNode := TreeNode{Type: TreeNodeTypeVirtual}
 
 	assert.False(t, fileNode.IsVirtual())
 	assert.False(t, dirNode.IsVirtual())
@@ -61,30 +61,30 @@ func TestIsVirtual(t *testing.T) {
 }
 
 func TestAddFile(t *testing.T) {
-	p := TreeNode{Type: FileTypeDirectory}
+	p := TreeNode{Type: TreeNodeTypeDirectory}
 	e, err := p.AddRegular("file", "source")
 	require.NoError(t, err)
-	assert.Equal(t, FileTypeRegular, e.Type)
+	assert.Equal(t, TreeNodeTypeRegular, e.Type)
 	assert.Equal(t, "source", e.RelatedPath)
 	assert.Empty(t, e.Source)
 	assert.Empty(t, e.children)
 }
 
 func TestAddDirectory(t *testing.T) {
-	p := TreeNode{Type: FileTypeDirectory}
+	p := TreeNode{Type: TreeNodeTypeDirectory}
 	e, err := p.AddDirectory("dir")
 	require.NoError(t, err)
-	assert.Equal(t, FileTypeDirectory, e.Type)
+	assert.Equal(t, TreeNodeTypeDirectory, e.Type)
 	assert.Equal(t, "", e.RelatedPath)
 	assert.Empty(t, e.Source)
 	assert.Empty(t, e.children)
 }
 
 func TestAddLink(t *testing.T) {
-	p := TreeNode{Type: FileTypeDirectory}
+	p := TreeNode{Type: TreeNodeTypeDirectory}
 	e, err := p.AddLink("link", "target")
 	require.NoError(t, err)
-	assert.Equal(t, FileTypeLink, e.Type)
+	assert.Equal(t, TreeNodeTypeLink, e.Type)
 	assert.Equal(t, "target", e.RelatedPath)
 	assert.Empty(t, e.Source)
 	assert.Empty(t, e.children)
@@ -97,10 +97,10 @@ func TestAddVirtual(t *testing.T) {
 	source, err := mapFS.Open("source")
 	require.NoError(t, err)
 
-	p := TreeNode{Type: FileTypeDirectory}
+	p := TreeNode{Type: TreeNodeTypeDirectory}
 	e, err := p.AddVirtual("file", source)
 	require.NoError(t, err)
-	assert.Equal(t, FileTypeVirtual, e.Type)
+	assert.Equal(t, TreeNodeTypeVirtual, e.Type)
 	assert.Equal(t, source, e.Source)
 	assert.Empty(t, e.RelatedPath)
 	assert.Empty(t, e.children)
@@ -108,7 +108,7 @@ func TestAddVirtual(t *testing.T) {
 
 func TestAddNode(t *testing.T) {
 	t.Run("new", func(t *testing.T) {
-		p := TreeNode{Type: FileTypeDirectory}
+		p := TreeNode{Type: TreeNodeTypeDirectory}
 		n := TreeNode{}
 		e, err := p.AddNode("new", &n)
 		require.NoError(t, err)
@@ -116,30 +116,30 @@ func TestAddNode(t *testing.T) {
 	})
 
 	t.Run("exists", func(t *testing.T) {
-		p := TreeNode{Type: FileTypeDirectory}
+		p := TreeNode{Type: TreeNodeTypeDirectory}
 		n := TreeNode{}
 		_, err := p.AddNode("new", &n)
 		require.NoError(t, err)
 		e, err := p.AddNode("new", &n)
-		require.ErrorIs(t, err, ErrNodeExists)
+		require.ErrorIs(t, err, ErrTreeNodeExists)
 		assert.Equal(t, &n, e)
 	})
 
 	t.Run("not dir", func(t *testing.T) {
-		p := TreeNode{Type: FileTypeRegular}
+		p := TreeNode{Type: TreeNodeTypeRegular}
 		n := TreeNode{}
 		_, err := p.AddNode("new", &n)
-		require.ErrorIs(t, err, ErrNodeNotDir)
+		require.ErrorIs(t, err, ErrTreeNodeNotDir)
 	})
 }
 
 func TestGetNode(t *testing.T) {
 	node := TreeNode{
-		Type:        FileTypeRegular,
+		Type:        TreeNodeTypeRegular,
 		RelatedPath: "source",
 	}
 	p := TreeNode{
-		Type: FileTypeDirectory,
+		Type: TreeNodeTypeDirectory,
 		children: map[string]*TreeNode{
 			"file": &node,
 		},
@@ -153,12 +153,12 @@ func TestGetNode(t *testing.T) {
 
 	t.Run("does not exist", func(t *testing.T) {
 		_, err := p.GetNode("404")
-		assert.ErrorIs(t, err, ErrNodeNotExists)
+		assert.ErrorIs(t, err, ErrTreeNodeNotExists)
 	})
 
 	t.Run("not dir", func(t *testing.T) {
-		p := TreeNode{Type: FileTypeRegular}
+		p := TreeNode{Type: TreeNodeTypeRegular}
 		_, err := p.GetNode("file")
-		require.ErrorIs(t, err, ErrNodeNotDir)
+		require.ErrorIs(t, err, ErrTreeNodeNotDir)
 	})
 }

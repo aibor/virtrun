@@ -6,6 +6,7 @@ package initramfs
 
 import (
 	"errors"
+	"io/fs"
 )
 
 var (
@@ -33,25 +34,5 @@ var (
 	ErrNotELFFile = errors.New("is not an ELF file")
 )
 
-// ArchiveError is returned if there is an error writing the archive.
-type ArchiveError struct {
-	Op   string
-	Path string
-	Err  error
-}
-
-// Error implements the [error] interface.
-func (e *ArchiveError) Error() string {
-	return "archive " + e.Op + " " + e.Path + ": " + e.Err.Error()
-}
-
-// Is implements the [errors.Is] interface.
-func (e *ArchiveError) Is(other error) bool {
-	err, ok := other.(*ArchiveError)
-	return ok && e.Op == err.Op
-}
-
-// Unwrap implements the [errors.Unwrap] interface.
-func (e *ArchiveError) Unwrap() error {
-	return e.Err
-}
+// PathError records an error and the operation and file path that caused it.
+type PathError = fs.PathError

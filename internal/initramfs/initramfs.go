@@ -11,7 +11,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const fileMode = 0o755
@@ -23,7 +22,7 @@ const fileMode = 0o755
 // [Initramfs.AddFiles]. Dynamically linked ELF libraries can be resolved
 // and added for all already added regular files by calling
 // [Initramfs.AddRequiredSharedObjects]. Once ready, write the [Initramfs] with
-// [Initramfs.WriteInto].
+// [Initramfs.WriteCPIOInto].
 type Initramfs struct {
 	fileTree Tree
 	libDir   string
@@ -63,7 +62,7 @@ func (i *Initramfs) AddFile(dir, name, path string) error {
 		name = filepath.Base(path)
 	}
 
-	dirNode, err := i.fileTree.Mkdir(dir)
+	dirNode, err := i.mkdir(dir)
 	if err != nil {
 		return err
 	}
@@ -74,7 +73,7 @@ func (i *Initramfs) AddFile(dir, name, path string) error {
 // AddFiles creates [Initramfs.filesDir] and adds the given files to it.
 // The file paths must be absolute or relative to "/".
 func (i *Initramfs) AddFiles(dir string, paths ...string) error {
-	dirNode, err := i.fileTree.Mkdir(dir)
+	dirNode, err := i.mkdir(dir)
 	if err != nil {
 		return err
 	}
@@ -105,16 +104,17 @@ func (i *Initramfs) AddRequiredSharedObjects() error {
 	// In order to keep any references and search paths of the dynamic linker
 	// working, add symbolic links for all other directories where libs are
 	// copied from to the central lib dir.
-	dirNode, err := i.fileTree.Mkdir(i.libDir)
+	dirNode, err := i.mkdir(i.libDir)
 	if err != nil {
 		return err
 	}
 
 	for path := range pathSet {
 		dir, name := filepath.Split(path)
-		_, err := dirNode.AddRegular(name, path)
+
+		err := addFile(dirNode, name, path)
 		if err != nil {
-			return fmt.Errorf("add file %s: %w", name, err)
+			return err
 		}
 
 		err = i.addLinkToLibDir(dir)
@@ -126,7 +126,11 @@ func (i *Initramfs) AddRequiredSharedObjects() error {
 		// get the real path that the dynamic linker needs.
 		canonicalDir, err := filepath.EvalSymlinks(dir)
 		if err != nil {
-			return fmt.Errorf("eval symlinks: %w", err)
+			return &PathError{
+				Op:   "eval symlinks",
+				Path: path,
+				Err:  err,
+			}
 		}
 
 		err = i.addLinkToLibDir(canonicalDir)
@@ -158,14 +162,23 @@ func (i *Initramfs) collectLibs() (map[string]bool, error) {
 				return nil
 			}
 
-			return fmt.Errorf("resolve %s: %w", path, err)
+			return &PathError{
+				Op:   "ldd",
+				Path: path,
+				Err:  err,
+			}
 		}
 
 		for _, p := range paths {
 			absPath, err := filepath.Abs(p)
 			if err != nil {
-				return fmt.Errorf("abs path for %s: %w", p, err)
+				return &PathError{
+					Op:   "absolute",
+					Path: path,
+					Err:  err,
+				}
 			}
+
 			pathSet[absPath] = true
 		}
 
@@ -186,10 +199,27 @@ func (i *Initramfs) addLinkToLibDir(path string) error {
 
 	err := i.fileTree.Ln(i.libDir, path)
 	if err != nil && !errors.Is(err, ErrTreeNodeExists) {
-		return fmt.Errorf("add link for %s: %w", path, err)
+		return &PathError{
+			Op:   "add link",
+			Path: path,
+			Err:  err,
+		}
 	}
 
 	return nil
+}
+
+func (i *Initramfs) mkdir(dir string) (*TreeNode, error) {
+	dirNode, err := i.fileTree.Mkdir(dir)
+	if err != nil {
+		return nil, &PathError{
+			Op:   "mkdir",
+			Path: dir,
+			Err:  err,
+		}
+	}
+
+	return dirNode, nil
 }
 
 // WriteToTempFile writes the complete CPIO archive into a new file in the
@@ -204,7 +234,7 @@ func (i *Initramfs) WriteToTempFile(tmpDir string) (string, error) {
 	}
 	defer file.Close()
 
-	err = i.WriteInto(file)
+	err = i.WriteCPIOInto(file, os.DirFS("/"))
 	if err != nil {
 		_ = os.Remove(file.Name())
 		return "", fmt.Errorf("create archive: %w", err)
@@ -213,45 +243,40 @@ func (i *Initramfs) WriteToTempFile(tmpDir string) (string, error) {
 	return file.Name(), nil
 }
 
-// WriteInto writes the [Initramfs] as CPIO archive to the given writer.
-func (i *Initramfs) WriteInto(writer io.Writer) error {
+// WriteCPIOInto writes the [Initramfs] as CPIO archive to the given [Writer]
+// from the given source [fs.FS].
+func (i *Initramfs) WriteCPIOInto(writer io.Writer, source fs.FS) error {
 	w := NewCPIOWriter(writer)
 	defer w.Close()
 
-	return i.writeTo(w, os.DirFS("/"))
+	return i.writeTo(w, source)
 }
 
 // writeTo writes all collected files into the given writer. Regular files are
-// copied from the given sourceFS.
-func (i *Initramfs) writeTo(writer Writer, sourceFS fs.FS) error {
+// copied from the given source [fs.FS].
+func (i *Initramfs) writeTo(writer Writer, source fs.FS) error {
 	return i.fileTree.Walk(func(path string, node *TreeNode) error {
-		switch node.Type {
-		case TreeNodeTypeRegular:
-			// Cut leading / since fs.FS considers it invalid.
-			relPath := strings.TrimPrefix(node.RelatedPath, "/")
-
-			source, err := sourceFS.Open(relPath)
-			if err != nil {
-				return fmt.Errorf("open: %w", err)
+		err := node.WriteTo(writer, path, source)
+		if err != nil {
+			return &PathError{
+				Op:   "archive write",
+				Path: path,
+				Err:  err,
 			}
-			defer source.Close()
-
-			return writer.WriteRegular(path, source, fileMode)
-		case TreeNodeTypeDirectory:
-			return writer.WriteDirectory(path)
-		case TreeNodeTypeLink:
-			return writer.WriteLink(path, node.RelatedPath)
-		case TreeNodeTypeVirtual:
-			return writer.WriteRegular(path, node.Source, fileMode)
-		default:
-			return fmt.Errorf("%w: %d", ErrTreeNodeTypeUnknown, node.Type)
 		}
+
+		return nil
 	})
 }
 
 func addFile(dirNode *TreeNode, name, path string) error {
-	if _, err := dirNode.AddRegular(name, path); err != nil {
-		return fmt.Errorf("add file %s: %w", path, err)
+	_, err := dirNode.AddRegular(name, path)
+	if err != nil {
+		return &PathError{
+			Op:   "add file",
+			Path: path,
+			Err:  err,
+		}
 	}
 
 	return nil

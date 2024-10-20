@@ -92,9 +92,7 @@ func TestCPIOWriter(t *testing.T) {
 
 				return w.WriteLink("test", "target")
 			},
-			expectedErr: &initramfs.ArchiveError{
-				Op: "write header",
-			},
+			expectedErr: cpio.ErrWriteAfterClose,
 		},
 	}
 

@@ -6,6 +6,7 @@ package initramfs
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/fs"
 
@@ -28,10 +29,7 @@ func NewCPIOWriter(w io.Writer) *CPIOWriter {
 func (w *CPIOWriter) Close() error {
 	err := w.cpioWriter.Close()
 	if err != nil {
-		return &ArchiveError{
-			Op:  "close",
-			Err: err,
-		}
+		return fmt.Errorf("close: %w", err)
 	}
 
 	return nil
@@ -41,10 +39,7 @@ func (w *CPIOWriter) Close() error {
 func (w *CPIOWriter) Flush() error {
 	err := w.cpioWriter.Flush()
 	if err != nil {
-		return &ArchiveError{
-			Op:  "flush",
-			Err: err,
-		}
+		return fmt.Errorf("flush: %w", err)
 	}
 
 	return nil
@@ -52,11 +47,7 @@ func (w *CPIOWriter) Flush() error {
 
 func (w *CPIOWriter) write(hdr *cpio.Header, src io.Reader) error {
 	if err := w.cpioWriter.WriteHeader(hdr); err != nil {
-		return &ArchiveError{
-			Op:   "write header",
-			Path: hdr.Name,
-			Err:  err,
-		}
+		return fmt.Errorf("write header: %w", err)
 	}
 
 	if src == nil {
@@ -64,11 +55,7 @@ func (w *CPIOWriter) write(hdr *cpio.Header, src io.Reader) error {
 	}
 
 	if _, err := io.Copy(w.cpioWriter, src); err != nil {
-		return &ArchiveError{
-			Op:   "write body",
-			Path: hdr.Name,
-			Err:  err,
-		}
+		return fmt.Errorf("write body: %w", err)
 	}
 
 	return nil
@@ -106,28 +93,16 @@ func (w *CPIOWriter) WriteRegular(
 ) error {
 	info, err := source.Stat()
 	if err != nil {
-		return &ArchiveError{
-			Op:   "read info",
-			Path: path,
-			Err:  err,
-		}
+		return fmt.Errorf("stat: %w", err)
 	}
 
 	if !info.Mode().IsRegular() {
-		return &ArchiveError{
-			Op:   "check source",
-			Path: path,
-			Err:  ErrNotRegularFile,
-		}
+		return ErrNotRegularFile
 	}
 
 	cpioHdr, err := cpio.FileInfoHeader(info, "")
 	if err != nil {
-		return &ArchiveError{
-			Op:   "create header",
-			Path: path,
-			Err:  err,
-		}
+		return fmt.Errorf("header from info: %w", err)
 	}
 
 	cpioHdr.Name = path

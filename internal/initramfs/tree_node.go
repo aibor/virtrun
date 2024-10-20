@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 )
 
 // TreeNode is a single file tree node.
@@ -136,6 +137,38 @@ func (e *TreeNode) GetNode(name string) (*TreeNode, error) {
 	}
 
 	return node, nil
+}
+
+// WriteTo writes the [TreeNode] into the given [Writer] with the given path.
+//
+// If the [TreeNode] is a regular file, it is read from the given source
+// [fs.FS].
+func (e *TreeNode) WriteTo(writer Writer, path string, source fs.FS) error {
+	switch e.Type {
+	case TreeNodeTypeRegular:
+		// Cut leading / since fs.FS considers it invalid.
+		relPath := strings.TrimPrefix(e.RelatedPath, "/")
+
+		source, err := source.Open(relPath)
+		if err != nil {
+			return fmt.Errorf("open source: %w", err)
+		}
+		defer source.Close()
+
+		//nolint:wrapcheck
+		return writer.WriteRegular(path, source, fileMode)
+	case TreeNodeTypeDirectory:
+		//nolint:wrapcheck
+		return writer.WriteDirectory(path)
+	case TreeNodeTypeLink:
+		//nolint:wrapcheck
+		return writer.WriteLink(path, e.RelatedPath)
+	case TreeNodeTypeVirtual:
+		//nolint:wrapcheck
+		return writer.WriteRegular(path, e.Source, fileMode)
+	default:
+		return fmt.Errorf("%w: %d", ErrTreeNodeTypeUnknown, e.Type)
+	}
 }
 
 func (e *TreeNode) walk(base string, fn WalkFunc) error {

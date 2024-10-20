@@ -109,7 +109,6 @@ func finitModule(f *os.File, params string) error {
 		flags |= unix.MODULE_INIT_COMPRESSED_FILE
 	}
 
-	//nolint:gosec
 	fd := int(f.Fd())
 
 	err := unix.FinitModule(fd, params, flags)

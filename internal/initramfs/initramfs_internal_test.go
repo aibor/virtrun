@@ -5,6 +5,7 @@
 package initramfs
 
 import (
+	"io/fs"
 	"path/filepath"
 	"testing"
 	"testing/fstest"
@@ -128,7 +129,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 			RelatedPath: "nonexisting",
 		}
 		err := test(node, &MockWriter{})
-		assert.ErrorContains(t, err, "open nonexisting: file does not exist")
+		assert.ErrorIs(t, err, fs.ErrNotExist)
 	})
 
 	t.Run("existing files", func(t *testing.T) {

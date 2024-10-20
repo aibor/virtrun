@@ -63,23 +63,30 @@ func (i *Initramfs) AddFile(dir, name, path string) error {
 		name = filepath.Base(path)
 	}
 
-	return i.withDirNode(dir, func(dirNode *TreeNode) error {
-		return addFile(dirNode, name, path)
-	})
+	dirNode, err := i.fileTree.Mkdir(dir)
+	if err != nil {
+		return err
+	}
+
+	return addFile(dirNode, name, path)
 }
 
 // AddFiles creates [Initramfs.filesDir] and adds the given files to it.
 // The file paths must be absolute or relative to "/".
 func (i *Initramfs) AddFiles(dir string, paths ...string) error {
-	return i.withDirNode(dir, func(dirNode *TreeNode) error {
-		for _, file := range paths {
-			if err := addFile(dirNode, filepath.Base(file), file); err != nil {
-				return err
-			}
-		}
+	dirNode, err := i.fileTree.Mkdir(dir)
+	if err != nil {
+		return err
+	}
 
-		return nil
-	})
+	for _, file := range paths {
+		err := addFile(dirNode, filepath.Base(file), file)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // AddRequiredSharedObjects recursively resolves the dynamically linked
@@ -98,29 +105,34 @@ func (i *Initramfs) AddRequiredSharedObjects() error {
 	// In order to keep any references and search paths of the dynamic linker
 	// working, add symbolic links for all other directories where libs are
 	// copied from to the central lib dir.
-	if err := i.withDirNode(i.libDir, func(dirNode *TreeNode) error {
-		for path := range pathSet {
-			dir, name := filepath.Split(path)
-			if _, err := dirNode.AddRegular(name, path); err != nil {
-				return fmt.Errorf("add file %s: %w", name, err)
-			}
-			if err := i.addLinkToLibDir(dir); err != nil {
-				return err
-			}
-			// Try if the directory has symbolic links and resolve them, so we
-			// get the real path that the dynamic linker needs.
-			canonicalDir, err := filepath.EvalSymlinks(dir)
-			if err != nil {
-				return fmt.Errorf("eval symlinks: %w", err)
-			}
-			if err := i.addLinkToLibDir(canonicalDir); err != nil {
-				return err
-			}
+	dirNode, err := i.fileTree.Mkdir(i.libDir)
+	if err != nil {
+		return err
+	}
+
+	for path := range pathSet {
+		dir, name := filepath.Split(path)
+		_, err := dirNode.AddRegular(name, path)
+		if err != nil {
+			return fmt.Errorf("add file %s: %w", name, err)
 		}
 
-		return nil
-	}); err != nil {
-		return err
+		err = i.addLinkToLibDir(dir)
+		if err != nil {
+			return err
+		}
+
+		// Try if the directory has symbolic links and resolve them, so we
+		// get the real path that the dynamic linker needs.
+		canonicalDir, err := filepath.EvalSymlinks(dir)
+		if err != nil {
+			return fmt.Errorf("eval symlinks: %w", err)
+		}
+
+		err = i.addLinkToLibDir(canonicalDir)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -234,15 +246,6 @@ func (i *Initramfs) writeTo(writer Writer, sourceFS fs.FS) error {
 			return fmt.Errorf("%w: %d", ErrFileTypeUnknown, node.Type)
 		}
 	})
-}
-
-func (i *Initramfs) withDirNode(dir string, fn func(*TreeNode) error) error {
-	dirNode, err := i.fileTree.Mkdir(dir)
-	if err != nil {
-		return fmt.Errorf("add dir %s: %w", dir, err)
-	}
-
-	return fn(dirNode)
 }
 
 func addFile(dirNode *TreeNode, name, path string) error {

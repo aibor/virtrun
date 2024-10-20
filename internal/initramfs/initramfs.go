@@ -150,19 +150,19 @@ func (i *Initramfs) collectLibs() (map[string]bool, error) {
 	// Ignore if it is not an ELF file or if it is statically linked (has no
 	// interpreter). Collect the absolute paths of the found shared objects
 	// deduplicated in a set.
-	if err := i.fileTree.Walk(func(path string, node *TreeNode) error {
+	for path, node := range i.fileTree.All() {
 		if node.Type != TreeNodeTypeRegular {
-			return nil
+			continue
 		}
 
 		paths, err := Ldd(node.RelatedPath)
 		if err != nil {
 			if errors.Is(err, ErrNotELFFile) ||
 				errors.Is(err, ErrNoInterpreter) {
-				return nil
+				continue
 			}
 
-			return &PathError{
+			return nil, &PathError{
 				Op:   "ldd",
 				Path: path,
 				Err:  err,
@@ -172,7 +172,7 @@ func (i *Initramfs) collectLibs() (map[string]bool, error) {
 		for _, p := range paths {
 			absPath, err := filepath.Abs(p)
 			if err != nil {
-				return &PathError{
+				return nil, &PathError{
 					Op:   "absolute",
 					Path: path,
 					Err:  err,
@@ -181,10 +181,6 @@ func (i *Initramfs) collectLibs() (map[string]bool, error) {
 
 			pathSet[absPath] = true
 		}
-
-		return nil
-	}); err != nil {
-		return nil, err
 	}
 
 	return pathSet, nil
@@ -255,7 +251,7 @@ func (i *Initramfs) WriteCPIOInto(writer io.Writer, source fs.FS) error {
 // writeTo writes all collected files into the given writer. Regular files are
 // copied from the given source [fs.FS].
 func (i *Initramfs) writeTo(writer Writer, source fs.FS) error {
-	return i.fileTree.Walk(func(path string, node *TreeNode) error {
+	for path, node := range i.fileTree.All() {
 		err := node.WriteTo(writer, path, source)
 		if err != nil {
 			return &PathError{
@@ -264,9 +260,9 @@ func (i *Initramfs) writeTo(writer Writer, source fs.FS) error {
 				Err:  err,
 			}
 		}
+	}
 
-		return nil
-	})
+	return nil
 }
 
 func addFile(dirNode *TreeNode, name, path string) error {

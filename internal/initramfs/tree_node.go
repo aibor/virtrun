@@ -7,6 +7,7 @@ package initramfs
 import (
 	"fmt"
 	"io/fs"
+	"iter"
 	"path/filepath"
 	"strings"
 )
@@ -171,19 +172,14 @@ func (e *TreeNode) WriteTo(writer Writer, path string, source fs.FS) error {
 	}
 }
 
-func (e *TreeNode) walk(base string, fn WalkFunc) error {
-	for name, node := range e.children {
-		path := filepath.Join(base, name)
-		if err := fn(path, node); err != nil {
-			return err
-		}
-
-		if node.IsDir() {
-			if err := node.walk(path, fn); err != nil {
-				return err
+// prefixedPaths creates an iterator over all children.
+func (e *TreeNode) prefixedPaths(base string) iter.Seq2[string, *TreeNode] {
+	return func(yield func(path string, node *TreeNode) bool) {
+		for name, node := range e.children {
+			path := filepath.Join(base, name)
+			if !yield(path, node) {
+				return
 			}
 		}
 	}
-
-	return nil
 }

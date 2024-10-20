@@ -6,6 +6,7 @@ package initramfs
 
 import (
 	"errors"
+	"iter"
 	"path/filepath"
 )
 
@@ -96,12 +97,31 @@ func (t *Tree) Ln(target string, path string) error {
 	return nil
 }
 
-// WalkFunc is called with the absolute path to the node.
-type WalkFunc func(path string, node *TreeNode) error
+// All returns an iterator that iterates all [TreeNode]s recursively.
+func (t *Tree) All() iter.Seq2[string, *TreeNode] {
+	return func(yield func(string, *TreeNode) bool) {
+		base := string(filepath.Separator)
 
-// Walk walks the tree recursively, starting at the root, and runs the given
-// function for each node. If the function returns an error, the recursion is
-// terminated immediately and the error is returned.
-func (t *Tree) Walk(fn WalkFunc) error {
-	return t.GetRoot().walk(string(filepath.Separator), fn)
+		if !yield(base, t.root) {
+			return
+		}
+
+		iterators := []iter.Seq2[string, *TreeNode]{
+			t.root.prefixedPaths(base),
+		}
+
+		for len(iterators) > 0 {
+			for path, node := range iterators[0] {
+				if !yield(path, node) {
+					return
+				}
+
+				if node.IsDir() {
+					iterators = append(iterators, node.prefixedPaths(path))
+				}
+			}
+
+			iterators = iterators[1:]
+		}
+	}
 }

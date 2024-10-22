@@ -8,6 +8,7 @@ import (
 	"errors"
 	"iter"
 	"path/filepath"
+	"strings"
 )
 
 // Tree represents a simple file tree.
@@ -18,7 +19,7 @@ type Tree struct {
 }
 
 func isRoot(path string) bool {
-	switch filepath.Clean(path) {
+	switch path {
 	case "", ".", "..", string(filepath.Separator):
 		return true
 	default:
@@ -37,45 +38,57 @@ func (t *Tree) GetRoot() *TreeNode {
 	return t.root
 }
 
+func (t *Tree) Nodes(path string) iter.Seq[string] {
+	return func(yield func(string) bool) {
+		relPath := strings.TrimPrefix(path, "/")
+		cleaned := filepath.Clean(relPath)
+
+		if isRoot(cleaned) {
+			return
+		}
+
+		nodes := strings.Split(cleaned, string(filepath.Separator))
+		for _, name := range nodes {
+			if !yield(name) {
+				return
+			}
+		}
+	}
+}
+
 // GetNode returns the node for the given path. Returns ErrNodeNotExists if
 // the node does not exist.
 func (t *Tree) GetNode(path string) (*TreeNode, error) {
-	if isRoot(path) {
-		return t.GetRoot(), nil
+	node := t.GetRoot()
+
+	for name := range t.Nodes(path) {
+		var err error
+
+		node, err = node.GetNode(name)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	dir, name := filepath.Split(filepath.Clean(path))
-
-	parent, err := t.GetNode(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	return parent.GetNode(name)
+	return node, nil
 }
 
 // Mkdir adds a directory node for the given path. Non existing parents
 // are created recursively. If any of the parents exists but is not a directory
 // ErrNodeNotDir is returned.
 func (t *Tree) Mkdir(path string) (*TreeNode, error) {
-	cleaned := filepath.Clean(path)
-	if isRoot(cleaned) {
-		return t.GetRoot(), nil
+	node := t.GetRoot()
+
+	for name := range t.Nodes(path) {
+		var err error
+
+		node, err = node.AddDirectory(name)
+		if err != nil && (!errors.Is(err, ErrTreeNodeExists) || !node.IsDir()) {
+			return nil, err
+		}
 	}
 
-	dir, name := filepath.Split(cleaned)
-
-	parent, err := t.Mkdir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	node, err := parent.AddDirectory(name)
-	if errors.Is(err, ErrTreeNodeExists) && node.IsDir() {
-		err = nil
-	}
-
-	return node, err
+	return node, nil
 }
 
 // Ln adds links to target for the given path.
@@ -106,6 +119,7 @@ func (t *Tree) All() iter.Seq2[string, *TreeNode] {
 			return
 		}
 
+		// Collect iterators for each sub directory. Start with root directory.
 		iterators := []iter.Seq2[string, *TreeNode]{
 			t.root.prefixedPaths(base),
 		}

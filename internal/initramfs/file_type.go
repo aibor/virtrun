@@ -19,8 +19,4 @@ const (
 
 	// TreeNodeTypeLink is a symbolic link in the archive.
 	TreeNodeTypeLink
-
-	// TreeNodeTypeVirtual is like [TreeNodeTypeRegular] but with its content
-	// written from an io.Reader instead of being copied from the fs.
-	TreeNodeTypeVirtual
 )

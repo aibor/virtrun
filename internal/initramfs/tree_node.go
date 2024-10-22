@@ -8,19 +8,27 @@ import (
 	"fmt"
 	"io/fs"
 	"iter"
+	"maps"
 	"path/filepath"
-	"strings"
+	"slices"
 )
+
+type OpenFunc func(path string) (fs.File, error)
+
+type TreeNamedNode struct {
+	*TreeNode
+	Name string
+}
 
 // TreeNode is a single file tree node.
 type TreeNode struct {
 	// Type of this node.
 	Type TreeNodeType
-	// Related path depending on the file type. Empty for directories,
-	// target path for links, source files for regular files.
+
+	// SourceOpenFunc is the content for a virtual regular file.
+	SourceOpenFunc OpenFunc
+
 	RelatedPath string
-	// Source is the content for a virtual regular file.
-	Source fs.File
 
 	children map[string]*TreeNode
 }
@@ -29,18 +37,11 @@ type TreeNode struct {
 func (e *TreeNode) String() string {
 	switch e.Type {
 	case TreeNodeTypeRegular:
-		return "File from: " + e.RelatedPath
+		return "regular file (" + e.RelatedPath + ")"
 	case TreeNodeTypeDirectory:
-		keys := make([]string, 0, len(e.children))
-		for key := range e.children {
-			keys = append(keys, key)
-		}
-
-		return fmt.Sprintf("Dir with entries: % s", keys)
+		return fmt.Sprintf("directory (% s)", slices.Collect(maps.Keys(e.children)))
 	case TreeNodeTypeLink:
-		return "Link to: " + e.RelatedPath
-	case TreeNodeTypeVirtual:
-		return "File virtual"
+		return "link (" + e.RelatedPath + ")"
 	default:
 		return "invalid type"
 	}
@@ -61,16 +62,16 @@ func (e *TreeNode) IsRegular() bool {
 	return e.Type == TreeNodeTypeRegular
 }
 
-// IsVirtual returns true if the [TreeNode] is a virtual regular file.
-func (e *TreeNode) IsVirtual() bool {
-	return e.Type == TreeNodeTypeVirtual
-}
-
 // AddRegular adds a new regular file [TreeNode] children.
-func (e *TreeNode) AddRegular(name, relatedPath string) (*TreeNode, error) {
+func (e *TreeNode) AddRegular(
+	name string,
+	path string,
+	openFn OpenFunc,
+) (*TreeNode, error) {
 	node := &TreeNode{
-		Type:        TreeNodeTypeRegular,
-		RelatedPath: relatedPath,
+		Type:           TreeNodeTypeRegular,
+		SourceOpenFunc: openFn,
+		RelatedPath:    path,
 	}
 
 	return e.AddNode(name, node)
@@ -86,20 +87,10 @@ func (e *TreeNode) AddDirectory(name string) (*TreeNode, error) {
 }
 
 // AddLink adds a new link [TreeNode] children.
-func (e *TreeNode) AddLink(name, relatedPath string) (*TreeNode, error) {
+func (e *TreeNode) AddLink(name, target string) (*TreeNode, error) {
 	node := &TreeNode{
 		Type:        TreeNodeTypeLink,
-		RelatedPath: relatedPath,
-	}
-
-	return e.AddNode(name, node)
-}
-
-// AddVirtual adds a new virtual file [TreeNode] children.
-func (e *TreeNode) AddVirtual(name string, source fs.File) (*TreeNode, error) {
-	node := &TreeNode{
-		Type:   TreeNodeTypeVirtual,
-		Source: source,
+		RelatedPath: target,
 	}
 
 	return e.AddNode(name, node)
@@ -144,13 +135,10 @@ func (e *TreeNode) GetNode(name string) (*TreeNode, error) {
 //
 // If the [TreeNode] is a regular file, it is read from the given source
 // [fs.FS].
-func (e *TreeNode) WriteTo(writer Writer, path string, source fs.FS) error {
+func (e *TreeNode) WriteTo(writer Writer, path string) error {
 	switch e.Type {
 	case TreeNodeTypeRegular:
-		// Cut leading / since fs.FS considers it invalid.
-		relPath := strings.TrimPrefix(e.RelatedPath, "/")
-
-		source, err := source.Open(relPath)
+		source, err := e.SourceOpenFunc(e.RelatedPath)
 		if err != nil {
 			return fmt.Errorf("open source: %w", err)
 		}
@@ -164,9 +152,6 @@ func (e *TreeNode) WriteTo(writer Writer, path string, source fs.FS) error {
 	case TreeNodeTypeLink:
 		//nolint:wrapcheck
 		return writer.WriteLink(path, e.RelatedPath)
-	case TreeNodeTypeVirtual:
-		//nolint:wrapcheck
-		return writer.WriteRegular(path, e.Source, fileMode)
 	default:
 		return fmt.Errorf("%w: %d", ErrTreeNodeTypeUnknown, e.Type)
 	}

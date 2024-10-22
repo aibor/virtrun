@@ -15,6 +15,18 @@ import (
 
 const fileMode = 0o755
 
+func OSFileOpen(path string) (fs.File, error) {
+	return os.Open(path) //nolint:wrapcheck
+}
+
+type openFile struct {
+	fs.File
+}
+
+func (f openFile) self(_ string) (fs.File, error) {
+	return f.File, nil
+}
+
 // Initramfs represents a file tree that can be used as an initramfs for the
 // Linux kernel.
 //
@@ -22,7 +34,7 @@ const fileMode = 0o755
 // [Initramfs.AddFiles]. Dynamically linked ELF libraries can be resolved
 // and added for all already added regular files by calling
 // [Initramfs.AddRequiredSharedObjects]. Once ready, write the [Initramfs] with
-// [Initramfs.WriteCPIOInto].
+// [Initramfs.WriteCPIO].
 type Initramfs struct {
 	fileTree Tree
 	libDir   string
@@ -31,14 +43,14 @@ type Initramfs struct {
 func WithRealInitFile(path string) func(*TreeNode) {
 	return func(rootDir *TreeNode) {
 		// Never fails on a new tree.
-		_, _ = rootDir.AddRegular("init", path)
+		_, _ = rootDir.AddRegular("init", path, OSFileOpen)
 	}
 }
 
 func WithVirtualInitFile(file fs.File) func(*TreeNode) {
 	return func(rootDir *TreeNode) {
 		// Never fails on a new tree.
-		_, _ = rootDir.AddVirtual("init", file)
+		_, _ = rootDir.AddRegular("init", "", openFile{file}.self)
 	}
 }
 
@@ -151,7 +163,7 @@ func (i *Initramfs) collectLibs() (map[string]bool, error) {
 	// interpreter). Collect the absolute paths of the found shared objects
 	// deduplicated in a set.
 	for path, node := range i.fileTree.All() {
-		if node.Type != TreeNodeTypeRegular {
+		if node.Type != TreeNodeTypeRegular || node.RelatedPath == "" {
 			continue
 		}
 
@@ -230,7 +242,7 @@ func (i *Initramfs) WriteToTempFile(tmpDir string) (string, error) {
 	}
 	defer file.Close()
 
-	err = i.WriteCPIOInto(file, os.DirFS("/"))
+	err = i.WriteCPIO(file)
 	if err != nil {
 		_ = os.Remove(file.Name())
 		return "", fmt.Errorf("create archive: %w", err)
@@ -239,20 +251,18 @@ func (i *Initramfs) WriteToTempFile(tmpDir string) (string, error) {
 	return file.Name(), nil
 }
 
-// WriteCPIOInto writes the [Initramfs] as CPIO archive to the given [Writer]
-// from the given source [fs.FS].
-func (i *Initramfs) WriteCPIOInto(writer io.Writer, source fs.FS) error {
+// WriteCPIO writes the [Initramfs] as CPIO archive to the given [Writer],.
+func (i *Initramfs) WriteCPIO(writer io.Writer) error {
 	w := NewCPIOWriter(writer)
 	defer w.Close()
 
-	return i.writeTo(w, source)
+	return i.writeTo(w)
 }
 
-// writeTo writes all collected files into the given writer. Regular files are
-// copied from the given source [fs.FS].
-func (i *Initramfs) writeTo(writer Writer, source fs.FS) error {
+// writeTo writes all collected files into the given writer.
+func (i *Initramfs) writeTo(writer Writer) error {
 	for path, node := range i.fileTree.All() {
-		err := node.WriteTo(writer, path, source)
+		err := node.WriteTo(writer, path)
 		if err != nil {
 			return &PathError{
 				Op:   "archive write",
@@ -266,7 +276,7 @@ func (i *Initramfs) writeTo(writer Writer, source fs.FS) error {
 }
 
 func addFile(dirNode *TreeNode, name, path string) error {
-	_, err := dirNode.AddRegular(name, path)
+	_, err := dirNode.AddRegular(name, path, OSFileOpen)
 	if err != nil {
 		return &PathError{
 			Op:   "add file",

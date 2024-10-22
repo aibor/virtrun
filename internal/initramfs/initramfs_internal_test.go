@@ -19,7 +19,7 @@ func assertNode(t *testing.T, i *Initramfs, p string, e TreeNode) {
 
 	node, err := i.fileTree.GetNode(p)
 	require.NoError(t, err)
-	assert.Equal(t, e, *node)
+	assert.Equal(t, e.String(), node.String())
 }
 
 func TestInitramfsNew(t *testing.T) {
@@ -38,16 +38,17 @@ func TestInitramfsNew(t *testing.T) {
 			name:     "real file",
 			initFunc: WithRealInitFile("first"),
 			expected: TreeNode{
-				Type:        TreeNodeTypeRegular,
-				RelatedPath: "first",
+				Type:           TreeNodeTypeRegular,
+				RelatedPath:    "first",
+				SourceOpenFunc: OSFileOpen,
 			},
 		},
 		{
 			name:     "virtual file",
 			initFunc: WithVirtualInitFile(initFile),
 			expected: TreeNode{
-				Type:   TreeNodeTypeVirtual,
-				Source: initFile,
+				Type:           TreeNodeTypeRegular,
+				SourceOpenFunc: openFile{initFile}.self,
 			},
 		},
 	}
@@ -55,7 +56,7 @@ func TestInitramfsNew(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := New(tt.initFunc)
-			assertNode(t, i, "/init", tt.expected)
+			assertNode(t, i, "init", tt.expected)
 		})
 	}
 }
@@ -115,7 +116,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 		_, err := i.fileTree.GetRoot().AddNode("init", node)
 		require.NoError(t, err)
 
-		return i.writeTo(w, testFS)
+		return i.writeTo(w)
 	}
 
 	t.Run("unknown file type", func(t *testing.T) {
@@ -125,8 +126,10 @@ func TestInitramfsWriteTo(t *testing.T) {
 
 	t.Run("nonexisting source", func(t *testing.T) {
 		node := &TreeNode{
-			Type:        TreeNodeTypeRegular,
-			RelatedPath: "nonexisting",
+			Type: TreeNodeTypeRegular,
+			SourceOpenFunc: func(_ string) (fs.File, error) {
+				return nil, fs.ErrNotExist
+			},
 		}
 		err := test(node, &MockWriter{})
 		assert.ErrorIs(t, err, fs.ErrNotExist)
@@ -143,6 +146,9 @@ func TestInitramfsWriteTo(t *testing.T) {
 				node: TreeNode{
 					Type:        TreeNodeTypeRegular,
 					RelatedPath: "/input",
+					SourceOpenFunc: func(_ string) (fs.File, error) {
+						return testFile, nil
+					},
 				},
 				mock: MockWriter{
 					Path:   "/init",
@@ -170,18 +176,6 @@ func TestInitramfsWriteTo(t *testing.T) {
 					RelatedPath: "/lib",
 				},
 			},
-			{
-				name: "virtual",
-				node: TreeNode{
-					Type:   TreeNodeTypeVirtual,
-					Source: testFile,
-				},
-				mock: MockWriter{
-					Path:   "/init",
-					Source: testFile,
-					Mode:   0o755,
-				},
-			},
 		}
 
 		for _, tt := range tests {
@@ -192,7 +186,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 					require.NoError(t, err)
 
 					mock := MockWriter{}
-					err = i.writeTo(&mock, testFS)
+					err = i.writeTo(&mock)
 					require.NoError(t, err)
 					assert.Equal(t, tt.mock, mock)
 				})
@@ -202,7 +196,7 @@ func TestInitramfsWriteTo(t *testing.T) {
 					require.NoError(t, err)
 
 					mock := MockWriter{Err: assert.AnError}
-					err = i.writeTo(&mock, testFS)
+					err = i.writeTo(&mock)
 					require.ErrorIs(t, err, assert.AnError)
 				})
 			})

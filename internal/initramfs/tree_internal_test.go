@@ -86,7 +86,7 @@ func TestTreeIsRoot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.assert(t, isRoot(tt.path))
+			tt.assert(t, isRoot(filepath.Clean(tt.path)))
 		})
 	}
 }
@@ -135,7 +135,7 @@ func TestTreeGetNode(t *testing.T) {
 		},
 		{
 			name:   "dir node",
-			path:   "/dir",
+			path:   "dir",
 			expect: &dirNode,
 		},
 	}

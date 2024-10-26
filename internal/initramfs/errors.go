@@ -10,28 +10,25 @@ import (
 )
 
 var (
-	// ErrTreeNodeNotDir is returned if a tree node is supposed to be a directory
-	// but is not.
-	ErrTreeNodeNotDir = errors.New("tree node is not a directory")
-
-	// ErrTreeNodeNotExists is returned if a tree node that is looked up does not
+	// ErrFileNotExist is returned if a tree node that is looked up does not
 	// exist.
-	ErrTreeNodeNotExists = errors.New("tree node does not exist")
+	ErrFileNotExist = fs.ErrNotExist
 
-	// ErrTreeNodeExists is returned if a tree node exists that was not expected.
-	ErrTreeNodeExists = errors.New("tree node already exists")
+	// ErrFileExist is returned if a tree node exists that was not expected.
+	ErrFileExist = fs.ErrExist
 
-	// ErrTreeNodeTypeUnknown is returned if the [TreeNodeType] is unknown.
-	ErrTreeNodeTypeUnknown = errors.New("unknown tree node type")
+	// ErrFileInvalid is returned if a file is invalid for the requested
+	// operation.
+	ErrFileInvalid = fs.ErrInvalid
 
-	// ErrNotRegularFile is returned if the source is not a regular file.
-	ErrNotRegularFile = errors.New("source is not a regular file")
+	// ErrFileNotDir is returned if a file exists but is not a directory.
+	ErrFileNotDir = errors.New("not a directory")
 
-	// ErrNoInterpreter is returned if no interpreter is found in an ELF file.
-	ErrNoInterpreter = errors.New("no interpreter in ELF file")
+	// ErrFileNotRegular is returned if the source is not a regular file.
+	ErrFileNotRegular = errors.New("source is not a regular file")
 
-	// ErrNotELFFile is returned if the file does not have an ELF magic number.
-	ErrNotELFFile = errors.New("is not an ELF file")
+	// ErrInvalidArgument is returned if an invalid argument is given.
+	ErrInvalidArgument = errors.New("invalid argument")
 )
 
 // PathError records an error and the operation and file path that caused it.

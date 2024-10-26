@@ -46,4 +46,5 @@ issues:
       source: "^\\s+defer \\S+\\.Close()"
     - linters:
         - err113
-      path: ".*_test.go"
+        - wrapcheck
+      path: "(.+_test|testing).go"

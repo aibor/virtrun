@@ -6,4 +6,4 @@
 
 //go:generate go generate -v ./testdata/cmd
 
-package initramfs_test
+package sys_test

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package initramfs
+package sys
 
 import (
 	"bufio"
@@ -71,10 +71,10 @@ func readInterpreter(path string) (string, error) {
 	elfFile, err := elf.Open(path)
 	if err != nil {
 		if strings.Contains(err.Error(), "bad magic number") {
-			return "", ErrNotELFFile
+			err = ErrNotELFFile
 		}
 
-		return "", fmt.Errorf("open: %w", err)
+		return "", fmt.Errorf("open %s: %w", path, err)
 	}
 	defer elfFile.Close()
 

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/internal/virtrun"
 )
 
@@ -188,7 +187,7 @@ func ParseArgs(
 		return failf("no binary given")
 	}
 
-	binary, err := sys.AbsoluteFilePath(fs.Args()[0])
+	binary, err := virtrun.AbsoluteFilePath(fs.Args()[0])
 	if err != nil {
 		return failf("binary path: %w", err)
 	}

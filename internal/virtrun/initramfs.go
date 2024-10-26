@@ -6,50 +6,45 @@ package virtrun
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
-	"path/filepath"
+	"slices"
 
 	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/aibor/virtrun/internal/sys"
 )
 
+const (
+	dataDir    = "data"
+	libsDir    = "lib"
+	modulesDir = "lib/modules"
+)
+
 type Initramfs struct {
 	Arch           sys.Arch
-	Binary         sys.FilePath
-	Files          sys.FilePathList
-	Modules        sys.FilePathList
+	Binary         FilePath
+	Files          FilePathList
+	Modules        FilePathList
 	StandaloneInit bool
 	Keep           bool
 }
 
+type InitramfsArchive struct {
+	Path string
+	keep bool
+}
+
 func NewInitramfsArchive(cfg Initramfs) (*InitramfsArchive, error) {
-	irfs, err := newInitramfs(string(cfg.Binary), cfg.StandaloneInit, cfg.Arch)
+	irfs := initramfs.New()
+
+	err := buildFS(irfs, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("new: %w", err)
+		return nil, fmt.Errorf("build: %w", err)
 	}
 
-	err = irfs.AddFiles("data", cfg.Files...)
+	path, err := WriteFSToTempFile(irfs, "")
 	if err != nil {
-		return nil, fmt.Errorf("add files: %w", err)
-	}
-
-	err = irfs.AddRequiredSharedObjects()
-	if err != nil {
-		return nil, fmt.Errorf("add libs: %w", err)
-	}
-
-	for idx, module := range cfg.Modules {
-		name := fmt.Sprintf("%04d-%s", idx, filepath.Base(module))
-
-		err = irfs.AddFile("lib/modules", name, module)
-		if err != nil {
-			return nil, fmt.Errorf("add modules: %w", err)
-		}
-	}
-
-	path, err := irfs.WriteToTempFile("")
-	if err != nil {
-		return nil, fmt.Errorf("write to temp file: %w", err)
+		return nil, fmt.Errorf("write archive file: %w", err)
 	}
 
 	a := &InitramfsArchive{
@@ -58,11 +53,6 @@ func NewInitramfsArchive(cfg Initramfs) (*InitramfsArchive, error) {
 	}
 
 	return a, nil
-}
-
-type InitramfsArchive struct {
-	Path string
-	keep bool
 }
 
 func (a *InitramfsArchive) Cleanup() error {
@@ -79,37 +69,73 @@ func (a *InitramfsArchive) Cleanup() error {
 	return nil
 }
 
-func newInitramfs(
-	mainBinary string,
-	standalone bool,
-	arch sys.Arch,
-) (*initramfs.Initramfs, error) {
-	// In standalone mode, the first file (which might be the only one)
-	// is supposed to work as an init matching our requirements.
-	if standalone {
-		return initramfs.New(initramfs.WithRealInitFile(mainBinary)), nil
+func buildFS(f initramfs.FSAdder, cfg Initramfs) error {
+	builder := fsBuilder{f}
+
+	err := builder.addFilePathAs("main", string(cfg.Binary))
+	if err != nil {
+		return err
 	}
 
-	return newInitramfsWithInit(mainBinary, arch)
+	err = builder.addInit(cfg.Arch, cfg.StandaloneInit)
+	if err != nil {
+		return err
+	}
+
+	err = builder.addFilesTo(dataDir, cfg.Files, baseName)
+	if err != nil {
+		return err
+	}
+
+	err = builder.addFilesTo(modulesDir, cfg.Modules, modName)
+	if err != nil {
+		return err
+	}
+
+	binaryFiles := []string{string(cfg.Binary)}
+	binaryFiles = append(binaryFiles, cfg.Files...)
+
+	libs, err := sys.CollectLibsFor(binaryFiles...)
+	if err != nil {
+		return fmt.Errorf("collect libs: %w", err)
+	}
+
+	err = builder.addFilesTo(libsDir, slices.Collect(libs.Libs()), baseName)
+	if err != nil {
+		return err
+	}
+
+	err = builder.symlinkTo(libsDir, slices.Collect(libs.SearchPaths()))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func newInitramfsWithInit(
-	mainBinary string,
-	arch sys.Arch,
-) (*initramfs.Initramfs, error) {
-	// In the default wrapped mode a pre-compiled init is used that just
-	// executes "/main".
-	init, err := initProgFor(arch)
+// WriteFSToTempFile writes the given [fs.FS] as CPIO archive into a new
+// temporary file in the given directory.
+//
+// It returns the path to the created file. If tmpDir is the empty string the
+// default directory is used as returned by [os.TempDir].
+//
+// The caller is responsible for removing the file once it is not needed
+// anymore.
+func WriteFSToTempFile(fsys fs.FS, tmpDir string) (string, error) {
+	file, err := os.CreateTemp(tmpDir, "initramfs")
 	if err != nil {
-		return nil, fmt.Errorf("embedded init: %w", err)
+		return "", fmt.Errorf("create temp file: %w", err)
+	}
+	defer file.Close()
+
+	writer := initramfs.NewCPIOFileWriter(file)
+	defer writer.Close()
+
+	err = initramfs.WriteFS(fsys, writer)
+	if err != nil {
+		_ = os.Remove(file.Name())
+		return "", fmt.Errorf("create archive: %w", err)
 	}
 
-	irfs := initramfs.New(initramfs.WithVirtualInitFile(init))
-
-	err = irfs.AddFile("/", "main", mainBinary)
-	if err != nil {
-		return nil, fmt.Errorf("add main file: %w", err)
-	}
-
-	return irfs, nil
+	return file.Name(), nil
 }

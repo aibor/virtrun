@@ -23,76 +23,47 @@ func TestCPIOWriter(t *testing.T) {
 	}
 
 	testFS := fstest.MapFS{
-		"regular": &fstest.MapFile{Data: regularFileBody},
-		"dir":     &fstest.MapFile{Mode: fs.ModeDir},
-		"link":    &fstest.MapFile{Mode: fs.ModeSymlink},
+		"regular": &fstest.MapFile{
+			Data: regularFileBody,
+		},
+		"dir": &fstest.MapFile{
+			Mode: fs.ModeDir,
+		},
+		"link": &fstest.MapFile{
+			Data: []byte("target"),
+			Mode: fs.ModeSymlink,
+		},
 	}
 
 	tests := []struct {
-		name         string
-		run          func(w *initramfs.CPIOWriter) error
-		expectedErr  error
-		assertHeader func(t assert.TestingT, hdr *cpio.Header)
-		expectedBody []byte
+		name             string
+		fileName         string
+		expectedErr      error
+		expectedType     uint
+		expectedSize     int64
+		expectedLinks    int
+		expectedLinkname string
+		expectedBody     []byte
 	}{
 		{
-			name: "write directory",
-			run: func(w *initramfs.CPIOWriter) error {
-				return w.WriteDirectory("test")
-			},
-			assertHeader: func(t assert.TestingT, hdr *cpio.Header) {
-				assert.Equal(t, "test", hdr.Name, "name")
-				assert.EqualValues(t, 0o777|cpio.TypeDir, hdr.Mode, "mode")
-				assert.EqualValues(t, 0, hdr.Size, "size")
-			},
+			name:          "write directory",
+			fileName:      "dir",
+			expectedType:  cpio.TypeDir,
+			expectedLinks: 2,
 		},
 		{
-			name: "write link",
-			run: func(w *initramfs.CPIOWriter) error {
-				return w.WriteLink("test", "target")
-			},
-			assertHeader: func(t assert.TestingT, hdr *cpio.Header) {
-				assert.Equal(t, "test", hdr.Name, "name")
-				assert.EqualValues(t, 0o777|cpio.TypeSymlink, hdr.Mode, "mode")
-				assert.EqualValues(t, 0, hdr.Size, "size")
-				assert.Equal(t, "target", hdr.Linkname)
-			},
+			name:             "write link",
+			fileName:         "link",
+			expectedType:     cpio.TypeSymlink,
+			expectedLinkname: "target",
 		},
 		{
-			name: "write regular",
-			run: func(w *initramfs.CPIOWriter) error {
-				file, err := testFS.Open("regular")
-				require.NoError(t, err)
-
-				return w.WriteRegular("test", file, 0o755)
-			},
-			assertHeader: func(t assert.TestingT, hdr *cpio.Header) {
-				assert.Equal(t, "test", hdr.Name, "name")
-				assert.EqualValues(t, 0o755|cpio.TypeReg, hdr.Mode, "mode")
-				assert.EqualValues(t, 200, hdr.Size, "size")
-			},
-			expectedBody: regularFileBody,
-		},
-		{
-			name: "write regular invalid",
-			run: func(w *initramfs.CPIOWriter) error {
-				file, err := testFS.Open("link")
-				require.NoError(t, err)
-
-				return w.WriteRegular("test", file, 0o755)
-			},
-			expectedErr: initramfs.ErrNotRegularFile,
-		},
-
-		{
-			name: "write closed",
-			run: func(w *initramfs.CPIOWriter) error {
-				err := w.Close()
-				require.NoError(t, err)
-
-				return w.WriteLink("test", "target")
-			},
-			expectedErr: cpio.ErrWriteAfterClose,
+			name:          "write regular",
+			fileName:      "regular",
+			expectedType:  cpio.TypeReg,
+			expectedSize:  200,
+			expectedLinks: 1,
+			expectedBody:  regularFileBody,
 		},
 	}
 
@@ -100,27 +71,33 @@ func TestCPIOWriter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var archive bytes.Buffer
 
-			w := initramfs.NewCPIOWriter(&archive)
+			w := initramfs.NewCPIOFileWriter(&archive)
 
-			err := tt.run(w)
+			file, err := testFS.Open(tt.fileName)
+			require.NoError(t, err)
+
+			err = w.WriteFile("test", file)
 			require.ErrorIs(t, err, tt.expectedErr)
 
-			r := cpio.NewReader(&archive)
-
-			if tt.assertHeader == nil {
+			if tt.expectedErr != nil {
 				return
 			}
 
-			h, err := r.Next()
+			r := cpio.NewReader(&archive)
+
+			hdr, err := r.Next()
 			require.NoError(t, err)
 
-			tt.assertHeader(t, h)
+			assert.Equal(t, "test", hdr.Name, "name")
+			assert.EqualValues(t, tt.expectedType, hdr.Mode, "mode")
+			assert.EqualValues(t, tt.expectedSize, hdr.Size, "size")
+			assert.EqualValues(t, tt.expectedLinks, hdr.Links, "links")
 
 			if tt.expectedBody == nil {
 				return
 			}
 
-			body := make([]byte, h.Size)
+			body := make([]byte, hdr.Size)
 			_, err = r.Read(body)
 			require.NoError(t, err)
 

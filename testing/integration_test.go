@@ -27,7 +27,7 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	KernelPath            = sys.FilePath("/kernels/vmlinuz")
+	KernelPath            = virtrun.FilePath("/kernels/vmlinuz")
 	KernelArch            = sys.Native
 	ForceTransportTypePCI bool
 	Verbose               bool
@@ -114,7 +114,7 @@ func TestIntegration(t *testing.T) {
 		},
 		{
 			name: "linked",
-			bin:  "../internal/initramfs/testdata/bin/main",
+			bin:  "../internal/sys/testdata/bin/main",
 			requireErr: func(t require.TestingT, err error, _ ...any) {
 				var qemuErr *qemu.CommandError
 
@@ -153,7 +153,7 @@ func TestIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			binary, err := sys.AbsoluteFilePath(tt.bin)
+			binary, err := virtrun.AbsoluteFilePath(tt.bin)
 			require.NoError(t, err)
 
 			config, err := virtrun.New(KernelArch)

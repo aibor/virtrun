@@ -5,7 +5,6 @@
 package virtrun
 
 import (
-	"debug/elf"
 	"fmt"
 	"os/exec"
 
@@ -102,25 +101,18 @@ func (v *Virtrun) Validate() error {
 	}
 
 	for _, file := range v.Initramfs.Files {
-		if err := sys.FilePath(file).Check(); err != nil {
+		if err := FilePath(file).Check(); err != nil {
 			return fmt.Errorf("check file: %w", err)
 		}
 	}
 
 	for _, file := range v.Initramfs.Modules {
-		if err := sys.FilePath(file).Check(); err != nil {
+		if err := FilePath(file).Check(); err != nil {
 			return fmt.Errorf("check module: %w", err)
 		}
 	}
 
-	// Do some deeper validation for the main binary.
-	elfFile, err := elf.Open(string(v.Initramfs.Binary))
-	if err != nil {
-		return fmt.Errorf("check main binary: %w", err)
-	}
-	defer elfFile.Close()
-
-	if err := sys.ValidateELF(elfFile.FileHeader, v.Initramfs.Arch); err != nil {
+	if err := v.Initramfs.Binary.CheckBinary(v.Initramfs.Arch); err != nil {
 		return fmt.Errorf("check main binary: %w", err)
 	}
 

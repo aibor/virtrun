@@ -6,7 +6,6 @@ package virtrun
 
 import (
 	"embed"
-	"fmt"
 	"io/fs"
 	"path/filepath"
 
@@ -23,20 +22,19 @@ import (
 // Embed pre-compiled init programs explicitly to trigger build time errors.
 //
 //go:embed bin/*
-var _inits embed.FS
+var initsFS embed.FS
 
-// initProgFor returns the pre-built init binary for the arch. The init binary
-// is supposed to set up the system and execute the file "/main".
+// initProgFor returns the pre-built init binary for the arch.
+//
+// The init binary is supposed to set up the system and execute the file
+// "/main". The returned file name can be opened with initFS.Open.
 func initProgFor(arch sys.Arch) (fs.File, error) {
-	switch arch {
-	case sys.AMD64, sys.ARM64, sys.RISCV64:
-		f, err := _inits.Open(filepath.Join("bin", arch.String()))
-		if err != nil {
-			return nil, fmt.Errorf("open: %w", err)
-		}
+	name := filepath.Join("bin", arch.String())
 
-		return f, nil
-	default:
-		return nil, fmt.Errorf("%w: %s", sys.ErrArchNotSupported, arch)
+	file, err := initsFS.Open(name)
+	if err != nil {
+		return nil, sys.ErrArchNotSupported
 	}
+
+	return file, nil
 }

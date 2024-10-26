@@ -2,13 +2,13 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package initramfs_test
+package sys_test
 
 import (
 	"os/exec"
 	"testing"
 
-	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/aibor/virtrun/internal/sys"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +24,7 @@ func TestTestdata(t *testing.T) {
 }
 
 func TestFilesLdd(t *testing.T) {
-	actual, err := initramfs.Ldd("testdata/bin/main")
+	actual, err := sys.Ldd("testdata/bin/main")
 	require.NoErrorf(t, err, "must resolve")
 
 	expected := []string{
@@ -33,5 +33,5 @@ func TestFilesLdd(t *testing.T) {
 		"testdata/lib/libfunc1.so",
 	}
 
-	initramfs.AssertContainsPaths(t, actual, expected)
+	sys.AssertContainsPaths(t, actual, expected)
 }

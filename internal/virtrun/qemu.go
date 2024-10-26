@@ -9,13 +9,12 @@ import (
 	"fmt"
 
 	"github.com/aibor/virtrun/internal/qemu"
-	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/sysinit"
 )
 
 type Qemu struct {
 	Executable          string
-	Kernel              sys.FilePath
+	Kernel              FilePath
 	Machine             string
 	CPU                 string
 	SMP                 LimitedUintFlag

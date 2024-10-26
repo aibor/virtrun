@@ -2,46 +2,47 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package sys
+package virtrun
 
 import (
 	"debug/elf"
-	"errors"
 	"fmt"
-)
+	"io"
 
-var (
-	ErrOSABINotSupported   = errors.New("OSABI not supported")
-	ErrMachineNotSupported = errors.New("machine not supported")
+	"github.com/aibor/virtrun/internal/sys"
 )
 
 // ValidateELF validates that ELF attributes match the requested architecture.
-func ValidateELF(hdr elf.FileHeader, arch Arch) error {
-	switch hdr.OSABI {
+func ValidateELF(file io.ReaderAt, arch sys.Arch) error {
+	elfFile, err := elf.NewFile(file)
+	if err != nil {
+		return fmt.Errorf("new: %w", err)
+	}
+
+	switch elfFile.OSABI {
 	case elf.ELFOSABI_NONE, elf.ELFOSABI_LINUX:
 		// supported, pass
 	default:
-		return fmt.Errorf("%w: %s", ErrOSABINotSupported, hdr.OSABI)
+		return fmt.Errorf("%w: %s", ErrOSABINotSupported, elfFile.OSABI)
 	}
 
-	var archReq Arch
+	var archReq sys.Arch
 
-	switch hdr.Machine {
+	//nolint:exhaustive
+	switch elfFile.Machine {
 	case elf.EM_X86_64:
-		archReq = AMD64
+		archReq = sys.AMD64
 	case elf.EM_AARCH64:
-		archReq = ARM64
+		archReq = sys.ARM64
 	case elf.EM_RISCV:
-		archReq = RISCV64
-	default:
-		return fmt.Errorf("%w: %s", ErrMachineNotSupported, hdr.Machine)
+		archReq = sys.RISCV64
 	}
 
 	if archReq != arch {
 		return fmt.Errorf(
 			"%w: %s on %s",
 			ErrMachineNotSupported,
-			hdr.Machine,
+			elfFile.Machine,
 			arch,
 		)
 	}

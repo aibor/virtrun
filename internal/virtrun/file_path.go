@@ -2,19 +2,15 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package sys
+package virtrun
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-)
 
-var (
-	ErrEmptyFilePath  = errors.New("file path must not be empty")
-	ErrNotRegularFile = errors.New("not a regular file")
+	"github.com/aibor/virtrun/internal/sys"
 )
 
 type FilePath string
@@ -38,6 +34,29 @@ func (f FilePath) Check() error {
 
 	if !stat.Mode().IsRegular() {
 		return ErrNotRegularFile
+	}
+
+	return nil
+}
+
+func (f FilePath) CheckBinary(arch sys.Arch) error {
+	file, err := os.Open(string(f))
+	if err != nil {
+		return fmt.Errorf("open: %w", err)
+	}
+
+	stat, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("stat: %w", err)
+	}
+
+	if !stat.Mode().IsRegular() {
+		return ErrNotRegularFile
+	}
+
+	err = ValidateELF(file, arch)
+	if err != nil {
+		return fmt.Errorf("check main binary: %w", err)
 	}
 
 	return nil

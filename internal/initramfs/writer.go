@@ -4,11 +4,39 @@
 
 package initramfs
 
-import "io/fs"
+import (
+	"io/fs"
+)
 
-// Writer defines initramfs archive writer interface.
-type Writer interface {
-	WriteRegular(path string, source fs.File, mode fs.FileMode) error
-	WriteDirectory(path string) error
-	WriteLink(path string, target string) error
+// FileWriter defines initramfs archive writer interface.
+type FileWriter interface {
+	WriteFile(path string, file fs.File) error
+}
+
+// WriteFS writes the given [fs.FS] to the given [FileWriter].
+func WriteFS(fsys fs.FS, writer FileWriter) error {
+	fn := func(path string, _ fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		file, err := fsys.Open(path)
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
+		defer file.Close()
+
+		err = writer.WriteFile(path, file)
+		if err != nil {
+			return &PathError{
+				Op:   "archive write",
+				Path: path,
+				Err:  err,
+			}
+		}
+
+		return nil
+	}
+
+	return fs.WalkDir(fsys, ".", fn) //nolint:wrapcheck
 }

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 /dist
-/internal/initramfs/testdata/bin/
-/internal/initramfs/testdata/lib/
+/internal/sys/testdata/bin/
+/internal/sys/testdata/lib/
 /testing/kernels/
 /testing/bin/

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package initramfs
+package sys
 
 import (
 	"bytes"

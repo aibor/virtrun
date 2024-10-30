@@ -7,20 +7,29 @@ package sysinit
 import (
 	"fmt"
 
-	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 )
 
-// ConfigureLoopbackInterface brings the loopback interface up. Kernel should
-// configure address already automatically.
+// ConfigureLoopbackInterface brings the loopback interface up.
+//
+// Kernel should configure address already automatically.
 func ConfigureLoopbackInterface() error {
-	link, err := netlink.LinkByName("lo")
+	// Any socket can be used for sending ioctls.
+	sock, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
 	if err != nil {
-		return fmt.Errorf("get link: %w", err)
+		return fmt.Errorf("create control socket: %w", err)
 	}
 
-	err = netlink.LinkSetUp(link)
+	ifReq, err := unix.NewIfreq("lo")
 	if err != nil {
-		return fmt.Errorf("set link up: %w", err)
+		return fmt.Errorf("new request: %w", err)
+	}
+
+	ifReq.SetUint16(unix.IFF_UP)
+
+	err = unix.IoctlIfreq(sock, unix.SIOCSIFFLAGS, ifReq)
+	if err != nil {
+		return fmt.Errorf("ioctl: %w", err)
 	}
 
 	return nil

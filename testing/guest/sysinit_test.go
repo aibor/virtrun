@@ -64,7 +64,7 @@ func TestLoopbackInterface(t *testing.T) {
 	addrs, err := iface.Addrs()
 	require.NoError(t, err, "must get addresses")
 
-	assert.Len(t, addrs, 2, "should have 2 addresses")
+	require.Len(t, addrs, 2, "should have 2 addresses")
 
 	assert.Equal(t, "127.0.0.1/8", addrs[0].String())
 	assert.Equal(t, "::1/128", addrs[1].String())

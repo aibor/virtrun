@@ -8,9 +8,45 @@ import (
 	"debug/elf"
 	"fmt"
 	"io"
+	"os/exec"
 
 	"github.com/aibor/virtrun/internal/sys"
 )
+
+// Validate file parameters of the given [Spec].
+func Validate(spec *Spec) error {
+	// Check files are actually present.
+	_, err := exec.LookPath(spec.Qemu.Executable)
+	if err != nil {
+		return fmt.Errorf("qemu binary: %w", err)
+	}
+
+	err = spec.Qemu.Kernel.Validate()
+	if err != nil {
+		return fmt.Errorf("kernel file: %w", err)
+	}
+
+	for _, file := range spec.Initramfs.Files {
+		err := FilePath(file).Validate()
+		if err != nil {
+			return fmt.Errorf("additional file: %w", err)
+		}
+	}
+
+	for _, file := range spec.Initramfs.Modules {
+		err := FilePath(file).Validate()
+		if err != nil {
+			return fmt.Errorf("module: %w", err)
+		}
+	}
+
+	err = spec.Initramfs.Binary.ValidateBinary(spec.Initramfs.Arch)
+	if err != nil {
+		return fmt.Errorf("main binary: %w", err)
+	}
+
+	return nil
+}
 
 // ValidateELF validates that ELF attributes match the requested architecture.
 func ValidateELF(file io.ReaderAt, arch sys.Arch) error {

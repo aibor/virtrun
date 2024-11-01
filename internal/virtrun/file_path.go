@@ -26,10 +26,10 @@ func (f *FilePath) UnmarshalText(text []byte) error {
 	return err
 }
 
-func (f FilePath) Check() error {
+func (f FilePath) Validate() error {
 	stat, err := os.Stat(string(f))
 	if err != nil {
-		return fmt.Errorf("stat: %w", err)
+		return err //nolint:wrapcheck
 	}
 
 	if !stat.Mode().IsRegular() {
@@ -39,15 +39,15 @@ func (f FilePath) Check() error {
 	return nil
 }
 
-func (f FilePath) CheckBinary(arch sys.Arch) error {
+func (f FilePath) ValidateBinary(arch sys.Arch) error {
 	file, err := os.Open(string(f))
 	if err != nil {
-		return fmt.Errorf("open: %w", err)
+		return err //nolint:wrapcheck
 	}
 
 	stat, err := file.Stat()
 	if err != nil {
-		return fmt.Errorf("stat: %w", err)
+		return err //nolint:wrapcheck
 	}
 
 	if !stat.Mode().IsRegular() {
@@ -56,7 +56,7 @@ func (f FilePath) CheckBinary(arch sys.Arch) error {
 
 	err = ValidateELF(file, arch)
 	if err != nil {
-		return fmt.Errorf("check main binary: %w", err)
+		return fmt.Errorf("elf header: %w", err)
 	}
 
 	return nil

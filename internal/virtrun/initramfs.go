@@ -7,6 +7,7 @@ package virtrun
 import (
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"slices"
 
@@ -29,44 +30,36 @@ type Initramfs struct {
 	Keep           bool
 }
 
-type InitramfsArchive struct {
-	Path string
-	keep bool
-}
-
-func NewInitramfsArchive(cfg Initramfs) (*InitramfsArchive, error) {
+func BuildInitramfsArchive(cfg Initramfs) (string, func() error, error) {
 	irfs := initramfs.New()
 
 	err := buildFS(irfs, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("build: %w", err)
+		return "", nil, fmt.Errorf("build: %w", err)
 	}
 
 	path, err := WriteFSToTempFile(irfs, "")
 	if err != nil {
-		return nil, fmt.Errorf("write archive file: %w", err)
+		return "", nil, fmt.Errorf("write archive file: %w", err)
 	}
 
-	a := &InitramfsArchive{
-		Path: path,
-		keep: cfg.Keep,
+	slog.Debug("Initramfs created", slog.String("path", path))
+
+	var removeFn func() error
+
+	if cfg.Keep {
+		removeFn = func() error {
+			slog.Info("Keep initramfs", slog.String("path", path))
+			return nil
+		}
+	} else {
+		removeFn = func() error {
+			slog.Debug("Remove initramfs", slog.String("path", path))
+			return os.Remove(path)
+		}
 	}
 
-	return a, nil
-}
-
-func (a *InitramfsArchive) Cleanup() error {
-	if a.keep {
-		fmt.Fprintf(os.Stderr, "initramfs kept at: %s\n", a.Path)
-		return nil
-	}
-
-	err := os.Remove(a.Path)
-	if err != nil {
-		return fmt.Errorf("remove: %w", err)
-	}
-
-	return nil
+	return path, removeFn, nil
 }
 
 func buildFS(f initramfs.FSAdder, cfg Initramfs) error {

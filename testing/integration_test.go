@@ -116,16 +116,14 @@ func TestIntegration(t *testing.T) {
 			name: "linked",
 			bin:  "../internal/sys/testdata/bin/main",
 			requireErr: func(t require.TestingT, err error, _ ...any) {
-				var qemuErr *qemu.CommandError
-
-				require.ErrorAs(t, err, &qemuErr)
-
-				expected := 73
 				if !KernelArch.IsNative() {
-					expected = 126
+					require.ErrorIs(t, err, virtrun.ErrMachineNotSupported)
+					return
 				}
 
-				require.Equal(t, expected, qemuErr.ExitCode)
+				var qemuErr *qemu.CommandError
+				require.ErrorAs(t, err, &qemuErr)
+				require.Equal(t, 73, qemuErr.ExitCode)
 			},
 		},
 		{
@@ -156,35 +154,26 @@ func TestIntegration(t *testing.T) {
 			binary, err := virtrun.AbsoluteFilePath(tt.bin)
 			require.NoError(t, err)
 
-			config, err := virtrun.New(KernelArch)
+			spec, err := virtrun.NewSpec(KernelArch)
 			require.NoError(t, err)
 
-			config.Qemu.Kernel = KernelPath
-			config.Qemu.Verbose = Verbose
-			config.Qemu.Memory.Value = 128
-			config.Qemu.InitArgs = tt.args
-			config.Initramfs.Binary = binary
-			config.Initramfs.StandaloneInit = tt.standalone
+			spec.Qemu.Kernel = KernelPath
+			spec.Qemu.Verbose = Verbose
+			spec.Qemu.Memory.Value = 128
+			spec.Qemu.InitArgs = tt.args
+			spec.Initramfs.Binary = binary
+			spec.Initramfs.StandaloneInit = tt.standalone
 
 			if ForceTransportTypePCI {
-				config.Qemu.TransportType = qemu.TransportTypePCI
+				spec.Qemu.TransportType = qemu.TransportTypePCI
 			}
-
-			irfs, err := virtrun.NewInitramfsArchive(config.Initramfs)
-			require.NoError(t, err)
-			t.Cleanup(func() { _ = irfs.Cleanup() })
 
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			t.Cleanup(cancel)
 
-			cmd, err := virtrun.NewQemuCommand(ctx, config.Qemu, irfs.Path)
-			require.NoError(t, err)
-
-			t.Log(cmd.String())
-
 			var stdOut, stdErr bytes.Buffer
 
-			err = cmd.Run(&stdOut, &stdErr)
+			err = virtrun.Run(ctx, spec, &stdOut, &stdErr)
 
 			t.Log(stdOut.String())
 			t.Log(stdErr.String())

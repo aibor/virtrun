@@ -7,6 +7,7 @@ package virtrun
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/sysinit"
@@ -58,6 +59,8 @@ func NewQemuCommand(
 	if err != nil {
 		return nil, fmt.Errorf("build command: %w", err)
 	}
+
+	slog.Debug("QEMU command", slog.String("command", cmd.String()))
 
 	return cmd, nil
 }

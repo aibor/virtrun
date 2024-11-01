@@ -11,5 +11,5 @@ import (
 )
 
 func main() {
-	os.Exit(cmd.Run())
+	os.Exit(cmd.Run(os.Args, os.Stdout, os.Stderr))
 }

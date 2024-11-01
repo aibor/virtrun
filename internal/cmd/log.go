@@ -5,18 +5,18 @@
 package cmd
 
 import (
+	"io"
 	"log/slog"
-	"os"
 )
 
-func setupLogging(debug bool) {
+func setupLogging(writer io.Writer, debug bool) {
 	level := slog.LevelWarn
 	if debug {
 		level = slog.LevelDebug
 	}
 
 	slog.SetDefault(slog.New(slog.NewTextHandler(
-		os.Stderr,
+		writer,
 		&slog.HandlerOptions{
 			Level: level,
 		},

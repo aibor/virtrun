@@ -10,8 +10,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log/slog"
-	"os"
 	"os/signal"
 	"syscall"
 
@@ -19,50 +17,25 @@ import (
 	"github.com/aibor/virtrun/internal/virtrun"
 )
 
-func run() error {
+func run(args []string, outWriter, errWriter io.Writer) error {
 	arch, err := GetArch()
 	if err != nil {
 		return fmt.Errorf("get arch: %w", err)
 	}
 
-	cfg, err := virtrun.New(arch)
+	spec, err := virtrun.NewSpec(arch)
 	if err != nil {
 		return fmt.Errorf("new args: %w", err)
 	}
 
-	err = ParseArgs(
-		cfg,
-		os.Args[0],
-		PrependEnvArgs(os.Args[1:]),
-		os.Stderr,
-	)
+	flags := NewFlags(args[0], spec, errWriter)
+
+	err = flags.ParseArgs(PrependEnvArgs(args[1:]))
 	if err != nil {
 		return fmt.Errorf("parse args: %w", err)
 	}
 
-	setupLogging(cfg.Debug)
-
-	err = cfg.Validate()
-	if err != nil {
-		return fmt.Errorf("validate args: %w", err)
-	}
-
-	// Build initramfs for the run.
-	irfs, err := virtrun.NewInitramfsArchive(cfg.Initramfs)
-	if err != nil {
-		return fmt.Errorf("initramfs: %w", err)
-	}
-
-	slog.Debug("Initramfs created", slog.String("path", irfs.Path))
-
-	defer func() {
-		err := irfs.Cleanup()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: cleanup initramfs archive: %v", err)
-		}
-
-		slog.Debug("Initramfs cleaned up", slog.String("path", irfs.Path))
-	}()
+	setupLogging(errWriter, flags.Debug())
 
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),
@@ -74,16 +47,7 @@ func run() error {
 	)
 	defer cancel()
 
-	cmd, err := virtrun.NewQemuCommand(ctx, cfg.Qemu, irfs.Path)
-	if err != nil {
-		return fmt.Errorf("build qemu command: %w", err)
-	}
-
-	slog.Debug("QEMU command",
-		slog.String("command", cmd.String()),
-	)
-
-	err = cmd.Run(os.Stdout, os.Stderr)
+	err = virtrun.Run(ctx, spec, outWriter, errWriter)
 	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
@@ -128,7 +92,7 @@ func handleRunError(err error, errWriter io.Writer) int {
 	return exitCode
 }
 
-func Run() int {
-	err := run()
-	return handleRunError(err, os.Stderr)
+func Run(args []string, outWriter, errWriter io.Writer) int {
+	err := run(args, outWriter, errWriter)
+	return handleRunError(err, errWriter)
 }

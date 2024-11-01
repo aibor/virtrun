@@ -15,6 +15,10 @@ type ParseArgsError struct {
 }
 
 func (e *ParseArgsError) Error() string {
+	if e.err == nil {
+		return e.msg
+	}
+
 	return fmt.Sprintf("%s: %v", e.msg, e.err)
 }
 

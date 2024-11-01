@@ -5,8 +5,9 @@
 package virtrun
 
 import (
+	"context"
 	"fmt"
-	"os/exec"
+	"io"
 
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
@@ -24,14 +25,17 @@ const (
 	smpDefault = 1
 )
 
-type Virtrun struct {
+// Spec describes a single [Run].
+//
+// It is split into parameters required for the [qemu.CommandSpec] and
+// parameters required for building the initramfs archive file.
+type Spec struct {
 	Qemu      Qemu
 	Initramfs Initramfs
-	Version   bool
-	Debug     bool
 }
 
-func New(arch sys.Arch) (*Virtrun, error) {
+// NewSpec creates a new [Spec] with defaults set for the given architecture.
+func NewSpec(arch sys.Arch) (*Spec, error) {
 	var (
 		qemuExecutable    string
 		qemuMachine       string
@@ -55,7 +59,7 @@ func New(arch sys.Arch) (*Virtrun, error) {
 		return nil, sys.ErrArchNotSupported
 	}
 
-	args := &Virtrun{
+	args := &Spec{
 		Qemu: Qemu{
 			Executable:    qemuExecutable,
 			Machine:       qemuMachine,
@@ -90,30 +94,38 @@ func New(arch sys.Arch) (*Virtrun, error) {
 	return args, nil
 }
 
-func (v *Virtrun) Validate() error {
-	// Check files are actually present.
-	if _, err := exec.LookPath(v.Qemu.Executable); err != nil {
-		return fmt.Errorf("check qemu binary: %w", err)
+// Run runs with the given [Spec].
+//
+// An initramfs archive file is built and used for running QEMU. It returns no
+// error if the run succeeds. To succeed, the guest system must explicitly
+// communicate exit code 0. The built initramfs archive file is removed, unless
+// [Spec.Initramfs.Keep] is set to true.
+func Run(
+	ctx context.Context,
+	spec *Spec,
+	outWriter,
+	errWriter io.Writer,
+) error {
+	err := Validate(spec)
+	if err != nil {
+		return fmt.Errorf("validate: %w", err)
 	}
 
-	if err := v.Qemu.Kernel.Check(); err != nil {
-		return fmt.Errorf("check kernel file: %w", err)
+	//nolint:contextcheck
+	path, removeFn, err := BuildInitramfsArchive(spec.Initramfs)
+	if err != nil {
+		return err
+	}
+	defer removeFn() //nolint:errcheck
+
+	cmd, err := NewQemuCommand(ctx, spec.Qemu, path)
+	if err != nil {
+		return err
 	}
 
-	for _, file := range v.Initramfs.Files {
-		if err := FilePath(file).Check(); err != nil {
-			return fmt.Errorf("check file: %w", err)
-		}
-	}
-
-	for _, file := range v.Initramfs.Modules {
-		if err := FilePath(file).Check(); err != nil {
-			return fmt.Errorf("check module: %w", err)
-		}
-	}
-
-	if err := v.Initramfs.Binary.CheckBinary(v.Initramfs.Arch); err != nil {
-		return fmt.Errorf("check main binary: %w", err)
+	err = cmd.Run(outWriter, errWriter)
+	if err != nil {
+		return fmt.Errorf("qemu run: %w", err)
 	}
 
 	return nil

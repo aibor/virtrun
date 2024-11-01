@@ -5,6 +5,7 @@
 package sys_test
 
 import (
+	"context"
 	"os/exec"
 	"testing"
 
@@ -24,7 +25,7 @@ func TestTestdata(t *testing.T) {
 }
 
 func TestFilesLdd(t *testing.T) {
-	actual, err := sys.Ldd("testdata/bin/main")
+	actual, err := sys.Ldd(context.Background(), "testdata/bin/main")
 	require.NoErrorf(t, err, "must resolve")
 
 	expected := []string{

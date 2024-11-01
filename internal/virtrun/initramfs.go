@@ -5,6 +5,7 @@
 package virtrun
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -30,10 +31,21 @@ type Initramfs struct {
 	Keep           bool
 }
 
-func BuildInitramfsArchive(cfg Initramfs) (string, func() error, error) {
+func BuildInitramfsArchive(
+	ctx context.Context,
+	cfg Initramfs,
+) (string, func() error, error) {
 	irfs := initramfs.New()
 
-	err := buildFS(irfs, cfg)
+	binaryFiles := []string{string(cfg.Binary)}
+	binaryFiles = append(binaryFiles, cfg.Files...)
+
+	libs, err := sys.CollectLibsFor(ctx, binaryFiles...)
+	if err != nil {
+		return "", nil, fmt.Errorf("collect libs: %w", err)
+	}
+
+	err = buildFS(irfs, cfg, libs)
 	if err != nil {
 		return "", nil, fmt.Errorf("build: %w", err)
 	}
@@ -62,7 +74,7 @@ func BuildInitramfsArchive(cfg Initramfs) (string, func() error, error) {
 	return path, removeFn, nil
 }
 
-func buildFS(f initramfs.FSAdder, cfg Initramfs) error {
+func buildFS(f initramfs.FSAdder, cfg Initramfs, libs sys.LibCollection) error {
 	builder := fsBuilder{f}
 
 	err := builder.addFilePathAs("main", string(cfg.Binary))
@@ -83,14 +95,6 @@ func buildFS(f initramfs.FSAdder, cfg Initramfs) error {
 	err = builder.addFilesTo(modulesDir, cfg.Modules, modName)
 	if err != nil {
 		return err
-	}
-
-	binaryFiles := []string{string(cfg.Binary)}
-	binaryFiles = append(binaryFiles, cfg.Files...)
-
-	libs, err := sys.CollectLibsFor(binaryFiles...)
-	if err != nil {
-		return fmt.Errorf("collect libs: %w", err)
 	}
 
 	err = builder.addFilesTo(libsDir, slices.Collect(libs.Libs()), baseName)

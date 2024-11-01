@@ -21,7 +21,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const lddTimeoutSeconds = 5
+const lddTimeout = 5 * time.Second
 
 // Ldd gathers the required shared objects of the ELF file with the given path.
 // The path must point to an ELF file. [ErrNotELFFile] is returned if it is not
@@ -43,13 +43,13 @@ const lddTimeoutSeconds = 5
 // thus Linux distribution specific, it is not feasible for this
 // implementation. Because of this the former procedure is used, so use with
 // great care!
-func Ldd(path string) ([]string, error) {
+func Ldd(ctx context.Context, path string) ([]string, error) {
 	interpreter, err := readInterpreter(path)
 	if err != nil {
 		return nil, err
 	}
 
-	infos, err := ldd(interpreter, path)
+	infos, err := ldd(ctx, interpreter, path)
 	if err != nil {
 		return nil, err
 	}
@@ -108,14 +108,12 @@ func readInterpreter(path string) (string, error) {
 // itself. so, call [elfFile.readInterpreter] before calling ldd.
 //
 // It returns ErrNoInterpreter if the elfFile has no interpreter set.
-func ldd(interpreter, path string) (ldInfos, error) {
+func ldd(ctx context.Context, interpreter, path string) (ldInfos, error) {
 	if interpreter == "" {
 		return nil, ErrNoInterpreter
 	}
 
-	timeout := lddTimeoutSeconds * time.Second
-
-	ctx, stop := context.WithTimeout(context.Background(), timeout)
+	ctx, stop := context.WithTimeout(ctx, lddTimeout)
 	defer stop()
 
 	var stdoutBuf, stderrBuf bytes.Buffer

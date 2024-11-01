@@ -111,8 +111,7 @@ func Run(
 		return fmt.Errorf("validate: %w", err)
 	}
 
-	//nolint:contextcheck
-	path, removeFn, err := BuildInitramfsArchive(spec.Initramfs)
+	path, removeFn, err := BuildInitramfsArchive(ctx, spec.Initramfs)
 	if err != nil {
 		return err
 	}

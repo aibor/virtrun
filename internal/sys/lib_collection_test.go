@@ -5,6 +5,7 @@
 package sys_test
 
 import (
+	"context"
 	"slices"
 	"testing"
 
@@ -14,7 +15,10 @@ import (
 )
 
 func TestLibCollection_CollectLibsFor(t *testing.T) {
-	collection, err := sys.CollectLibsFor("testdata/bin/main")
+	collection, err := sys.CollectLibsFor(
+		context.Background(),
+		"testdata/bin/main",
+	)
 	require.NoError(t, err)
 
 	expectedLibs := []string{

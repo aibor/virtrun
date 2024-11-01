@@ -5,6 +5,7 @@
 package sys
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"iter"
@@ -42,14 +43,17 @@ func (c *LibCollection) SearchPaths() iter.Seq[string] {
 // all given ELF files.
 //
 // The dynamic linker consumed LD_LIBRARY_PATH from the environment.
-func CollectLibsFor(files ...string) (LibCollection, error) {
+func CollectLibsFor(
+	ctx context.Context,
+	files ...string,
+) (LibCollection, error) {
 	collection := LibCollection{
 		libs:        make(map[string]int),
 		searchPaths: make(map[string]int),
 	}
 
 	for _, name := range files {
-		err := collectLibsFor(collection.libs, name)
+		err := collectLibsFor(ctx, collection.libs, name)
 		if err != nil {
 			return collection, fmt.Errorf("[%s]: %w", name, err)
 		}
@@ -67,12 +71,16 @@ func CollectLibsFor(files ...string) (LibCollection, error) {
 	return collection, nil
 }
 
-func collectLibsFor(libs map[string]int, name string) error {
+func collectLibsFor(
+	ctx context.Context,
+	libs map[string]int,
+	name string,
+) error {
 	// For each regular file, try to get linked shared objects.
 	// Ignore if it is not an ELF file or if it is statically linked (has no
 	// interpreter). Collect the absolute paths of the found shared objects
 	// deduplicated in a set.
-	paths, err := Ldd(name)
+	paths, err := Ldd(ctx, name)
 	if err != nil {
 		if errors.Is(err, ErrNotELFFile) ||
 			errors.Is(err, ErrNoInterpreter) {

@@ -6,6 +6,7 @@ package sys
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,7 @@ func TestELFFileLdd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			infos, err := ldd(interpreter, tt.file)
+			infos, err := ldd(context.Background(), interpreter, tt.file)
 			require.NoError(t, err, "must resolve")
 
 			actual := infos.realPaths()

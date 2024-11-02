@@ -220,6 +220,19 @@ ones. See `sysinit.RunTests` for the steps it does.
 
 ## Internals
 
+### Work flow
+
+For running the QEMU command an initramfs archive file must be built. For this,
+the main binary is copied to `/main` and all additional files are copied into
+the `/data/` directory. For those files all required dynamic libraries are
+added into the `/lib/` directory. Kernel modules are copied into the
+`/lib/modules/` directory.
+
+The build archive file is used for running the QEMU command along with the
+given kernel file. Before the run is executed, go test flags that provide file
+paths are rewritten, so the guest writes into serial consoles and the host
+forwards them into the actual files given by the user.
+
 ### Exit Code Communication
 
 Virtrun wraps QEMU and runs an init program that runs and communicates its exit

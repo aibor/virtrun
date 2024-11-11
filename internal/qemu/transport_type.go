@@ -45,7 +45,7 @@ func (t *TransportType) String() string {
 }
 
 // MarshalText implements [encoding.TextMarshaler].
-func (t TransportType) MarshalText() ([]byte, error) {
+func (t *TransportType) MarshalText() ([]byte, error) {
 	s := t.String()
 	if s == "" {
 		return nil, ErrTransportTypeInvalid

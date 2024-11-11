@@ -38,13 +38,13 @@ func init() {
 	flag.TextVar(
 		&KernelPath,
 		"kernel.path",
-		KernelPath,
+		&KernelPath,
 		"absolute path of the test kernel",
 	)
 	flag.TextVar(
 		&KernelArch,
 		"kernel.arch",
-		KernelArch,
+		&KernelArch,
 		"architecture of the kernel",
 	)
 	flag.BoolVar(

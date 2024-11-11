@@ -18,7 +18,7 @@ type LimitedUintFlag struct {
 	unit     string
 }
 
-func (u LimitedUintFlag) MarshalText() ([]byte, error) {
+func (u *LimitedUintFlag) MarshalText() ([]byte, error) {
 	return []byte(strconv.FormatUint(u.Value, 10) + u.unit), nil
 }
 

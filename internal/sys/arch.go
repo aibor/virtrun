@@ -21,16 +21,16 @@ const (
 
 var ErrArchNotSupported = errors.New("architecture not supported")
 
-func (a Arch) String() string {
-	return string(a)
+func (a *Arch) String() string {
+	return string(*a)
 }
 
-func (a Arch) IsNative() bool {
-	return Native == a
+func (a *Arch) IsNative() bool {
+	return Native == *a
 }
 
 // KVMAvailable checks if KVM support is available for the given architecture.
-func (a Arch) KVMAvailable() bool {
+func (a *Arch) KVMAvailable() bool {
 	if !a.IsNative() {
 		return false
 	}
@@ -41,8 +41,8 @@ func (a Arch) KVMAvailable() bool {
 	return err == nil
 }
 
-func (a Arch) MarshalText() ([]byte, error) {
-	return []byte(a), nil
+func (a *Arch) MarshalText() ([]byte, error) {
+	return []byte(*a), nil
 }
 
 func (a *Arch) UnmarshalText(text []byte) error {

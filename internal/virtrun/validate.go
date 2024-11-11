@@ -27,14 +27,14 @@ func Validate(spec *Spec) error {
 	}
 
 	for _, file := range spec.Initramfs.Files {
-		err := FilePath(file).Validate()
+		err := (*FilePath)(&file).Validate()
 		if err != nil {
 			return fmt.Errorf("additional file: %w", err)
 		}
 	}
 
 	for _, file := range spec.Initramfs.Modules {
-		err := FilePath(file).Validate()
+		err := (*FilePath)(&file).Validate()
 		if err != nil {
 			return fmt.Errorf("module: %w", err)
 		}

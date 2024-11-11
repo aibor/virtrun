@@ -51,7 +51,7 @@ func (f *Flags) initFlagset(output io.Writer) {
 	fs.TextVar(
 		&f.spec.Qemu.Kernel,
 		"kernel",
-		f.spec.Qemu.Kernel,
+		&f.spec.Qemu.Kernel,
 		"path to kernel to use",
 	)
 
@@ -79,7 +79,7 @@ func (f *Flags) initFlagset(output io.Writer) {
 	fs.TextVar(
 		&f.spec.Qemu.TransportType,
 		"transport",
-		f.spec.Qemu.TransportType,
+		&f.spec.Qemu.TransportType,
 		"io transport type: isa, pci, mmio",
 	)
 
@@ -93,14 +93,14 @@ func (f *Flags) initFlagset(output io.Writer) {
 	fs.TextVar(
 		&f.spec.Qemu.Memory,
 		"memory",
-		f.spec.Qemu.Memory,
+		&f.spec.Qemu.Memory,
 		"memory (in MB) for the QEMU VM",
 	)
 
 	fs.TextVar(
 		&f.spec.Qemu.SMP,
 		"smp",
-		f.spec.Qemu.SMP,
+		&f.spec.Qemu.SMP,
 		"number of CPUs for the QEMU VM",
 	)
 

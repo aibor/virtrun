@@ -15,8 +15,8 @@ import (
 
 type FilePath string
 
-func (f FilePath) MarshalText() ([]byte, error) {
-	return []byte(f), nil
+func (f *FilePath) MarshalText() ([]byte, error) {
+	return []byte(*f), nil
 }
 
 func (f *FilePath) UnmarshalText(text []byte) error {
@@ -26,8 +26,8 @@ func (f *FilePath) UnmarshalText(text []byte) error {
 	return err
 }
 
-func (f FilePath) Validate() error {
-	stat, err := os.Stat(string(f))
+func (f *FilePath) Validate() error {
+	stat, err := os.Stat(string(*f))
 	if err != nil {
 		return err //nolint:wrapcheck
 	}
@@ -39,8 +39,8 @@ func (f FilePath) Validate() error {
 	return nil
 }
 
-func (f FilePath) ValidateBinary(arch sys.Arch) error {
-	file, err := os.Open(string(f))
+func (f *FilePath) ValidateBinary(arch sys.Arch) error {
+	file, err := os.Open(string(*f))
 	if err != nil {
 		return err //nolint:wrapcheck
 	}
@@ -64,8 +64,8 @@ func (f FilePath) ValidateBinary(arch sys.Arch) error {
 
 type FilePathList []string
 
-func (f FilePathList) String() string {
-	return strings.Join(f, ",")
+func (f *FilePathList) String() string {
+	return strings.Join(*f, ",")
 }
 
 func (f *FilePathList) Set(value string) error {

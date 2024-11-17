@@ -6,6 +6,7 @@ package main
 
 import (
 	"os"
+	"syscall"
 )
 
 func main() {
@@ -13,8 +14,12 @@ func main() {
 		panic("not PID 1")
 	}
 
-	if err := os.WriteFile("/proc/sys/kernel/sysrq", []byte{'1'}, 0); err != nil {
-		panic("enable sysrq: " + err.Error())
+	if err := os.MkdirAll("/proc", os.ModePerm); err != nil {
+		panic("mkdir: " + err.Error())
+	}
+
+	if err := syscall.Mount("proc", "/proc", "proc", 0, ""); err != nil {
+		panic("mount: " + err.Error())
 	}
 
 	if err := os.WriteFile("/proc/sysrq-trigger", []byte{'c'}, 0); err != nil {

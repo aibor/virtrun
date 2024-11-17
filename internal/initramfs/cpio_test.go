@@ -6,7 +6,10 @@ package initramfs_test
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"io/fs"
+	"slices"
 	"testing"
 	"testing/fstest"
 
@@ -16,92 +19,63 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCPIOWriter(t *testing.T) {
-	regularFileBody := make([]byte, 200)
-	for idx := range regularFileBody {
-		regularFileBody[idx] = byte(idx)
-	}
-
+func TestCPIOFSWriter_AddFS(t *testing.T) {
 	testFS := fstest.MapFS{
-		"regular": &fstest.MapFile{
-			Data: regularFileBody,
-		},
-		"dir": &fstest.MapFile{
+		".": &fstest.MapFile{
 			Mode: fs.ModeDir,
+		},
+		"regular": &fstest.MapFile{
+			Data: slices.Repeat([]byte{0xfe}, 200),
 		},
 		"link": &fstest.MapFile{
 			Data: []byte("target"),
 			Mode: fs.ModeSymlink,
 		},
-	}
-
-	tests := []struct {
-		name             string
-		fileName         string
-		expectedErr      error
-		expectedType     uint
-		expectedSize     int64
-		expectedLinks    int
-		expectedLinkname string
-		expectedBody     []byte
-	}{
-		{
-			name:          "write directory",
-			fileName:      "dir",
-			expectedType:  cpio.TypeDir,
-			expectedLinks: 2,
+		"dir": &fstest.MapFile{
+			Mode: fs.ModeDir,
 		},
-		{
-			name:             "write link",
-			fileName:         "link",
-			expectedType:     cpio.TypeSymlink,
-			expectedLinkname: "target",
+		"dir/regular": &fstest.MapFile{
+			Data: slices.Repeat([]byte{0xfe}, 100),
 		},
-		{
-			name:          "write regular",
-			fileName:      "regular",
-			expectedType:  cpio.TypeReg,
-			expectedSize:  200,
-			expectedLinks: 1,
-			expectedBody:  regularFileBody,
+		"dir/link": &fstest.MapFile{
+			Data: []byte("/"),
+			Mode: fs.ModeSymlink,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var archive bytes.Buffer
+	var archive bytes.Buffer
 
-			w := initramfs.NewCPIOFileWriter(&archive)
+	w := initramfs.NewCPIOFSWriter(&archive)
 
-			file, err := testFS.Open(tt.fileName)
-			require.NoError(t, err)
+	err := w.AddFS(testFS)
+	require.NoError(t, err)
 
-			err = w.WriteFile("test", file)
-			require.ErrorIs(t, err, tt.expectedErr)
+	r := cpio.NewReader(&archive)
 
-			if tt.expectedErr != nil {
-				return
-			}
+	extractedFS := fstest.MapFS{}
 
-			r := cpio.NewReader(&archive)
+	for {
+		hdr, err := r.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
 
-			hdr, err := r.Next()
-			require.NoError(t, err)
+		require.NoError(t, err)
 
-			assert.Equal(t, "test", hdr.Name, "name")
-			assert.EqualValues(t, tt.expectedType, hdr.Mode, "mode")
-			assert.EqualValues(t, tt.expectedSize, hdr.Size, "size")
-			assert.EqualValues(t, tt.expectedLinks, hdr.Links, "links")
-
-			if tt.expectedBody == nil {
-				return
-			}
-
-			body := make([]byte, hdr.Size)
+		var body []byte
+		if hdr.Size > 0 {
+			body = make([]byte, hdr.Size)
 			_, err = r.Read(body)
 			require.NoError(t, err)
+		} else if hdr.Linkname != "" {
+			body = []byte(hdr.Linkname)
+		}
 
-			assert.Equal(t, tt.expectedBody, body)
-		})
+		extractedFS[hdr.Name] = &fstest.MapFile{
+			Data: body,
+			Mode: hdr.FileInfo().Mode(),
+		}
 	}
+
+	assert.Equal(t, testFS, extractedFS)
 }

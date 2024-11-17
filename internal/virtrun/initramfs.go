@@ -125,10 +125,10 @@ func WriteFSToTempFile(fsys fs.FS, tmpDir string) (string, error) {
 	}
 	defer file.Close()
 
-	writer := initramfs.NewCPIOFileWriter(file)
+	writer := initramfs.NewCPIOFSWriter(file)
 	defer writer.Close()
 
-	err = initramfs.WriteFS(fsys, writer)
+	err = writer.AddFS(fsys)
 	if err != nil {
 		_ = os.Remove(file.Name())
 		return "", fmt.Errorf("create archive: %w", err)

@@ -5,62 +5,89 @@
 package initramfs
 
 import (
-	"fmt"
 	"io"
 	"io/fs"
 
 	"github.com/cavaliergopher/cpio"
 )
 
-const numLinks = 2
-
-var _ FileWriter = (*CPIOFileWriter)(nil)
-
-// CPIOFileWriter extends [cpio.Writer] to implement [FileWriter].
-type CPIOFileWriter struct {
+// CPIOFSWriter extends [cpio.Writer] by [CPIOFSWriter.AddFS] in the same way
+// archive/tar and archive/zip implement it.
+type CPIOFSWriter struct {
 	*cpio.Writer
 }
 
-// NewCPIOFileWriter creates a new archive writer.
-func NewCPIOFileWriter(w io.Writer) *CPIOFileWriter {
-	return &CPIOFileWriter{cpio.NewWriter(w)}
+// NewCPIOFSWriter creates a new archive writer.
+func NewCPIOFSWriter(w io.Writer) *CPIOFSWriter {
+	return &CPIOFSWriter{cpio.NewWriter(w)}
 }
 
-// WriteFile writes the given [fs.File] to the archive with the given path.
+// AddFS adds the files from fs.FS to the archive.
 //
-// File details are read from the file's [fs.FileInfo].
-func (w *CPIOFileWriter) WriteFile(path string, file fs.File) error {
-	info, err := file.Stat()
-	if err != nil {
-		return fmt.Errorf("stat: %w", err)
-	}
+// It walks the directory tree starting at the root of the filesystem adding
+// each file to the tar archive while maintaining the directory structure.
+// The [fs.FS.Open] must not follow symlinks. This is the case for [FS] and
+// most implementations in the standard library, except for [os.DirFS].
+//
+// TODO: Consider switching to [fs.ReadLinkFS] once available. See
+// https://github.com/golang/go/issues/49580
+//
+//nolint:godox
+func (w *CPIOFSWriter) AddFS(fsys fs.FS) error {
+	return fs.WalkDir(fsys, ".", func( //nolint:wrapcheck
+		name string, d fs.DirEntry, err error,
+	) error {
+		if err != nil {
+			return err
+		}
 
-	header, err := cpio.FileInfoHeader(info, "")
-	if err != nil {
-		return fmt.Errorf("header from file: %w", err)
-	}
+		info, err := d.Info()
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
 
-	// Override name from source with passed name for the file in the archive.
-	header.Name = path
-	if info.IsDir() {
-		// Fix number of links for directories.
-		header.Links = numLinks
-	}
+		header, err := cpio.FileInfoHeader(info, "")
+		if err != nil {
+			return &PathError{
+				Op:   "header from file",
+				Path: name,
+				Err:  err,
+			}
+		}
 
-	err = w.WriteHeader(header)
-	if err != nil {
-		return fmt.Errorf("write header: %w", err)
-	}
+		// Override name from source with passed name for the file in the
+		// archive.
+		header.Name = name
 
-	// Directories do not have a body and fail on [fs.File.Read].
-	if info.IsDir() {
+		err = w.WriteHeader(header)
+		if err != nil {
+			return &PathError{
+				Op:   "write header",
+				Path: name,
+				Err:  err,
+			}
+		}
+
+		// Directories do not have a body and fail on [fs.File.Read].
+		if info.IsDir() {
+			return nil
+		}
+
+		file, err := fsys.Open(name)
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
+		defer file.Close()
+
+		_, err = io.Copy(w, file)
+		if err != nil {
+			return &PathError{
+				Op:   "write body",
+				Path: name,
+				Err:  err,
+			}
+		}
+
 		return nil
-	}
-
-	_, err = io.Copy(w, file)
-	if err != nil {
-		return fmt.Errorf("write body: %w", err)
-	}
-
-	return nil
+	})
 }

@@ -7,6 +7,7 @@ package initramfs
 import (
 	"io"
 	"io/fs"
+	"os"
 
 	"github.com/cavaliergopher/cpio"
 )
@@ -26,14 +27,7 @@ func NewCPIOFSWriter(w io.Writer) *CPIOFSWriter {
 //
 // It walks the directory tree starting at the root of the filesystem adding
 // each file to the tar archive while maintaining the directory structure.
-// The [fs.FS.Open] must not follow symlinks. This is the case for [FS] and
-// most implementations in the standard library, except for [os.DirFS].
-//
-// TODO: Consider switching to [fs.ReadLinkFS] once available. See
-// https://github.com/golang/go/issues/49580
-//
-//nolint:godox
-func (w *CPIOFSWriter) AddFS(fsys fs.FS) error {
+func (w *CPIOFSWriter) AddFS(fsys ReadLinkFS) error {
 	return fs.WalkDir(fsys, ".", func( //nolint:wrapcheck
 		name string, d fs.DirEntry, err error,
 	) error {
@@ -68,18 +62,7 @@ func (w *CPIOFSWriter) AddFS(fsys fs.FS) error {
 			}
 		}
 
-		// Directories do not have a body and fail on [fs.File.Read].
-		if info.IsDir() {
-			return nil
-		}
-
-		file, err := fsys.Open(name)
-		if err != nil {
-			return err //nolint:wrapcheck
-		}
-		defer file.Close()
-
-		_, err = io.Copy(w, file)
+		err = w.writeBody(fsys, name, info.Mode().Type())
 		if err != nil {
 			return &PathError{
 				Op:   "write body",
@@ -90,4 +73,37 @@ func (w *CPIOFSWriter) AddFS(fsys fs.FS) error {
 
 		return nil
 	})
+}
+
+func (w *CPIOFSWriter) writeBody(
+	fsys ReadLinkFS,
+	name string,
+	typ fs.FileMode,
+) error {
+	switch typ {
+	case os.ModeDir:
+		// Directories do not have a body and fail on [fs.File.Read].
+		return nil
+	case fs.ModeSymlink:
+		linkName, err := fsys.ReadLink(name)
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
+
+		_, err = w.Write([]byte(linkName))
+
+		return err //nolint:wrapcheck
+	case 0:
+		file, err := fsys.Open(name)
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
+		defer file.Close()
+
+		_, err = io.Copy(w, file)
+
+		return err //nolint:wrapcheck
+	default:
+		return ErrFileInvalid
+	}
 }

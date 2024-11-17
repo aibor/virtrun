@@ -20,7 +20,7 @@ import (
 )
 
 func TestCPIOFSWriter_AddFS(t *testing.T) {
-	testFS := fstest.MapFS{
+	sourceFS := fstest.MapFS{
 		".": &fstest.MapFile{
 			Mode: fs.ModeDir,
 		},
@@ -47,7 +47,7 @@ func TestCPIOFSWriter_AddFS(t *testing.T) {
 
 	w := initramfs.NewCPIOFSWriter(&archive)
 
-	err := w.AddFS(testFS)
+	err := w.AddFS(initramfs.WithReadLinkNoFollowOpen(sourceFS))
 	require.NoError(t, err)
 
 	r := cpio.NewReader(&archive)
@@ -77,5 +77,5 @@ func TestCPIOFSWriter_AddFS(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, testFS, extractedFS)
+	assert.Equal(t, sourceFS, extractedFS)
 }

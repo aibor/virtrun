@@ -7,7 +7,6 @@ package virtrun
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"log/slog"
 	"os"
 	"slices"
@@ -113,13 +112,13 @@ func buildFS(f initramfs.FSAdder, cfg Initramfs, libs sys.LibCollection) error {
 // WriteFSToTempFile writes the given [fs.FS] as CPIO archive into a new
 // temporary file in the given directory.
 //
-// It returns the path to the created file. If tmpDir is the empty string the
+// It returns the path to the created file. If dir is the empty string the
 // default directory is used as returned by [os.TempDir].
 //
 // The caller is responsible for removing the file once it is not needed
 // anymore.
-func WriteFSToTempFile(fsys fs.FS, tmpDir string) (string, error) {
-	file, err := os.CreateTemp(tmpDir, "initramfs")
+func WriteFSToTempFile(fsys initramfs.ReadLinkFS, dir string) (string, error) {
+	file, err := os.CreateTemp(dir, "initramfs")
 	if err != nil {
 		return "", fmt.Errorf("create temp file: %w", err)
 	}

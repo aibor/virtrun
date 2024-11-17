@@ -13,6 +13,7 @@ import (
 
 const defaultFileMode = 0o755
 
+// FileOpenFunc returns an open [fs.File] or an error if opening fails.
 type FileOpenFunc func() (fs.File, error)
 
 // FSAdder defines the interface required to add files to a FS.
@@ -33,17 +34,22 @@ var (
 //
 // Regular files that should be copied from another source can be added with
 // [FS.Add].It supports adding symbolic links with [FS.Symlink]. Use [FS.Mkdir]
-// to create any required directories beforehand.
+// or [FS.MkdirAll] to create any required directories beforehand.
 type FS struct {
 	root directory
 }
 
+// New creates a new [FS].
 func New() *FS {
 	return &FS{
 		root: make(directory),
 	}
 }
 
+// Open opens the named file.
+//
+// It returns a [PathError] in case of errors. It does not follow symbolic
+// links and returns symbolic links directly.
 func (fsys *FS) Open(name string) (fs.File, error) {
 	file, err := fsys.open(name)
 	if err != nil {
@@ -57,6 +63,10 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 	return file, nil
 }
 
+// ReadLink returns the target of the symbolic link at the given name.
+//
+// It prepares for [fs.ReadLinkFS] as proposed:
+// https://github.com/golang/go/issues/49580
 func (fsys *FS) ReadLink(name string) (string, error) {
 	target, err := fsys.readlink(name)
 	if err != nil {
@@ -70,6 +80,9 @@ func (fsys *FS) ReadLink(name string) (string, error) {
 	return target, nil
 }
 
+// Mkdir creates a new directory with the given name.
+//
+// It returns [PathError] in case of errors.
 func (fsys *FS) Mkdir(name string) error {
 	parentName, dirName := filepath.Split(clean(name))
 
@@ -94,6 +107,11 @@ func (fsys *FS) Mkdir(name string) error {
 	return nil
 }
 
+// MkdirAll creates a directory with the given name along with all necessary
+// parents.
+//
+// It returns a [PathError] in case of errors. If the directory exists already,
+// it does nothing and returns nil.
 func (fsys *FS) MkdirAll(name string) error {
 	cleaned := clean(name)
 
@@ -121,6 +139,10 @@ func (fsys *FS) MkdirAll(name string) error {
 	return fsys.Mkdir(name)
 }
 
+// Add creates a new regular file with the given name.
+//
+// File content is read from the file returned by the given [FileOpenFunc]. It
+// returns a [PathError] in case of errors.
 func (fsys *FS) Add(name string, openFn FileOpenFunc) error {
 	if openFn == nil {
 		return &PathError{
@@ -142,6 +164,9 @@ func (fsys *FS) Add(name string, openFn FileOpenFunc) error {
 	return nil
 }
 
+// Symlink adds a new symbolic link that links to oldname at newname.
+//
+// It returns a [PathError] in case of errors.
 func (fsys *FS) Symlink(oldname, newname string) error {
 	file := symbolicLink(oldname)
 

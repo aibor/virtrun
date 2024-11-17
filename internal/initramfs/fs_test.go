@@ -10,6 +10,7 @@ import (
 	"testing/fstest"
 
 	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -307,6 +308,62 @@ func TestFS_Symlink(t *testing.T) {
 
 			err := fsys.Symlink("somewhere", tt.path)
 			require.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
+
+func TestFS_ReadLink(t *testing.T) {
+	tests := []struct {
+		name        string
+		path        string
+		prepare     func(fsys *initramfs.FS) error
+		expected    string
+		expectedErr error
+	}{
+		{
+			name: "exists as link",
+			path: "link",
+			prepare: func(fsys *initramfs.FS) error {
+				return fsys.Symlink("somewhere", "link")
+			},
+			expected: "somewhere",
+		},
+		{
+			name: "exists as other",
+			path: "link",
+			prepare: func(fsys *initramfs.FS) error {
+				return fsys.Mkdir("link")
+			},
+			expectedErr: initramfs.ErrFileInvalid,
+		},
+		{
+			name: "parent not a dir",
+			path: "dir/link",
+			prepare: func(fsys *initramfs.FS) error {
+				return fsys.Symlink("somewhere", "dir")
+			},
+			expectedErr: initramfs.ErrFileNotExist,
+		},
+		{
+			name:        "missing parent",
+			path:        "dir/link",
+			expectedErr: initramfs.ErrFileNotExist,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsys := initramfs.New()
+
+			if tt.prepare != nil {
+				err := tt.prepare(fsys)
+				require.NoError(t, err)
+			}
+
+			actual, err := fsys.ReadLink(tt.path)
+			require.ErrorIs(t, err, tt.expectedErr)
+
+			assert.Equal(t, tt.expected, actual)
 		})
 	}
 }

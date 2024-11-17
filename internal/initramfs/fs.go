@@ -57,6 +57,19 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 	return file, nil
 }
 
+func (fsys *FS) ReadLink(name string) (string, error) {
+	target, err := fsys.readlink(name)
+	if err != nil {
+		return "", &PathError{
+			Op:   "readlink",
+			Path: name,
+			Err:  err,
+		}
+	}
+
+	return target, nil
+}
+
 func (fsys *FS) Mkdir(name string) error {
 	parentName, dirName := filepath.Split(clean(name))
 
@@ -186,6 +199,20 @@ func (fsys *FS) open(name string) (fs.File, error) {
 	}
 
 	return file.open(info)
+}
+
+func (fsys *FS) readlink(name string) (string, error) {
+	file, err := fsys.find(name)
+	if err != nil {
+		return "", err
+	}
+
+	symlink, isSymlink := file.(symbolicLink)
+	if !isSymlink {
+		return "", ErrFileInvalid
+	}
+
+	return string(symlink), nil
 }
 
 //nolint:ireturn

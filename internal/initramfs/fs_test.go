@@ -47,6 +47,80 @@ func TestFiles_TestFS(t *testing.T) {
 	})
 }
 
+func TestFS_Add(t *testing.T) {
+	testFS := fstest.MapFS{
+		"test": &fstest.MapFile{
+			Data: []byte("content"),
+		},
+	}
+
+	tests := []struct {
+		name        string
+		path        string
+		prepare     func(fsys *initramfs.FS) error
+		expectedErr error
+	}{
+		{
+			name: "new",
+			path: "test",
+		},
+		{
+			name: "new in dir",
+			path: "dir/test",
+			prepare: func(fsys *initramfs.FS) error {
+				return fsys.Mkdir("dir")
+			},
+		},
+		{
+			name: "exists as file",
+			path: "test",
+			prepare: func(fsys *initramfs.FS) error {
+				return fsys.Add("test", func() (fs.File, error) {
+					return testFS.Open("test")
+				})
+			},
+			expectedErr: initramfs.ErrFileExist,
+		},
+		{
+			name: "exists as other",
+			path: "test",
+			prepare: func(fsys *initramfs.FS) error {
+				return fsys.Symlink("somewhere", "test")
+			},
+			expectedErr: initramfs.ErrFileExist,
+		},
+		{
+			name: "parent not a dir",
+			path: "dir/test",
+			prepare: func(fsys *initramfs.FS) error {
+				return fsys.Symlink("somewhere", "dir")
+			},
+			expectedErr: initramfs.ErrFileNotDir,
+		},
+		{
+			name:        "missing parent",
+			path:        "dir/test",
+			expectedErr: initramfs.ErrFileNotExist,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsys := initramfs.New()
+
+			if tt.prepare != nil {
+				err := tt.prepare(fsys)
+				require.NoError(t, err)
+			}
+
+			err := fsys.Add(tt.path, func() (fs.File, error) {
+				return testFS.Open("test")
+			})
+			require.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
+
 func TestFS_Mkdir(t *testing.T) {
 	tests := []struct {
 		name        string

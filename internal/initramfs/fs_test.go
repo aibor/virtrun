@@ -267,10 +267,10 @@ func TestFS_Symlink(t *testing.T) {
 		},
 		{
 			name: "exists as link",
+			path: "link",
 			prepare: func(fsys *initramfs.FS) error {
 				return fsys.Symlink("somewhere", "link")
 			},
-			path:        "link",
 			expectedErr: initramfs.ErrFileExist,
 		},
 		{

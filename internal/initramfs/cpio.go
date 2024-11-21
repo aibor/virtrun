@@ -27,7 +27,7 @@ func NewCPIOFSWriter(w io.Writer) *CPIOFSWriter {
 //
 // It walks the directory tree starting at the root of the filesystem adding
 // each file to the tar archive while maintaining the directory structure.
-func (w *CPIOFSWriter) AddFS(fsys ReadLinkFS) error {
+func (w *CPIOFSWriter) AddFS(fsys fs.FS) error {
 	return fs.WalkDir(fsys, ".", func( //nolint:wrapcheck
 		name string, d fs.DirEntry, err error,
 	) error {
@@ -76,7 +76,7 @@ func (w *CPIOFSWriter) AddFS(fsys ReadLinkFS) error {
 }
 
 func (w *CPIOFSWriter) writeBody(
-	fsys ReadLinkFS,
+	fsys fs.FS,
 	name string,
 	typ fs.FileMode,
 ) error {
@@ -85,9 +85,9 @@ func (w *CPIOFSWriter) writeBody(
 		// Directories do not have a body and fail on [fs.File.Read].
 		return nil
 	case fs.ModeSymlink:
-		linkName, err := fsys.ReadLink(name)
+		linkName, err := ReadLink(fsys, name)
 		if err != nil {
-			return err //nolint:wrapcheck
+			return err
 		}
 
 		_, err = w.Write([]byte(linkName))

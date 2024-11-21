@@ -7,6 +7,7 @@ package virtrun
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"slices"
@@ -117,7 +118,7 @@ func buildFS(f initramfs.FSAdder, cfg Initramfs, libs sys.LibCollection) error {
 //
 // The caller is responsible for removing the file once it is not needed
 // anymore.
-func WriteFSToTempFile(fsys initramfs.ReadLinkFS, dir string) (string, error) {
+func WriteFSToTempFile(fsys fs.FS, dir string) (string, error) {
 	file, err := os.CreateTemp(dir, "initramfs")
 	if err != nil {
 		return "", fmt.Errorf("create temp file: %w", err)

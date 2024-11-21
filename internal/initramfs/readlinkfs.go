@@ -14,14 +14,31 @@ import "io/fs"
 type ReadLinkFS interface {
 	fs.FS
 
-	// ReadLink returns the destination a symbolic link points to. Returns an
-	// error if the file at name is not a symbolic link or cannot be read.
 	ReadLink(name string) (string, error)
+	Lstat(name string) (fs.FileInfo, error)
+}
+
+// ReadLink returns the destination a symbolic links points to.
+//
+// The given [fs.FS], must implement [readLinkFS], otherwise ErrFileInvalid is
+// returned.
+func ReadLink(fsys fs.FS, name string) (string, error) {
+	rlFS, ok := fsys.(ReadLinkFS)
+	if !ok {
+		return "", &PathError{
+			Op:   "readlink",
+			Path: name,
+			Err:  ErrFileInvalid,
+		}
+	}
+
+	return rlFS.ReadLink(name) //nolint:wrapcheck
 }
 
 type readLinkFS struct {
 	fs.FS
-	readLinkFn ReadLinkFunc
+	readLinkFn func(name string) (string, error)
+	lstatFn    func(name string) (fs.FileInfo, error)
 }
 
 // ReadLink implements [ReadLinkFS].
@@ -29,19 +46,9 @@ func (fsys *readLinkFS) ReadLink(name string) (string, error) {
 	return fsys.readLinkFn(name)
 }
 
-// ReadLinkFunc returns the destination of a symbolic link or an error in case
-// the file at name is not a symbolic link or cannot be read.
-type ReadLinkFunc func(name string) (string, error)
-
-// WithReadLinkFunc extends the given [fs.FS] with the given [ReadLinkFunc]
-// into a new [ReadLinkFS].
-//
-//nolint:ireturn
-func WithReadLinkFunc(fsys fs.FS, readLinkFn ReadLinkFunc) ReadLinkFS {
-	return &readLinkFS{
-		FS:         fsys,
-		readLinkFn: readLinkFn,
-	}
+// Lstat implements [ReadLinkFS].
+func (fsys *readLinkFS) Lstat(name string) (fs.FileInfo, error) {
+	return fsys.lstatFn(name)
 }
 
 // WithReadLinkNoFollowOpen extends the given [fs.FS] into a new [ReadLinkFS].
@@ -50,38 +57,46 @@ func WithReadLinkFunc(fsys fs.FS, readLinkFn ReadLinkFunc) ReadLinkFS {
 // them directly so the destination can be read and returned by the ReadLink
 // method.
 //
-//nolint:ireturn
-func WithReadLinkNoFollowOpen(fsys fs.FS) ReadLinkFS {
-	return WithReadLinkFunc(fsys, func(name string) (string, error) {
-		file, err := fsys.Open(name)
-		if err != nil {
-			return "", err //nolint:wrapcheck
-		}
-		defer file.Close()
-
-		info, err := file.Stat()
-		if err != nil {
-			return "", err //nolint:wrapcheck
-		}
-
-		if info.Mode().Type() != fs.ModeSymlink {
-			return "", &PathError{
-				Op:   "readlink",
-				Path: name,
-				Err:  ErrFileInvalid,
+// This is a workaround until the standard librariy's implementations implement
+// [ReadLinkFS] themself (Pallend for 1.24). See
+// https://github.com/golang/go/issues/49580
+func WithReadLinkNoFollowOpen(fsys fs.FS) fs.FS {
+	return &readLinkFS{
+		FS: fsys,
+		readLinkFn: func(name string) (string, error) {
+			file, err := fsys.Open(name)
+			if err != nil {
+				return "", err //nolint:wrapcheck
 			}
-		}
+			defer file.Close()
 
-		b := make([]byte, info.Size())
-
-		if _, err := file.Read(b); err != nil {
-			return "", &PathError{
-				Op:   "readlink",
-				Path: name,
-				Err:  err,
+			info, err := file.Stat()
+			if err != nil {
+				return "", err //nolint:wrapcheck
 			}
-		}
 
-		return string(b), nil
-	})
+			if info.Mode().Type() != fs.ModeSymlink {
+				return "", &PathError{
+					Op:   "readlink",
+					Path: name,
+					Err:  ErrFileInvalid,
+				}
+			}
+
+			b := make([]byte, info.Size())
+
+			if _, err := file.Read(b); err != nil {
+				return "", &PathError{
+					Op:   "readlink",
+					Path: name,
+					Err:  err,
+				}
+			}
+
+			return string(b), nil
+		},
+		lstatFn: func(name string) (fs.FileInfo, error) {
+			return fs.Stat(fsys, name)
+		},
+	}
 }

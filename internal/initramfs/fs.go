@@ -25,8 +25,9 @@ type FSAdder interface {
 }
 
 var (
-	_ fs.FS   = (*FS)(nil)
-	_ FSAdder = (*FS)(nil)
+	_ fs.FS      = (*FS)(nil)
+	_ ReadLinkFS = (*FS)(nil)
+	_ FSAdder    = (*FS)(nil)
 )
 
 // FS represents a simple [fs.FS] that supports directories, regular files and
@@ -63,10 +64,10 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 	return file, nil
 }
 
-// ReadLink returns the target of the symbolic link at the given name.
+// ReadLink returns the target of the symbolic link with the given name.
 //
-// It prepares for [fs.ReadLinkFS] as proposed:
-// https://github.com/golang/go/issues/49580
+// It returns a [PathError] in case of errors. It returns ErrFileInvalid in
+// case the file is not a symbolic link.
 func (fsys *FS) ReadLink(name string) (string, error) {
 	target, err := fsys.readlink(name)
 	if err != nil {
@@ -78,6 +79,23 @@ func (fsys *FS) ReadLink(name string) (string, error) {
 	}
 
 	return target, nil
+}
+
+// Lstat returns information about the file with the given name.
+//
+// It returns a [PathError] in case of errors. It does not follow symbolic
+// links and returns symbolic links directly.
+func (fsys *FS) Lstat(name string) (fs.FileInfo, error) {
+	info, err := fsys.lstat(name)
+	if err != nil {
+		return nil, &PathError{
+			Op:   "lstat",
+			Path: name,
+			Err:  err,
+		}
+	}
+
+	return info, nil
 }
 
 // Mkdir creates a new directory with the given name.
@@ -238,6 +256,21 @@ func (fsys *FS) readlink(name string) (string, error) {
 	}
 
 	return string(symlink), nil
+}
+
+func (fsys *FS) lstat(name string) (fs.FileInfo, error) {
+	file, err := fsys.open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil {
+		return nil, err //nolint:wrapcheck
+	}
+
+	return info, nil
 }
 
 //nolint:ireturn

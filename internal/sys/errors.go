@@ -12,4 +12,12 @@ var (
 
 	// ErrNotELFFile is returned if the file does not have an ELF magic number.
 	ErrNotELFFile = errors.New("is not an ELF file")
+
+	// ErrOSABINotSupported is returned if the OS ABI of an ELF file is not
+	// supported.
+	ErrOSABINotSupported = errors.New("OSABI not supported")
+
+	// ErrMachineNotSupported is returned if the machine type of an ELF file
+	// is not supported.
+	ErrMachineNotSupported = errors.New("machine type not supported")
 )

@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"strings"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -68,13 +67,9 @@ func Ldd(ctx context.Context, path string) ([]string, error) {
 // file does not have an ELF magic number, [ErrNoELFFile] is returned. If no
 // interpreter path is found, [ErrNoInterpreter] is returned.
 func readInterpreter(path string) (string, error) {
-	elfFile, err := elf.Open(path)
+	elfFile, err := elfOpen(path)
 	if err != nil {
-		if strings.Contains(err.Error(), "bad magic number") {
-			err = ErrNotELFFile
-		}
-
-		return "", fmt.Errorf("open %s: %w", path, err)
+		return "", err
 	}
 	defer elfFile.Close()
 

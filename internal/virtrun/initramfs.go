@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	dataDir    = "data"
-	libsDir    = "lib"
-	modulesDir = "lib/modules"
+	dataDir    = "/data"
+	libsDir    = "/lib"
+	modulesDir = "/lib/modules"
 )
 
 type Initramfs struct {

@@ -69,6 +69,10 @@ func (b *fsBuilder) addFilesTo(dir string, files []string, fn nameFunc) error {
 
 func (b *fsBuilder) symlinkTo(dir string, paths []string) error {
 	for _, path := range paths {
+		if path == dir {
+			continue
+		}
+
 		path := strings.TrimPrefix(path, string(filepath.Separator))
 		if path == "" || path == dir {
 			continue

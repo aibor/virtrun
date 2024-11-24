@@ -9,8 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/aibor/virtrun/internal/sys"
 )
 
 type FilePath string
@@ -34,29 +32,6 @@ func (f *FilePath) Validate() error {
 
 	if !stat.Mode().IsRegular() {
 		return ErrNotRegularFile
-	}
-
-	return nil
-}
-
-func (f *FilePath) ValidateBinary(arch sys.Arch) error {
-	file, err := os.Open(string(*f))
-	if err != nil {
-		return err //nolint:wrapcheck
-	}
-
-	stat, err := file.Stat()
-	if err != nil {
-		return err //nolint:wrapcheck
-	}
-
-	if !stat.Mode().IsRegular() {
-		return ErrNotRegularFile
-	}
-
-	err = ValidateELF(file, arch)
-	if err != nil {
-		return fmt.Errorf("elf header: %w", err)
 	}
 
 	return nil

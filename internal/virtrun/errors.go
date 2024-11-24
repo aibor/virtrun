@@ -13,12 +13,4 @@ var (
 	// ErrNotRegularFile is returned if a file should be read but is not a
 	// regular file.
 	ErrNotRegularFile = errors.New("not a regular file")
-
-	// ErrOSABINotSupported is returned if the OS ABI of an ELF file is not
-	// supported.
-	ErrOSABINotSupported = errors.New("OSABI not supported")
-
-	// ErrMachineNotSupported is returned if the machine type of an ELF file
-	// is not supported.
-	ErrMachineNotSupported = errors.New("machine type not supported")
 )

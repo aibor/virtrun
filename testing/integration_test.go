@@ -117,7 +117,7 @@ func TestIntegration(t *testing.T) {
 			bin:  "../internal/sys/testdata/bin/main",
 			requireErr: func(t require.TestingT, err error, _ ...any) {
 				if !KernelArch.IsNative() {
-					require.ErrorIs(t, err, virtrun.ErrMachineNotSupported)
+					require.ErrorIs(t, err, qemu.ErrGuestPanic)
 					return
 				}
 

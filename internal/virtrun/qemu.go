@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
+	"strings"
 
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/sysinit"
@@ -33,7 +35,7 @@ func NewQemuCommand(
 	cfg Qemu,
 	initramfsPath string,
 ) (*qemu.Command, error) {
-	spec := qemu.CommandSpec{
+	cmdSpec := qemu.CommandSpec{
 		Executable:    cfg.Executable,
 		Kernel:        string(cfg.Kernel),
 		Initramfs:     initramfsPath,
@@ -52,10 +54,10 @@ func NewQemuCommand(
 	// In order to be useful with "go test -exec", rewrite the file based flags
 	// so the output can be passed from guest to kernel via consoles.
 	if !cfg.NoGoTestFlagRewrite {
-		spec.ProcessGoTestFlags()
+		rewriteGoTestFlagsPath(&cmdSpec)
 	}
 
-	cmd, err := qemu.NewCommand(ctx, spec)
+	cmd, err := qemu.NewCommand(ctx, cmdSpec)
 	if err != nil {
 		return nil, fmt.Errorf("build command: %w", err)
 	}
@@ -63,4 +65,57 @@ func NewQemuCommand(
 	slog.Debug("QEMU command", slog.String("command", cmd.String()))
 
 	return cmd, nil
+}
+
+// rewriteGoTestFlagsPath processes file related go test flags in
+// [qemu.CommandSpec.InitArgs] and changes them, so the guest system's writes
+// end up in the host systems file paths.
+//
+// It scans [qemu.CommandSpec.InitArgs] for coverage and profile related paths
+// and replaces them with console path. The original paths are added as
+// additional file descriptors to the [qemu.CommandSpec].
+//
+// It is required that the flags are prefixed with "test" and value is
+// separated form the flag by "=". This is the format the "go test" tool
+// invokes the test binary with.
+func rewriteGoTestFlagsPath(c *qemu.CommandSpec) {
+	// Only coverprofile has a relative path to the test pwd and can be
+	// replaced immediately. All other profile files are relative to the actual
+	// test running and need to be prefixed with -test.outputdir. So, collect
+	// them and process them afterwards when "outputdir" is found.
+	needsOutputDirPrefix := make([]int, 0)
+	outputDir := ""
+
+	for idx, posArg := range c.InitArgs {
+		splits := strings.Split(posArg, "=")
+		switch splits[0] {
+		case "-test.coverprofile":
+			splits[1] = "/dev/" + c.AddConsole(splits[1])
+			c.InitArgs[idx] = strings.Join(splits, "=")
+		case "-test.blockprofile",
+			"-test.cpuprofile",
+			"-test.memprofile",
+			"-test.mutexprofile",
+			"-test.trace":
+			needsOutputDirPrefix = append(needsOutputDirPrefix, idx)
+
+			continue
+		case "-test.outputdir":
+			outputDir = splits[1]
+
+			fallthrough
+		case "-test.gocoverdir":
+			splits[1] = "/tmp"
+			c.InitArgs[idx] = strings.Join(splits, "=")
+		}
+	}
+
+	if outputDir != "" {
+		for _, argsIdx := range needsOutputDirPrefix {
+			splits := strings.Split(c.InitArgs[argsIdx], "=")
+			path := filepath.Join(outputDir, splits[1])
+			splits[1] = "/dev/" + c.AddConsole(path)
+			c.InitArgs[argsIdx] = strings.Join(splits, "=")
+		}
+	}
 }

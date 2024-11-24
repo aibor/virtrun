@@ -15,10 +15,11 @@ import (
 // It returns an error if the ELF file is not for Linux or is for an
 // unsupported architecture.
 func ReadELFArch(fileName string) (Arch, error) {
-	file, err := elf.Open(fileName)
+	file, err := elfOpen(fileName)
 	if err != nil {
-		return "", err //nolint:wrapcheck
+		return "", err
 	}
+	defer file.Close()
 
 	switch file.OSABI {
 	case elf.ELFOSABI_NONE, elf.ELFOSABI_LINUX:

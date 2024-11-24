@@ -23,20 +23,51 @@ const (
 )
 
 type Initramfs struct {
-	Arch           sys.Arch
-	Binary         FilePath
-	Files          FilePathList
-	Modules        FilePathList
+	// Arch is the architecture the archive is for. It is required for picking
+	// the correct init program in case the main binary is not used in
+	// standalone mode directly.
+	Arch sys.Arch
+
+	// Binary is the main binary that is either called directly or by the init
+	// program depending on the StandaloneInit flag.
+	Binary FilePath
+
+	// Files is a list of any additional files that should be added to the
+	// dataDir directory. For ELF files the required dynamic libraries are
+	// added the libsDir directory.
+	Files FilePathList
+
+	// Modules is a list of kernel module files. They are added to the
+	// modulesDir directory.
+	Modules FilePathList
+
+	// StandaloneInit determines if the main Binary should be called as init
+	// directly. The main binary is responsible for a clean shutdown of the
+	// system.
 	StandaloneInit bool
-	Keep           bool
+
+	// Keep determines if the archive file is removed by the cleanup function
+	// returned by [BuildInitramfsArchive]. If set to true, the file is not
+	// removed. Instead, a log message with the file's path is printed.
+	Keep bool
 }
 
+// BuildInitramfsArchive creates a new initramfs CPIO archive file.
+//
+// The archive consists of a main binary that is either called directly or
+// by the init program. All other files are added to the dataDir directory.
+// Kernel modules are added to modulesDir directory. For all ELF files the
+// dynamically linked shared objects are collected and added to the libsDir
+// directory. The paths to the directories they have been found at are added as
+// symlinks to the libsDir directory as well.
+//
+// The CPIO archive is written to [os.TempDir]. The path to the file is
+// returned along with a cleanup function. The caller is responsible to call
+// the function once the archive file is no longer needed.
 func BuildInitramfsArchive(
 	ctx context.Context,
 	cfg Initramfs,
 ) (string, func() error, error) {
-	irfs := initramfs.New()
-
 	binaryFiles := []string{string(cfg.Binary)}
 	binaryFiles = append(binaryFiles, cfg.Files...)
 
@@ -45,14 +76,14 @@ func BuildInitramfsArchive(
 		return "", nil, fmt.Errorf("collect libs: %w", err)
 	}
 
-	err = buildFS(irfs, cfg, libs)
+	irfs, err := buildInitramFS(cfg, libs)
 	if err != nil {
 		return "", nil, fmt.Errorf("build: %w", err)
 	}
 
-	path, err := WriteFSToTempFile(irfs, "")
+	path, err := writeFSToTempFile(irfs, "")
 	if err != nil {
-		return "", nil, fmt.Errorf("write archive file: %w", err)
+		return "", nil, err
 	}
 
 	slog.Debug("Initramfs created", slog.String("path", path))
@@ -74,54 +105,50 @@ func BuildInitramfsArchive(
 	return path, removeFn, nil
 }
 
-func buildFS(f initramfs.FSAdder, cfg Initramfs, libs sys.LibCollection) error {
-	builder := fsBuilder{f}
+func buildInitramFS(
+	cfg Initramfs,
+	libs sys.LibCollection,
+) (*initramfs.FS, error) {
+	irfs := initramfs.New()
+	builder := fsBuilder{irfs}
 
 	err := builder.addFilePathAs("main", string(cfg.Binary))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = builder.addInit(cfg.Arch, cfg.StandaloneInit)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = builder.addFilesTo(dataDir, cfg.Files, baseName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = builder.addFilesTo(modulesDir, cfg.Modules, modName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = builder.addFilesTo(libsDir, slices.Collect(libs.Libs()), baseName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = builder.symlinkTo(libsDir, slices.Collect(libs.SearchPaths()))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return irfs, nil
 }
 
-// WriteFSToTempFile writes the given [fs.FS] as CPIO archive into a new
-// temporary file in the given directory.
-//
-// It returns the path to the created file. If dir is the empty string the
-// default directory is used as returned by [os.TempDir].
-//
-// The caller is responsible for removing the file once it is not needed
-// anymore.
-func WriteFSToTempFile(fsys fs.FS, dir string) (string, error) {
+func writeFSToTempFile(fsys fs.FS, dir string) (string, error) {
 	file, err := os.CreateTemp(dir, "initramfs")
 	if err != nil {
-		return "", fmt.Errorf("create temp file: %w", err)
+		return "", fmt.Errorf("create archive file: %w", err)
 	}
 	defer file.Close()
 
@@ -131,7 +158,7 @@ func WriteFSToTempFile(fsys fs.FS, dir string) (string, error) {
 	err = writer.AddFS(fsys)
 	if err != nil {
 		_ = os.Remove(file.Name())
-		return "", fmt.Errorf("create archive: %w", err)
+		return "", fmt.Errorf("write archive: %w", err)
 	}
 
 	return file.Name(), nil

@@ -23,11 +23,6 @@ const (
 )
 
 type Initramfs struct {
-	// Arch is the architecture the archive is for. It is required for picking
-	// the correct init program in case the main binary is not used in
-	// standalone mode directly.
-	Arch sys.Arch
-
 	// Binary is the main binary that is either called directly or by the init
 	// program depending on the StandaloneInit flag.
 	Binary FilePath
@@ -68,6 +63,11 @@ func BuildInitramfsArchive(
 	ctx context.Context,
 	cfg Initramfs,
 ) (string, func() error, error) {
+	arch, err := sys.ReadELFArch(string(cfg.Binary))
+	if err != nil {
+		return "", nil, fmt.Errorf("read main binary arch: %w", err)
+	}
+
 	binaryFiles := []string{string(cfg.Binary)}
 	binaryFiles = append(binaryFiles, cfg.Files...)
 
@@ -76,7 +76,7 @@ func BuildInitramfsArchive(
 		return "", nil, fmt.Errorf("collect libs: %w", err)
 	}
 
-	irfs, err := buildInitramFS(cfg, libs)
+	irfs, err := buildInitramFS(cfg, arch, libs)
 	if err != nil {
 		return "", nil, fmt.Errorf("build: %w", err)
 	}
@@ -107,6 +107,7 @@ func BuildInitramfsArchive(
 
 func buildInitramFS(
 	cfg Initramfs,
+	arch sys.Arch,
 	libs sys.LibCollection,
 ) (*initramfs.FS, error) {
 	irfs := initramfs.New()
@@ -117,7 +118,7 @@ func buildInitramFS(
 		return nil, err
 	}
 
-	err = builder.addInit(cfg.Arch, cfg.StandaloneInit)
+	err = builder.addInit(arch, cfg.StandaloneInit)
 	if err != nil {
 		return nil, err
 	}

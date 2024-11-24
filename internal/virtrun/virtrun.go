@@ -86,9 +86,6 @@ func NewSpec(arch sys.Arch) (*Spec, error) {
 				qemu.UniqueArg("no-user-config", ""),
 			},
 		},
-		Initramfs: Initramfs{
-			Arch: arch,
-		},
 	}
 
 	return args, nil

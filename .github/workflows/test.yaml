@@ -60,8 +60,10 @@ jobs:
         arch:
           - go: amd64
             apk: x86_64
+            skip:
           - go: arm64
             apk: aarch64
+            skip: "TestIntegration/linked"
     steps:
       - name: Install packages
         run: apk add tar "qemu-system-${{ matrix.arch.apk }}" gcc musl-dev
@@ -92,12 +94,12 @@ jobs:
         run: |
           go test -v \
             -tags integration \
+            -skip "${{ matrix.arch.skip }}" \
             -covermode atomic \
             -coverpkg "$(go list ./internal/... | tr '\n' ,)" \
             -coverprofile /tmp/cover.testing.out \
             ./testing/ \
             -kernel.path "/boot/vmlinuz-virt" \
-            -kernel.arch ${{ matrix.arch.go }} \
             -force-pci
 
   integration-tests-modules:

@@ -28,7 +28,6 @@ import (
 //nolint:gochecknoglobals
 var (
 	KernelPath            = virtrun.FilePath("/kernels/vmlinuz")
-	KernelArch            = sys.Native
 	ForceTransportTypePCI bool
 	Verbose               bool
 )
@@ -39,11 +38,6 @@ func init() {
 		&KernelPath,
 		"kernel.path",
 		"absolute path of the test kernel",
-	)
-	flag.Var(
-		&KernelArch,
-		"kernel.arch",
-		"architecture of the kernel",
 	)
 	flag.BoolVar(
 		&ForceTransportTypePCI,
@@ -75,6 +69,7 @@ func TestIntegration(t *testing.T) {
 		bin        string
 		args       []string
 		standalone bool
+		nativeOnly bool
 		requireErr require.ErrorAssertionFunc
 	}{
 		{
@@ -111,14 +106,10 @@ func TestIntegration(t *testing.T) {
 			},
 		},
 		{
-			name: "linked",
-			bin:  "../internal/sys/testdata/bin/main",
+			name:       "linked",
+			bin:        "../internal/sys/testdata/bin/main",
+			nativeOnly: true,
 			requireErr: func(t require.TestingT, err error, _ ...any) {
-				if !KernelArch.IsNative() {
-					require.ErrorIs(t, err, qemu.ErrGuestPanic)
-					return
-				}
-
 				var qemuErr *qemu.CommandError
 				require.ErrorAs(t, err, &qemuErr)
 				require.Equal(t, 73, qemuErr.ExitCode)
@@ -152,7 +143,10 @@ func TestIntegration(t *testing.T) {
 			binary, err := virtrun.AbsoluteFilePath(tt.bin)
 			require.NoError(t, err)
 
-			spec, err := virtrun.NewSpec(KernelArch)
+			arch, err := sys.ReadELFArch(string(binary))
+			require.NoError(t, err)
+
+			spec, err := virtrun.NewSpec(arch)
 			require.NoError(t, err)
 
 			spec.Qemu.Kernel = KernelPath

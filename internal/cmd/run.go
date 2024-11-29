@@ -7,7 +7,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os/signal"
@@ -60,9 +59,9 @@ func handleRunError(err error, errWriter io.Writer) int {
 		return 0
 	}
 
-	// [flag.ErrHelp] is returned when help is requested. So exit without error
+	// [ErrHelp] is returned when help is requested. So exit without error
 	// in this case.
-	if errors.Is(err, flag.ErrHelp) {
+	if errors.Is(err, ErrHelp) {
 		return 0
 	}
 

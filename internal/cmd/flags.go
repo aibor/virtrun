@@ -175,7 +175,7 @@ func (f *Flags) printVersionInformation() error {
 
 	fmt.Fprintf(f.flagSet.Output(), "Version: %s\n", buildInfo.Main.Version)
 
-	return flag.ErrHelp
+	return ErrHelp
 }
 
 func (f *Flags) ParseArgs(args []string) error {
@@ -185,7 +185,7 @@ func (f *Flags) ParseArgs(args []string) error {
 		return &ParseArgsError{msg: "flag parse: %w", err: err}
 	}
 
-	// With version flag, just print the version and exit. Using [flag.ErrHelp]
+	// With version flag, just print the version and exit. Using [ErrHelp]
 	// the main binary is supposed to return with a non error exit code.
 	if f.versionFlag {
 		err := f.printVersionInformation()

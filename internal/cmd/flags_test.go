@@ -5,7 +5,6 @@
 package cmd_test
 
 import (
-	"flag"
 	"io"
 	"testing"
 
@@ -32,14 +31,14 @@ func TestFlags_ParseArgs(t *testing.T) {
 			args: []string{
 				"-help",
 			},
-			expecterErr: flag.ErrHelp,
+			expecterErr: cmd.ErrHelp,
 		},
 		{
 			name: "version",
 			args: []string{
 				"-version",
 			},
-			expecterErr: flag.ErrHelp,
+			expecterErr: cmd.ErrHelp,
 		},
 		{
 			name: "no kernel",

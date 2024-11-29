@@ -6,10 +6,17 @@ package cmd
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 )
 
-var ErrReadBuildInfo = errors.New("can't read build info")
+var (
+	// ErrHelp aliases [flag.ErrHelp].
+	ErrHelp = flag.ErrHelp
+
+	// ErrReadBuildInfo is returned if the go build info can not be read.
+	ErrReadBuildInfo = errors.New("can't read build info")
+)
 
 // ParseArgsError wraps errors that occur during argument parsing.
 type ParseArgsError struct {

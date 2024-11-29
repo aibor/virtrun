@@ -41,11 +41,10 @@ func TestCommmandConsoleDeviceName(t *testing.T) {
 	}
 }
 
-func TestTransportType_MarshalText(t *testing.T) {
+func TestTransportType_String(t *testing.T) {
 	tests := []struct {
-		input       qemu.TransportType
-		expected    string
-		expectedErr error
+		input    qemu.TransportType
+		expected string
 	}{
 		{
 			input:    qemu.TransportTypeISA,
@@ -60,22 +59,20 @@ func TestTransportType_MarshalText(t *testing.T) {
 			expected: "mmio",
 		},
 		{
-			input:       qemu.TransportType("unknown"),
-			expectedErr: qemu.ErrTransportTypeInvalid,
+			input:    qemu.TransportType("unknown"),
+			expected: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(string(tt.input), func(t *testing.T) {
-			actual, err := tt.input.MarshalText()
-			require.ErrorIs(t, err, tt.expectedErr)
-
-			assert.Equal(t, tt.expected, string(actual))
+			actual := tt.input.String()
+			assert.Equal(t, tt.expected, actual)
 		})
 	}
 }
 
-func TestTransportType_UnmarshalText(t *testing.T) {
+func TestTransportType_Set(t *testing.T) {
 	tests := []struct {
 		input       string
 		expected    qemu.TransportType
@@ -103,7 +100,7 @@ func TestTransportType_UnmarshalText(t *testing.T) {
 		t.Run(tt.input, func(t *testing.T) {
 			var actual qemu.TransportType
 
-			err := actual.UnmarshalText([]byte(tt.input))
+			err := actual.Set(tt.input)
 			require.ErrorIs(t, err, tt.expectedErr)
 
 			assert.Equal(t, tt.expected, actual)

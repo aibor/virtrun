@@ -21,12 +21,12 @@ func GetArch() (sys.Arch, error) {
 	// the runtime architecture. If VIRTRUN_ARCH is not present, GOARCH will be
 	// used. This is handy in case of cross-architecture go test invocations.
 	for _, name := range []string{"VIRTRUN_ARCH", "GOARCH"} {
-		if v, exists := os.LookupEnv(name); exists {
+		if value, exists := os.LookupEnv(name); exists {
 			// Keep default native arch in case the var is empty.
-			if v != "" {
-				err := arch.UnmarshalText([]byte(v))
+			if value != "" {
+				err := arch.Set(value)
 				if err != nil {
-					return "", fmt.Errorf("unmarshal arch: %w", err)
+					return "", fmt.Errorf("read env var %s : %w", name, err)
 				}
 			}
 

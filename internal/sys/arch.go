@@ -41,14 +41,10 @@ func (a *Arch) KVMAvailable() bool {
 	return err == nil
 }
 
-func (a *Arch) MarshalText() ([]byte, error) {
-	return []byte(*a), nil
-}
-
-func (a *Arch) UnmarshalText(text []byte) error {
-	switch Arch(text) {
+func (a *Arch) Set(s string) error {
+	switch Arch(s) {
 	case AMD64, ARM64, RISCV64:
-		*a = Arch(text)
+		*a = Arch(s)
 	default:
 		return ErrArchNotSupported
 	}

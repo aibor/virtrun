@@ -35,7 +35,9 @@ func (t *TransportType) isKnown() bool {
 	return slices.Contains(knownTransportTypes, *t)
 }
 
-// String implements [fmt.Stringer].
+// String returns the [TransportType]'s underlying string value.
+//
+// It returns the empty string for unknown [TransportType]s.
 func (t *TransportType) String() string {
 	if !t.isKnown() {
 		return ""
@@ -44,19 +46,12 @@ func (t *TransportType) String() string {
 	return string(*t)
 }
 
-// MarshalText implements [encoding.TextMarshaler].
-func (t *TransportType) MarshalText() ([]byte, error) {
-	s := t.String()
-	if s == "" {
-		return nil, ErrTransportTypeInvalid
-	}
-
-	return []byte(s), nil
-}
-
-// UnmarshalText implements [encoding.TextUnmarshaler].
-func (t *TransportType) UnmarshalText(text []byte) error {
-	tt := TransportType(text)
+// Set parses the given string and sets the receiving [TransportType].
+//
+// It returns ErrTransportTypeInvalid if the string does not represent a valid
+// [TransportType].
+func (t *TransportType) Set(s string) error {
+	tt := TransportType(s)
 
 	if !tt.isKnown() {
 		return ErrTransportTypeInvalid

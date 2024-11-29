@@ -18,12 +18,12 @@ type LimitedUintFlag struct {
 	unit     string
 }
 
-func (u *LimitedUintFlag) MarshalText() ([]byte, error) {
-	return []byte(strconv.FormatUint(u.Value, 10) + u.unit), nil
+func (u *LimitedUintFlag) String() string {
+	return strconv.FormatUint(u.Value, 10) + u.unit
 }
 
-func (u *LimitedUintFlag) UnmarshalText(text []byte) error {
-	value, err := strconv.ParseUint(string(text), 10, 0)
+func (u *LimitedUintFlag) Set(s string) error {
+	value, err := strconv.ParseUint(s, 10, 0)
 	if err != nil {
 		return fmt.Errorf("parse: %w", err)
 	}

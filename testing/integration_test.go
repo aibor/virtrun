@@ -35,16 +35,14 @@ var (
 
 //nolint:gochecknoinits
 func init() {
-	flag.TextVar(
+	flag.Var(
 		&KernelPath,
 		"kernel.path",
-		&KernelPath,
 		"absolute path of the test kernel",
 	)
-	flag.TextVar(
+	flag.Var(
 		&KernelArch,
 		"kernel.arch",
-		&KernelArch,
 		"architecture of the kernel",
 	)
 	flag.BoolVar(

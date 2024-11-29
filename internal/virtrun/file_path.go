@@ -13,13 +13,13 @@ import (
 
 type FilePath string
 
-func (f *FilePath) MarshalText() ([]byte, error) {
-	return []byte(*f), nil
+func (f *FilePath) String() string {
+	return string(*f)
 }
 
-func (f *FilePath) UnmarshalText(text []byte) error {
+func (f *FilePath) Set(s string) error {
 	var err error
-	*f, err = AbsoluteFilePath(string(text))
+	*f, err = AbsoluteFilePath(s)
 
 	return err
 }

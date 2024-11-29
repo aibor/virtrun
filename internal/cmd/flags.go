@@ -45,10 +45,9 @@ func (f *Flags) initFlagset(output io.Writer) {
 		"QEMU binary to use",
 	)
 
-	fs.TextVar(
+	fs.Var(
 		&f.spec.Qemu.Kernel,
 		"kernel",
-		&f.spec.Qemu.Kernel,
 		"path to kernel to use",
 	)
 
@@ -73,10 +72,9 @@ func (f *Flags) initFlagset(output io.Writer) {
 		"disable hardware support",
 	)
 
-	fs.TextVar(
+	fs.Var(
 		&f.spec.Qemu.TransportType,
 		"transport",
-		&f.spec.Qemu.TransportType,
 		"io transport type: isa, pci, mmio",
 	)
 
@@ -87,17 +85,15 @@ func (f *Flags) initFlagset(output io.Writer) {
 		"enable verbose guest system output",
 	)
 
-	fs.TextVar(
+	fs.Var(
 		&f.spec.Qemu.Memory,
 		"memory",
-		&f.spec.Qemu.Memory,
 		"memory (in MB) for the QEMU VM",
 	)
 
-	fs.TextVar(
+	fs.Var(
 		&f.spec.Qemu.SMP,
 		"smp",
-		&f.spec.Qemu.SMP,
 		"number of CPUs for the QEMU VM",
 	)
 

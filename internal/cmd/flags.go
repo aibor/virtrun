@@ -13,9 +13,6 @@ import (
 	"github.com/aibor/virtrun/internal/virtrun"
 )
 
-// Set on build.
-var version = "dev"
-
 type Flags struct {
 	name string
 	spec *virtrun.Spec
@@ -170,14 +167,15 @@ func (f *Flags) Debug() bool {
 	return f.debugFlag
 }
 
-func (f *Flags) printVersionInformation() {
+func (f *Flags) printVersionInformation() error {
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
-		return
+		return ErrReadBuildInfo
 	}
 
-	fmt.Fprintf(f.flagSet.Output(), "%s: %s\n\n", f.name, version)
-	fmt.Fprintln(f.flagSet.Output(), buildInfo.String())
+	fmt.Fprintf(f.flagSet.Output(), "Version: %s\n", buildInfo.Main.Version)
+
+	return flag.ErrHelp
 }
 
 func (f *Flags) ParseArgs(args []string) error {
@@ -190,8 +188,8 @@ func (f *Flags) ParseArgs(args []string) error {
 	// With version flag, just print the version and exit. Using [flag.ErrHelp]
 	// the main binary is supposed to return with a non error exit code.
 	if f.versionFlag {
-		f.printVersionInformation()
-		return &ParseArgsError{msg: "version requested", err: flag.ErrHelp}
+		err := f.printVersionInformation()
+		return &ParseArgsError{msg: "version requested", err: err}
 	}
 
 	if f.spec.Qemu.Kernel == "" {

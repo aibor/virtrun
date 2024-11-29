@@ -5,8 +5,11 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 )
+
+var ErrReadBuildInfo = errors.New("can't read build info")
 
 // ParseArgsError wraps errors that occur during argument parsing.
 type ParseArgsError struct {

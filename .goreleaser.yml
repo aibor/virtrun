@@ -18,9 +18,6 @@ builds:
     mod_timestamp: "{{.CommitTimestamp}}"
     ldflags:
       - -s -w
-      - -X {{.ModulePath}}/internal.cmd.version={{.Version}}
-      - -X {{.ModulePath}}/internal.cmd.commit={{.FullCommit}}
-      - -X {{.ModulePath}}/internal.cmd.date={{.CommitDate}}
     flags:
       - -trimpath
     goos:

@@ -17,11 +17,11 @@ import (
 
 type Qemu struct {
 	Executable          string
-	Kernel              FilePath
+	Kernel              string
 	Machine             string
 	CPU                 string
-	SMP                 LimitedUintFlag
-	Memory              LimitedUintFlag
+	SMP                 uint64
+	Memory              uint64
 	TransportType       qemu.TransportType
 	InitArgs            []string
 	ExtraArgs           []qemu.Argument
@@ -37,12 +37,12 @@ func NewQemuCommand(
 ) (*qemu.Command, error) {
 	cmdSpec := qemu.CommandSpec{
 		Executable:    cfg.Executable,
-		Kernel:        string(cfg.Kernel),
+		Kernel:        cfg.Kernel,
 		Initramfs:     initramfsPath,
 		Machine:       cfg.Machine,
 		CPU:           cfg.CPU,
-		Memory:        cfg.Memory.Value,
-		SMP:           cfg.SMP.Value,
+		Memory:        cfg.Memory,
+		SMP:           cfg.SMP,
 		TransportType: cfg.TransportType,
 		InitArgs:      cfg.InitArgs,
 		ExtraArgs:     cfg.ExtraArgs,

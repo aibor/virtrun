@@ -34,6 +34,11 @@ func run(args []string, outWriter, errWriter io.Writer) error {
 		return fmt.Errorf("parse args: %w", err)
 	}
 
+	err = Validate(spec)
+	if err != nil {
+		return fmt.Errorf("validate: %w", err)
+	}
+
 	setupLogging(errWriter, flags.Debug())
 
 	ctx, cancel := signal.NotifyContext(

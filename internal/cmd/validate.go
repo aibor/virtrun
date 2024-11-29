@@ -2,41 +2,43 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package virtrun
+package cmd
 
 import (
 	"fmt"
 	"os/exec"
+
+	"github.com/aibor/virtrun/internal/virtrun"
 )
 
 // Validate file parameters of the given [Spec].
-func Validate(spec *Spec) error {
+func Validate(spec *virtrun.Spec) error {
 	// Check files are actually present.
 	_, err := exec.LookPath(spec.Qemu.Executable)
 	if err != nil {
 		return fmt.Errorf("qemu binary: %w", err)
 	}
 
-	err = spec.Qemu.Kernel.Validate()
+	err = ValidateFilePath(spec.Qemu.Kernel)
 	if err != nil {
 		return fmt.Errorf("kernel file: %w", err)
 	}
 
 	for _, file := range spec.Initramfs.Files {
-		err := (*FilePath)(&file).Validate()
+		err := ValidateFilePath(file)
 		if err != nil {
 			return fmt.Errorf("additional file: %w", err)
 		}
 	}
 
 	for _, file := range spec.Initramfs.Modules {
-		err := (*FilePath)(&file).Validate()
+		err := ValidateFilePath(file)
 		if err != nil {
 			return fmt.Errorf("module: %w", err)
 		}
 	}
 
-	err = spec.Initramfs.Binary.Validate()
+	err = ValidateFilePath(spec.Initramfs.Binary)
 	if err != nil {
 		return fmt.Errorf("main binary: %w", err)
 	}

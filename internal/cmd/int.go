@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package virtrun
+package cmd
 
 import (
 	"errors"
@@ -12,17 +12,20 @@ import (
 
 var ErrValueOutOfRange = errors.New("value is outside of range")
 
-type LimitedUintFlag struct {
-	Value    uint64
+type limitedUintValue struct {
+	Value    *uint64
 	min, max uint64
-	unit     string
 }
 
-func (u *LimitedUintFlag) String() string {
-	return strconv.FormatUint(u.Value, 10) + u.unit
+func (u *limitedUintValue) String() string {
+	if u.Value == nil {
+		return "0"
+	}
+
+	return strconv.FormatUint(*u.Value, 10)
 }
 
-func (u *LimitedUintFlag) Set(s string) error {
+func (u *limitedUintValue) Set(s string) error {
 	value, err := strconv.ParseUint(s, 10, 0)
 	if err != nil {
 		return fmt.Errorf("parse: %w", err)
@@ -36,7 +39,7 @@ func (u *LimitedUintFlag) Set(s string) error {
 		return fmt.Errorf("%d > %d: %w", value, u.max, ErrValueOutOfRange)
 	}
 
-	u.Value = value
+	*u.Value = value
 
 	return nil
 }

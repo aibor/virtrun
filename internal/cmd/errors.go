@@ -16,6 +16,13 @@ var (
 
 	// ErrReadBuildInfo is returned if the go build info can not be read.
 	ErrReadBuildInfo = errors.New("can't read build info")
+
+	// ErrEmptyFilePath is returned if an empty file path is given.
+	ErrEmptyFilePath = errors.New("file path must not be empty")
+
+	// ErrNotRegularFile is returned if a file should be read but is not a
+	// regular file.
+	ErrNotRegularFile = errors.New("not a regular file")
 )
 
 // ParseArgsError wraps errors that occur during argument parsing.

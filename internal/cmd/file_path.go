@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package virtrun
+package cmd
 
 import (
 	"fmt"
@@ -18,23 +18,11 @@ func (f *FilePath) String() string {
 }
 
 func (f *FilePath) Set(s string) error {
-	var err error
-	*f, err = AbsoluteFilePath(s)
+	path, err := AbsoluteFilePath(s)
+
+	*f = FilePath(path)
 
 	return err
-}
-
-func (f *FilePath) Validate() error {
-	stat, err := os.Stat(string(*f))
-	if err != nil {
-		return err //nolint:wrapcheck
-	}
-
-	if !stat.Mode().IsRegular() {
-		return ErrNotRegularFile
-	}
-
-	return nil
 }
 
 type FilePathList []string
@@ -43,18 +31,20 @@ func (f *FilePathList) String() string {
 	return strings.Join(*f, ",")
 }
 
-func (f *FilePathList) Set(value string) error {
-	path, err := AbsoluteFilePath(value)
-	if err != nil {
-		return err
-	}
+func (f *FilePathList) Set(s string) error {
+	for _, e := range strings.Split(s, ",") {
+		path, err := AbsoluteFilePath(e)
+		if err != nil {
+			return err
+		}
 
-	*f = append(*f, string(path))
+		*f = append(*f, path)
+	}
 
 	return nil
 }
 
-func AbsoluteFilePath(path string) (FilePath, error) {
+func AbsoluteFilePath(path string) (string, error) {
 	if path == "" {
 		return "", ErrEmptyFilePath
 	}
@@ -64,5 +54,18 @@ func AbsoluteFilePath(path string) (FilePath, error) {
 		return "", fmt.Errorf("ensure absolute path: %w", err)
 	}
 
-	return FilePath(path), nil
+	return path, nil
+}
+
+func ValidateFilePath(name string) error {
+	stat, err := os.Stat(name)
+	if err != nil {
+		return err //nolint:wrapcheck
+	}
+
+	if !stat.Mode().IsRegular() {
+		return ErrNotRegularFile
+	}
+
+	return nil
 }

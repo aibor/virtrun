@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aibor/virtrun/internal/cmd"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/internal/virtrun"
@@ -27,7 +28,7 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	KernelPath            = virtrun.FilePath("/kernels/vmlinuz")
+	KernelPath            = "/kernels/vmlinuz"
 	ForceTransportTypePCI bool
 	Verbose               bool
 )
@@ -35,7 +36,7 @@ var (
 //nolint:gochecknoinits
 func init() {
 	flag.Var(
-		&KernelPath,
+		(*cmd.FilePath)(&KernelPath),
 		"kernel.path",
 		"absolute path of the test kernel",
 	)
@@ -140,10 +141,10 @@ func TestIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			binary, err := virtrun.AbsoluteFilePath(tt.bin)
+			binary, err := cmd.AbsoluteFilePath(tt.bin)
 			require.NoError(t, err)
 
-			arch, err := sys.ReadELFArch(string(binary))
+			arch, err := sys.ReadELFArch(binary)
 			require.NoError(t, err)
 
 			spec, err := virtrun.NewSpec(arch)
@@ -151,7 +152,7 @@ func TestIntegration(t *testing.T) {
 
 			spec.Qemu.Kernel = KernelPath
 			spec.Qemu.Verbose = Verbose
-			spec.Qemu.Memory.Value = 128
+			spec.Qemu.Memory = 128
 			spec.Qemu.InitArgs = tt.args
 			spec.Initramfs.Binary = binary
 			spec.Initramfs.StandaloneInit = tt.standalone

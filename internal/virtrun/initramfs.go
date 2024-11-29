@@ -25,16 +25,16 @@ const (
 type Initramfs struct {
 	// Binary is the main binary that is either called directly or by the init
 	// program depending on the StandaloneInit flag.
-	Binary FilePath
+	Binary string
 
 	// Files is a list of any additional files that should be added to the
 	// dataDir directory. For ELF files the required dynamic libraries are
 	// added the libsDir directory.
-	Files FilePathList
+	Files []string
 
 	// Modules is a list of kernel module files. They are added to the
 	// modulesDir directory.
-	Modules FilePathList
+	Modules []string
 
 	// StandaloneInit determines if the main Binary should be called as init
 	// directly. The main binary is responsible for a clean shutdown of the
@@ -63,7 +63,7 @@ func BuildInitramfsArchive(
 	ctx context.Context,
 	cfg Initramfs,
 ) (string, func() error, error) {
-	arch, err := sys.ReadELFArch(string(cfg.Binary))
+	arch, err := sys.ReadELFArch(cfg.Binary)
 	if err != nil {
 		return "", nil, fmt.Errorf("read main binary arch: %w", err)
 	}
@@ -106,7 +106,7 @@ func buildInitramfsArchive(
 	cfg Initramfs,
 	initFileOpenFn initramfs.FileOpenFunc,
 ) (*initramfs.FS, error) {
-	binaryFiles := []string{string(cfg.Binary)}
+	binaryFiles := []string{cfg.Binary}
 	binaryFiles = append(binaryFiles, cfg.Files...)
 
 	libs, err := sys.CollectLibsFor(ctx, binaryFiles...)
@@ -145,7 +145,7 @@ func buildInitramFS(
 	irfs := initramfs.New()
 	builder := fsBuilder{irfs}
 
-	err := builder.addFilePathAs("main", string(cfg.Binary))
+	err := builder.addFilePathAs("main", cfg.Binary)
 	if err != nil {
 		return nil, err
 	}

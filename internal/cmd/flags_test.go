@@ -16,7 +16,7 @@ import (
 )
 
 func TestFlags_ParseArgs(t *testing.T) {
-	absBinPath, err := virtrun.AbsoluteFilePath("bin.test")
+	absBinPath, err := cmd.AbsoluteFilePath("bin.test")
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -140,9 +140,9 @@ func TestFlags_ParseArgs(t *testing.T) {
 					CPU:           "host",
 					Machine:       "pc",
 					TransportType: qemu.TransportTypeMMIO,
-					Memory:        virtrun.LimitedUintFlag{Value: 269},
+					Memory:        269,
 					NoKVM:         true,
-					SMP:           virtrun.LimitedUintFlag{Value: 7},
+					SMP:           7,
 					InitArgs: []string{
 						"-test.paniconexit0",
 						"-test.v=true",

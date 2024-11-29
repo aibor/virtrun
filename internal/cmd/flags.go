@@ -13,6 +13,14 @@ import (
 	"github.com/aibor/virtrun/internal/virtrun"
 )
 
+const (
+	memMin = 128
+	memMax = 16384
+
+	smpMin = 1
+	smpMax = 16
+)
+
 type Flags struct {
 	name string
 	spec *virtrun.Spec
@@ -46,7 +54,7 @@ func (f *Flags) initFlagset(output io.Writer) {
 	)
 
 	fs.Var(
-		&f.spec.Qemu.Kernel,
+		(*FilePath)(&f.spec.Qemu.Kernel),
 		"kernel",
 		"path to kernel to use",
 	)
@@ -86,13 +94,21 @@ func (f *Flags) initFlagset(output io.Writer) {
 	)
 
 	fs.Var(
-		&f.spec.Qemu.Memory,
+		&limitedUintValue{
+			Value: &f.spec.Qemu.Memory,
+			min:   memMin,
+			max:   memMax,
+		},
 		"memory",
 		"memory (in MB) for the QEMU VM",
 	)
 
 	fs.Var(
-		&f.spec.Qemu.SMP,
+		&limitedUintValue{
+			Value: &f.spec.Qemu.SMP,
+			min:   smpMin,
+			max:   smpMax,
+		},
 		"smp",
 		"number of CPUs for the QEMU VM",
 	)
@@ -121,13 +137,13 @@ func (f *Flags) initFlagset(output io.Writer) {
 	)
 
 	fs.Var(
-		&f.spec.Initramfs.Files,
+		(*FilePathList)(&f.spec.Initramfs.Files),
 		"addFile",
 		"file to add to guest's /data dir. Flag may be used more than once.",
 	)
 
 	fs.Var(
-		&f.spec.Initramfs.Modules,
+		(*FilePathList)(&f.spec.Initramfs.Modules),
 		"addModule",
 		"kernel module to add to guest. Flag may be used more than once.",
 	)
@@ -199,7 +215,7 @@ func (f *Flags) ParseArgs(args []string) error {
 		return f.Fail("no binary given", nil)
 	}
 
-	binary, err := virtrun.AbsoluteFilePath(positionalArgs[0])
+	binary, err := AbsoluteFilePath(positionalArgs[0])
 	if err != nil {
 		return f.Fail("binary path", err)
 	}

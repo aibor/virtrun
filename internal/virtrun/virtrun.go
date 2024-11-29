@@ -15,13 +15,7 @@ import (
 
 const (
 	cpuDefault = "max"
-
-	memMin     = 128
-	memMax     = 16384
 	memDefault = 256
-
-	smpMin     = 1
-	smpMax     = 16
 	smpDefault = 1
 )
 
@@ -65,19 +59,9 @@ func NewSpec(arch sys.Arch) (*Spec, error) {
 			Machine:       qemuMachine,
 			TransportType: qemuTransportType,
 			CPU:           cpuDefault,
-			Memory: LimitedUintFlag{
-				memDefault,
-				memMin,
-				memMax,
-				"MB",
-			},
-			SMP: LimitedUintFlag{
-				smpDefault,
-				smpMin,
-				smpMax,
-				"",
-			},
-			NoKVM: !arch.KVMAvailable(),
+			Memory:        memDefault,
+			SMP:           smpDefault,
+			NoKVM:         !arch.KVMAvailable(),
 			ExtraArgs: []qemu.Argument{
 				qemu.UniqueArg("display", "none"),
 				qemu.UniqueArg("monitor", "none"),
@@ -103,11 +87,6 @@ func Run(
 	outWriter,
 	errWriter io.Writer,
 ) error {
-	err := Validate(spec)
-	if err != nil {
-		return fmt.Errorf("validate: %w", err)
-	}
-
 	path, removeFn, err := BuildInitramfsArchive(ctx, spec.Initramfs)
 	if err != nil {
 		return err

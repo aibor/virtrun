@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/aibor/virtrun/internal/initramfs"
-	"github.com/aibor/virtrun/internal/sys"
 )
 
 type nameFunc func(idx int, path string) string
@@ -33,20 +32,18 @@ func (b *fsBuilder) mkdirAll(dir string) error {
 	return b.fs.MkdirAll(dir) //nolint:wrapcheck
 }
 
-func (b *fsBuilder) addFilePathAs(name, source string) error {
-	return b.fs.Add(name, func() (fs.File, error) { //nolint:wrapcheck
-		return os.Open(source)
-	})
-}
-
-func (b *fsBuilder) addOpenFileAs(name string, file fs.File) error {
-	return b.fs.Add(name, func() (fs.File, error) { //nolint:wrapcheck
-		return file, nil
-	})
+func (b *fsBuilder) add(name string, openFn initramfs.FileOpenFunc) error {
+	return b.fs.Add(name, openFn) //nolint:wrapcheck
 }
 
 func (b *fsBuilder) symlink(target, name string) error {
 	return b.fs.Symlink(target, name) //nolint:wrapcheck
+}
+
+func (b *fsBuilder) addFilePathAs(name, source string) error {
+	return b.add(name, func() (fs.File, error) {
+		return os.Open(source)
+	})
 }
 
 func (b *fsBuilder) addFilesTo(dir string, files []string, fn nameFunc) error {
@@ -90,19 +87,4 @@ func (b *fsBuilder) symlinkTo(dir string, paths []string) error {
 	}
 
 	return nil
-}
-
-func (b *fsBuilder) addInit(arch sys.Arch, standalone bool) error {
-	// In standalone mode, the main file is supposed to work as a complete init
-	// matching our requirements.
-	if standalone {
-		return b.symlink("main", "init")
-	}
-
-	initFile, err := initProgFor(arch)
-	if err != nil {
-		return err
-	}
-
-	return b.addOpenFileAs("init", initFile)
 }

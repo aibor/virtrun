@@ -68,17 +68,11 @@ func BuildInitramfsArchive(
 		return "", nil, fmt.Errorf("read main binary arch: %w", err)
 	}
 
-	binaryFiles := []string{string(cfg.Binary)}
-	binaryFiles = append(binaryFiles, cfg.Files...)
+	initFileOpenFn := func() (fs.File, error) { return initProgFor(arch) }
 
-	libs, err := sys.CollectLibsFor(ctx, binaryFiles...)
+	irfs, err := buildInitramfsArchive(ctx, cfg, initFileOpenFn)
 	if err != nil {
-		return "", nil, fmt.Errorf("collect libs: %w", err)
-	}
-
-	irfs, err := buildInitramFS(cfg, arch, libs)
-	if err != nil {
-		return "", nil, fmt.Errorf("build: %w", err)
+		return "", nil, err
 	}
 
 	path, err := writeFSToTempFile(irfs, "")
@@ -105,10 +99,48 @@ func BuildInitramfsArchive(
 	return path, removeFn, nil
 }
 
+// buildInitramfsArchive creates a new CPIO archive file according to the given
+// [Initramfs] spec.
+func buildInitramfsArchive(
+	ctx context.Context,
+	cfg Initramfs,
+	initFileOpenFn initramfs.FileOpenFunc,
+) (*initramfs.FS, error) {
+	binaryFiles := []string{string(cfg.Binary)}
+	binaryFiles = append(binaryFiles, cfg.Files...)
+
+	libs, err := sys.CollectLibsFor(ctx, binaryFiles...)
+	if err != nil {
+		return nil, fmt.Errorf("collect libs: %w", err)
+	}
+
+	initFn := func(b *fsBuilder, name string) error {
+		return b.add(name, initFileOpenFn)
+	}
+
+	// In standalone mode, the main file is supposed to work as a complete
+	// init matching our requirements.
+	if cfg.StandaloneInit {
+		initFn = func(b *fsBuilder, name string) error {
+			return b.symlink("main", name)
+		}
+	}
+
+	irfs, err := buildInitramFS(cfg, libs, initFn)
+	if err != nil {
+		return nil, fmt.Errorf("build: %w", err)
+	}
+
+	return irfs, nil
+}
+
+// buildInitramFS creates a new [initramfs.FS].
+//
+// It does not read any source files. Only the FS file tree is created.
 func buildInitramFS(
 	cfg Initramfs,
-	arch sys.Arch,
 	libs sys.LibCollection,
+	initFn func(*fsBuilder, string) error,
 ) (*initramfs.FS, error) {
 	irfs := initramfs.New()
 	builder := fsBuilder{irfs}
@@ -118,7 +150,7 @@ func buildInitramFS(
 		return nil, err
 	}
 
-	err = builder.addInit(arch, cfg.StandaloneInit)
+	err = initFn(&builder, "init")
 	if err != nil {
 		return nil, err
 	}
@@ -146,6 +178,11 @@ func buildInitramFS(
 	return irfs, nil
 }
 
+// writeFSToTempFile writes the [fs.FS] as CPIO archive into a temporary file
+// and returns the absolute path to this file.
+//
+// If the given dir is not empty, th efile is create din this directory.
+// Otherwise the default tempdir is used. See [os.CreateTemp].
 func writeFSToTempFile(fsys fs.FS, dir string) (string, error) {
 	file, err := os.CreateTemp(dir, "initramfs")
 	if err != nil {

@@ -80,18 +80,18 @@ func BuildInitramfsArchive(
 		return "", nil, err
 	}
 
-	slog.Debug("Initramfs created", slog.String("path", path))
+	slog.Debug("Created initramfs archive", slog.String("path", path))
 
 	var removeFn func() error
 
 	if cfg.Keep {
 		removeFn = func() error {
-			slog.Info("Keep initramfs", slog.String("path", path))
+			slog.Info("Keep initramfs archive", slog.String("path", path))
 			return nil
 		}
 	} else {
 		removeFn = func() error {
-			slog.Debug("Remove initramfs", slog.String("path", path))
+			slog.Debug("Remove initramfs archive", slog.String("path", path))
 			return os.Remove(path)
 		}
 	}

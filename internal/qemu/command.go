@@ -158,6 +158,19 @@ func (c *CommandSpec) arguments() []Argument {
 		args = append(args, addConsoleArgs(minAdditionalFileDescriptor+idx)...)
 	}
 
+	args = append(args,
+		// Disable video output.
+		UniqueArg("display", "none"),
+		// Disable QEMU monitor.
+		UniqueArg("monitor", "none"),
+		// Guest must not reboot.
+		UniqueArg("no-reboot"),
+		// Disable all default devices.
+		UniqueArg("nodefaults"),
+		// Do not load any user config files.
+		UniqueArg("no-user-config"),
+	)
+
 	args = append(args, c.ExtraArgs...)
 
 	kernelCmdline := strings.Join(c.kernelCmdlineArgs(), " ")

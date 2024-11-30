@@ -62,13 +62,6 @@ func NewSpec(arch sys.Arch) (*Spec, error) {
 			Memory:        memDefault,
 			SMP:           smpDefault,
 			NoKVM:         !arch.KVMAvailable(),
-			ExtraArgs: []qemu.Argument{
-				qemu.UniqueArg("display", "none"),
-				qemu.UniqueArg("monitor", "none"),
-				qemu.UniqueArg("no-reboot", ""),
-				qemu.UniqueArg("nodefaults", ""),
-				qemu.UniqueArg("no-user-config", ""),
-			},
 		},
 	}
 

@@ -159,6 +159,7 @@ func TestNewCommand(t *testing.T) {
 					"-append",
 					"console=ttyS0",
 					"panic=-1",
+					"mitigations=off",
 					"acpi=off",
 				),
 				stdoutParser: stdoutParser{

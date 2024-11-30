@@ -100,7 +100,8 @@ jobs:
             -coverprofile /tmp/cover.testing.out \
             ./testing/ \
             -kernel.path "/boot/vmlinuz-virt" \
-            -force-pci
+            -force-pci \
+            -verbose
 
   integration-tests-modules:
     name: Run integration tests for kernel modules
@@ -116,6 +117,7 @@ jobs:
                      -addModule /lib/modules/kernel/drivers/net/tun.ko.gz \
                      -addModule /lib/modules/kernel/drivers/net/veth.ko.gz \
                      -transport pci \
+                     -verbose \
                      -debug"
     strategy:
       matrix:

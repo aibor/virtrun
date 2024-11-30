@@ -184,6 +184,7 @@ func (c *CommandSpec) kernelCmdlineArgs() []string {
 	cmdline := []string{
 		"console=" + c.TransportType.ConsoleDeviceName(0),
 		"panic=-1",
+		"acpi=off",
 	}
 
 	if !c.Verbose {

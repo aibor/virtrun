@@ -37,9 +37,12 @@ func Poweroff() {
 	// Silence the kernel so it does not show up in our test output.
 	_ = os.WriteFile("/proc/sys/kernel/printk", []byte("0"), sysFileMode)
 
-	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
+	// Use restart instead of poweroff for shutting down the system since it
+	// does not require ACPI. The guest system should be started with noreboot.
+	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {
 		fmt.Fprintf(os.Stderr, "error calling power off: %v\n", err)
 	}
+
 	// We just told the system to shutdown. There's no point in staying around.
 	os.Exit(0)
 }

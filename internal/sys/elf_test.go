@@ -5,6 +5,7 @@
 package sys_test
 
 import (
+	"io/fs"
 	"testing"
 
 	"github.com/aibor/virtrun/internal/sys"
@@ -13,8 +14,40 @@ import (
 )
 
 func TestReadArch(t *testing.T) {
-	arch, err := sys.ReadELFArch("testdata/bin/main")
-	require.NoError(t, err)
+	tests := []struct {
+		name      string
+		expected  sys.Arch
+		assertErr require.ErrorAssertionFunc
+	}{
+		{
+			name:      "amd64",
+			expected:  sys.AMD64,
+			assertErr: require.NoError,
+		},
+		{
+			name:      "arm64",
+			expected:  sys.ARM64,
+			assertErr: require.NoError,
+		},
+		{
+			name:      "riscv64",
+			expected:  sys.RISCV64,
+			assertErr: require.NoError,
+		},
+		{
+			name: "unknown",
+			assertErr: func(t require.TestingT, err error, _ ...any) {
+				require.ErrorIs(t, err, fs.ErrNotExist)
+			},
+		},
+	}
 
-	assert.Equal(t, sys.Native, arch)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fileName := "../virtrun/bin/" + tt.name
+			actual, err := sys.ReadELFArch(fileName)
+			tt.assertErr(t, err)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
 }

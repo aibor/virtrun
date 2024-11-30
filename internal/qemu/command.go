@@ -186,6 +186,7 @@ func (c *CommandSpec) kernelCmdlineArgs() []string {
 		"panic=-1",
 		"mitigations=off",
 		"acpi=off",
+		"initcall_blacklist=ahci_pci_driver_init",
 	}
 
 	if !c.Verbose {

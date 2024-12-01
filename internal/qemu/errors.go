@@ -41,7 +41,7 @@ func (e *ArgumentError) Error() string {
 }
 
 // Is implements the [errors.Is] interface.
-func (e *ArgumentError) Is(other error) bool {
+func (*ArgumentError) Is(other error) bool {
 	_, ok := other.(*ArgumentError)
 	return ok
 }
@@ -64,7 +64,7 @@ func (e *CommandError) Error() string {
 }
 
 // Is implements the [errors.Is] interface.
-func (e *CommandError) Is(other error) bool {
+func (*CommandError) Is(other error) bool {
 	_, ok := other.(*CommandError)
 	return ok
 }

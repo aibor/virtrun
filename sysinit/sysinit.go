@@ -42,9 +42,6 @@ func Poweroff() {
 	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {
 		fmt.Fprintf(os.Stderr, "error calling power off: %v\n", err)
 	}
-
-	// We just told the system to shutdown. There's no point in staying around.
-	os.Exit(0)
 }
 
 // EnvVars is a map of environment variable values by name.

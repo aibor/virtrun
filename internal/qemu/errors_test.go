@@ -5,7 +5,6 @@
 package qemu_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/aibor/virtrun/internal/qemu"
@@ -15,11 +14,11 @@ import (
 func TestArgumentErrorIs(t *testing.T) {
 	//nolint:testifylint
 	assert.ErrorIs(t, error(&qemu.ArgumentError{}), &qemu.ArgumentError{})
-	assert.NotErrorIs(t, errors.New(""), &qemu.ArgumentError{})
+	assert.NotErrorIs(t, assert.AnError, &qemu.ArgumentError{})
 }
 
 func TestCommandErrorIs(t *testing.T) {
 	//nolint:testifylint
 	assert.ErrorIs(t, error(&qemu.CommandError{}), &qemu.CommandError{})
-	assert.NotErrorIs(t, errors.New(""), &qemu.CommandError{})
+	assert.NotErrorIs(t, assert.AnError, &qemu.CommandError{})
 }

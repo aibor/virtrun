@@ -50,11 +50,11 @@ type fileInfo struct {
 	size int64
 }
 
-func (i *fileInfo) Size() int64        { return i.size }
-func (i *fileInfo) Mode() fs.FileMode  { return i.file.mode() }
-func (i *fileInfo) ModTime() time.Time { return time.Time{} }
-func (i *fileInfo) Sys() any           { return i.file }
-func (i *fileInfo) String() string     { return fs.FormatFileInfo(i) }
+func (i *fileInfo) Size() int64       { return i.size }
+func (i *fileInfo) Mode() fs.FileMode { return i.file.mode() }
+func (*fileInfo) ModTime() time.Time  { return time.Time{} }
+func (i *fileInfo) Sys() any          { return i.file }
+func (i *fileInfo) String() string    { return fs.FormatFileInfo(i) }
 
 var (
 	_ fs.File        = (*openFile)(nil)

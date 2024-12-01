@@ -39,7 +39,7 @@ func (e *ParseArgsError) Error() string {
 	return fmt.Sprintf("%s: %v", e.msg, e.err)
 }
 
-func (e *ParseArgsError) Is(other error) bool {
+func (*ParseArgsError) Is(other error) bool {
 	_, ok := other.(*ParseArgsError)
 	return ok
 }

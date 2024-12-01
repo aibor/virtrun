@@ -107,7 +107,7 @@ func consoleArgsFunc(transportType TransportType) func(int) []Argument {
 			}
 		}
 	default: // Ignore invalid transport types.
-		return func(_ int) (_ []Argument) { return }
+		return func(_ int) []Argument { return nil }
 	}
 }
 

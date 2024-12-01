@@ -7,7 +7,6 @@ linters:
   disable:
     - depguard
     - exhaustruct
-    - exportloopref
     - funlen
     - paralleltest
     - varnamelen
@@ -19,12 +18,36 @@ linters-settings:
   gosec:
     excludes:
       - G204
+      - G301
+      - G304
 
   nlreturn:
     block-size: 2
 
   lll:
     line-length: 80
+
+  revive:
+    enable-all-rules: true
+    rules:
+      - name: add-constant
+        disabled: true
+      - name: cognitive-complexity
+        disabled: true
+      - name: confusing-naming
+        disabled: true
+      - name: cyclomatic
+        disabled: true
+      - name: deep-exit
+        disabled: true
+      - name: flag-parameter
+        disabled: true
+      - name: function-length
+        disabled: true
+      - name: line-length-limit
+        disabled: true
+      - name: unhandled-error
+        disabled: true
 
 issues:
   include:
@@ -35,6 +58,8 @@ issues:
     - EXC0006
     - EXC0007
     - EXC0008
+    - EXC0009
+    - EXC0010
     - EXC0013
     - EXC0014
 
@@ -42,7 +67,3 @@ issues:
     - linters:
         - errcheck
       source: "^\\s+defer \\S+\\.Close()"
-    - linters:
-        - err113
-        - wrapcheck
-      path: "(.+_test|testing).go"

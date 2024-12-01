@@ -14,26 +14,36 @@ import (
 )
 
 const (
-	memMin = 128
-	memMax = 16384
+	cpuDefault = "max"
 
-	smpMin = 1
-	smpMax = 16
+	memDefault = 256
+	memMin     = 128
+	memMax     = 16384
+
+	smpDefault = 1
+	smpMin     = 1
+	smpMax     = 16
 )
 
-type Flags struct {
+type flags struct {
 	name string
-	spec *virtrun.Spec
 
+	spec        *virtrun.Spec
+	flagSet     *flag.FlagSet
 	versionFlag bool
 	debugFlag   bool
-	flagSet     *flag.FlagSet
 }
 
-func NewFlags(name string, spec *virtrun.Spec, output io.Writer) *Flags {
-	flags := &Flags{
+func newFlags(name string, output io.Writer) *flags {
+	flags := &flags{
 		name: name,
-		spec: spec,
+		spec: &virtrun.Spec{
+			Qemu: virtrun.Qemu{
+				CPU:    cpuDefault,
+				Memory: memDefault,
+				SMP:    1,
+			},
+		},
 	}
 
 	flags.initFlagset(output)
@@ -41,7 +51,7 @@ func NewFlags(name string, spec *virtrun.Spec, output io.Writer) *Flags {
 	return flags
 }
 
-func (f *Flags) initFlagset(output io.Writer) {
+func (f *flags) initFlagset(output io.Writer) {
 	fsName := f.name + " [flags...] binary [initargs...]"
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
 	fs.SetOutput(output)
@@ -50,7 +60,7 @@ func (f *Flags) initFlagset(output io.Writer) {
 		&f.spec.Qemu.Executable,
 		"qemu-bin",
 		f.spec.Qemu.Executable,
-		"QEMU binary to use",
+		"QEMU binary to use (default depends on binary arch)",
 	)
 
 	fs.Var(
@@ -63,7 +73,7 @@ func (f *Flags) initFlagset(output io.Writer) {
 		&f.spec.Qemu.Machine,
 		"machine",
 		f.spec.Qemu.Machine,
-		"QEMU machine type to use",
+		"QEMU machine type to use (default depends on binary arch)",
 	)
 
 	fs.StringVar(
@@ -77,13 +87,13 @@ func (f *Flags) initFlagset(output io.Writer) {
 		&f.spec.Qemu.NoKVM,
 		"nokvm",
 		f.spec.Qemu.NoKVM,
-		"disable hardware support",
+		"disable hardware support (default depends on binary arch)",
 	)
 
 	fs.Var(
 		&f.spec.Qemu.TransportType,
 		"transport",
-		"io transport type: isa, pci, mmio",
+		"io transport type: isa, pci, mmio (default depends on binary arch)",
 	)
 
 	fs.BoolVar(
@@ -165,8 +175,8 @@ func (f *Flags) initFlagset(output io.Writer) {
 	f.flagSet = fs
 }
 
-// Fail fails like flag does. It prints the error first and then usage.
-func (f *Flags) Fail(msg string, err error) error {
+// fail fails like flag does. It prints the error first and then usage.
+func (f *flags) fail(msg string, err error) error {
 	err = &ParseArgsError{msg: msg, err: err}
 	fmt.Fprintln(f.flagSet.Output(), err.Error())
 
@@ -175,11 +185,11 @@ func (f *Flags) Fail(msg string, err error) error {
 	return err
 }
 
-func (f *Flags) Debug() bool {
+func (f *flags) Debug() bool {
 	return f.debugFlag
 }
 
-func (f *Flags) printVersionInformation() error {
+func (f *flags) printVersionInformation() error {
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		return ErrReadBuildInfo
@@ -190,7 +200,7 @@ func (f *Flags) printVersionInformation() error {
 	return ErrHelp
 }
 
-func (f *Flags) ParseArgs(args []string) error {
+func (f *flags) ParseArgs(args []string) error {
 	// Parses arguments up to the first one that is not prefixed with a "-" or
 	// is "--".
 	if err := f.flagSet.Parse(args); err != nil {
@@ -205,19 +215,19 @@ func (f *Flags) ParseArgs(args []string) error {
 	}
 
 	if f.spec.Qemu.Kernel == "" {
-		return f.Fail("no kernel given (use -kernel)", nil)
+		return f.fail("no kernel given (use -kernel)", nil)
 	}
 
 	positionalArgs := f.flagSet.Args()
 
 	// First positional argument is supposed to be a binary file.
 	if len(positionalArgs) < 1 {
-		return f.Fail("no binary given", nil)
+		return f.fail("no binary given", nil)
 	}
 
 	binary, err := AbsoluteFilePath(positionalArgs[0])
 	if err != nil {
-		return f.Fail("binary path", err)
+		return f.fail("binary path", err)
 	}
 
 	f.spec.Initramfs.Binary = binary

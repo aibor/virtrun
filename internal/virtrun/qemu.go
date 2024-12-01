@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/sysinit"
 )
 
@@ -28,6 +29,49 @@ type Qemu struct {
 	NoKVM               bool
 	Verbose             bool
 	NoGoTestFlagRewrite bool
+}
+
+func (s *Qemu) addDefaultsFor(arch sys.Arch) error {
+	var (
+		executable    string
+		machine       string
+		transportType qemu.TransportType
+	)
+
+	switch arch {
+	case sys.AMD64:
+		executable = "qemu-system-x86_64"
+		machine = "q35"
+		transportType = qemu.TransportTypePCI
+	case sys.ARM64:
+		executable = "qemu-system-aarch64"
+		machine = "virt"
+		transportType = qemu.TransportTypeMMIO
+	case sys.RISCV64:
+		executable = "qemu-system-riscv64"
+		machine = "virt"
+		transportType = qemu.TransportTypeMMIO
+	default:
+		return sys.ErrArchNotSupported
+	}
+
+	if s.Executable == "" {
+		s.Executable = executable
+	}
+
+	if s.Machine == "" {
+		s.Machine = machine
+	}
+
+	if s.TransportType == "" {
+		s.TransportType = transportType
+	}
+
+	if !s.NoKVM {
+		s.NoKVM = !arch.KVMAvailable()
+	}
+
+	return nil
 }
 
 func NewQemuCommand(

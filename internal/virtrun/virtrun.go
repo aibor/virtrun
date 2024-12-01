@@ -8,15 +8,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 
-	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
-)
-
-const (
-	cpuDefault = "max"
-	memDefault = 256
-	smpDefault = 1
 )
 
 // Spec describes a single [Run].
@@ -28,46 +22,6 @@ type Spec struct {
 	Initramfs Initramfs
 }
 
-// NewSpec creates a new [Spec] with defaults set for the given architecture.
-func NewSpec(arch sys.Arch) (*Spec, error) {
-	var (
-		qemuExecutable    string
-		qemuMachine       string
-		qemuTransportType qemu.TransportType
-	)
-
-	switch arch {
-	case sys.AMD64:
-		qemuExecutable = "qemu-system-x86_64"
-		qemuMachine = "q35"
-		qemuTransportType = qemu.TransportTypePCI
-	case sys.ARM64:
-		qemuExecutable = "qemu-system-aarch64"
-		qemuMachine = "virt"
-		qemuTransportType = qemu.TransportTypeMMIO
-	case sys.RISCV64:
-		qemuExecutable = "qemu-system-riscv64"
-		qemuMachine = "virt"
-		qemuTransportType = qemu.TransportTypeMMIO
-	default:
-		return nil, sys.ErrArchNotSupported
-	}
-
-	args := &Spec{
-		Qemu: Qemu{
-			Executable:    qemuExecutable,
-			Machine:       qemuMachine,
-			TransportType: qemuTransportType,
-			CPU:           cpuDefault,
-			Memory:        memDefault,
-			SMP:           smpDefault,
-			NoKVM:         !arch.KVMAvailable(),
-		},
-	}
-
-	return args, nil
-}
-
 // Run runs with the given [Spec].
 //
 // An initramfs archive file is built and used for running QEMU. It returns no
@@ -77,10 +31,21 @@ func NewSpec(arch sys.Arch) (*Spec, error) {
 func Run(
 	ctx context.Context,
 	spec *Spec,
-	outWriter,
-	errWriter io.Writer,
+	outWriter, errWriter io.Writer,
 ) error {
-	path, removeFn, err := BuildInitramfsArchive(ctx, spec.Initramfs)
+	arch, err := sys.ReadELFArch(spec.Initramfs.Binary)
+	if err != nil {
+		return fmt.Errorf("read main binary arch: %w", err)
+	}
+
+	err = spec.Qemu.addDefaultsFor(arch)
+	if err != nil {
+		return err
+	}
+
+	initFn := func() (fs.File, error) { return initProgFor(arch) }
+
+	path, removeFn, err := BuildInitramfsArchive(ctx, spec.Initramfs, initFn)
 	if err != nil {
 		return err
 	}

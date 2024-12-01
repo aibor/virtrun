@@ -112,7 +112,6 @@ jobs:
       - lint-and-test
     env:
       GOCOVERDIR: "/tmp/gocoverdir"
-      VIRTRUN_ARCH: "${{ matrix.arch.go }}"
       VIRTRUN_ARGS: "-kernel /boot/vmlinuz-virt \
                      -addModule /lib/modules/kernel/drivers/net/tun.ko.gz \
                      -addModule /lib/modules/kernel/drivers/net/veth.ko.gz \

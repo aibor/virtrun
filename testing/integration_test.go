@@ -21,7 +21,6 @@ import (
 
 	"github.com/aibor/virtrun/internal/cmd"
 	"github.com/aibor/virtrun/internal/qemu"
-	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/internal/virtrun"
 	"github.com/stretchr/testify/require"
 )
@@ -144,18 +143,20 @@ func TestIntegration(t *testing.T) {
 			binary, err := cmd.AbsoluteFilePath(tt.bin)
 			require.NoError(t, err)
 
-			arch, err := sys.ReadELFArch(binary)
-			require.NoError(t, err)
-
-			spec, err := virtrun.NewSpec(arch)
-			require.NoError(t, err)
-
-			spec.Qemu.Kernel = KernelPath
-			spec.Qemu.Verbose = Verbose
-			spec.Qemu.Memory = 128
-			spec.Qemu.InitArgs = tt.args
-			spec.Initramfs.Binary = binary
-			spec.Initramfs.StandaloneInit = tt.standalone
+			spec := &virtrun.Spec{
+				Qemu: virtrun.Qemu{
+					Kernel:   KernelPath,
+					Verbose:  Verbose,
+					CPU:      "max",
+					Memory:   128,
+					SMP:      1,
+					InitArgs: tt.args,
+				},
+				Initramfs: virtrun.Initramfs{
+					Binary:         binary,
+					StandaloneInit: tt.standalone,
+				},
+			}
 
 			if ForceTransportTypePCI {
 				spec.Qemu.TransportType = qemu.TransportTypePCI

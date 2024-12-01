@@ -17,24 +17,14 @@ import (
 )
 
 func run(args []string, outWriter, errWriter io.Writer) error {
-	arch, err := GetArch()
-	if err != nil {
-		return fmt.Errorf("get arch: %w", err)
-	}
+	flags := newFlags(args[0], errWriter)
 
-	spec, err := virtrun.NewSpec(arch)
-	if err != nil {
-		return fmt.Errorf("new args: %w", err)
-	}
-
-	flags := NewFlags(args[0], spec, errWriter)
-
-	err = flags.ParseArgs(PrependEnvArgs(args[1:]))
+	err := flags.ParseArgs(PrependEnvArgs(args[1:]))
 	if err != nil {
 		return fmt.Errorf("parse args: %w", err)
 	}
 
-	err = Validate(spec)
+	err = Validate(flags.spec)
 	if err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
@@ -51,7 +41,7 @@ func run(args []string, outWriter, errWriter io.Writer) error {
 	)
 	defer cancel()
 
-	err = virtrun.Run(ctx, spec, outWriter, errWriter)
+	err = virtrun.Run(ctx, flags.spec, outWriter, errWriter)
 	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}

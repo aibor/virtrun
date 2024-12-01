@@ -62,14 +62,8 @@ type Initramfs struct {
 func BuildInitramfsArchive(
 	ctx context.Context,
 	cfg Initramfs,
+	initFileOpenFn initramfs.FileOpenFunc,
 ) (string, func() error, error) {
-	arch, err := sys.ReadELFArch(cfg.Binary)
-	if err != nil {
-		return "", nil, fmt.Errorf("read main binary arch: %w", err)
-	}
-
-	initFileOpenFn := func() (fs.File, error) { return initProgFor(arch) }
-
 	irfs, err := buildInitramfsArchive(ctx, cfg, initFileOpenFn)
 	if err != nil {
 		return "", nil, err

@@ -2,13 +2,12 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package cmd_test
+package cmd
 
 import (
 	"io"
 	"testing"
 
-	"github.com/aibor/virtrun/internal/cmd"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/virtrun"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +15,7 @@ import (
 )
 
 func TestFlags_ParseArgs(t *testing.T) {
-	absBinPath, err := cmd.AbsoluteFilePath("bin.test")
+	absBinPath, err := AbsoluteFilePath("bin.test")
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -31,28 +30,28 @@ func TestFlags_ParseArgs(t *testing.T) {
 			args: []string{
 				"-help",
 			},
-			expecterErr: cmd.ErrHelp,
+			expecterErr: ErrHelp,
 		},
 		{
 			name: "version",
 			args: []string{
 				"-version",
 			},
-			expecterErr: cmd.ErrHelp,
+			expecterErr: ErrHelp,
 		},
 		{
 			name: "no kernel",
 			args: []string{
 				"bin.test",
 			},
-			expecterErr: &cmd.ParseArgsError{},
+			expecterErr: &ParseArgsError{},
 		},
 		{
 			name: "no binary",
 			args: []string{
 				"-kernel=/boot/this",
 			},
-			expecterErr: &cmd.ParseArgsError{},
+			expecterErr: &ParseArgsError{},
 		},
 		{
 			name: "additional file is empty",
@@ -61,7 +60,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 				"-addFile=",
 				"bin.test",
 			},
-			expecterErr: &cmd.ParseArgsError{},
+			expecterErr: &ParseArgsError{},
 		},
 		{
 			name: "debug",
@@ -76,6 +75,9 @@ func TestFlags_ParseArgs(t *testing.T) {
 				},
 				Qemu: virtrun.Qemu{
 					Kernel:   "/boot/this",
+					CPU:      "max",
+					Memory:   256,
+					SMP:      1,
 					InitArgs: []string{},
 				},
 			},
@@ -96,6 +98,9 @@ func TestFlags_ParseArgs(t *testing.T) {
 				},
 				Qemu: virtrun.Qemu{
 					Kernel: "/boot/this",
+					CPU:    "max",
+					Memory: 256,
+					SMP:    1,
 					InitArgs: []string{
 						"-test.paniconexit0",
 						"-test.v=true",
@@ -169,6 +174,9 @@ func TestFlags_ParseArgs(t *testing.T) {
 				},
 				Qemu: virtrun.Qemu{
 					Kernel: "/boot/this",
+					CPU:    "max",
+					Memory: 256,
+					SMP:    1,
 					InitArgs: []string{
 						"-test.paniconexit0",
 						"another.file",
@@ -182,8 +190,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spec := &virtrun.Spec{}
-			flags := cmd.NewFlags("test", spec, io.Discard)
+			flags := newFlags("test", io.Discard)
 
 			err := flags.ParseArgs(tt.args)
 			require.ErrorIs(t, err, tt.expecterErr)
@@ -192,7 +199,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, tt.expectedSpec, spec, "spec")
+			assert.Equal(t, tt.expectedSpec, flags.spec, "spec")
 			assert.Equal(t, tt.expectedDebugFlag, flags.Debug(), "debug flag")
 		})
 	}

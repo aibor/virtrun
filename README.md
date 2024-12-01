@@ -40,11 +40,12 @@ loaded for functionality required bu the binary itself.
 The absolute path to the kernel must be given by flag `-kernel`. Make sure the
 kernel matches the architecture of your binaries and the QEMU binary.
 
-By default, the most likely correct IO transport is chosen automatically. It
-can be set manually with the flag `-transport`. With amd64 `pci` is usually
-the right one. With arm64 and riscv64 it is `mmio`. `isa` can be tried as a
-fallback, in case there is no output ("Error: run: guest did not print init
-exit code").
+Virtrun supports different QEMU IO transport types. Which is needed depends on
+the kernel and machine type used. By default, the most likely correct IO
+transport is chosen automatically. It can be set manually with the flag
+`-transport`. With amd64 `pci` is usually the right one. With arm64 and riscv64
+it is `mmio`. `isa` can be tried as a fallback, in case there is no output
+("Error: run: guest did not print init exit code").
 
 The Ubuntu kernels work out of the box and have all necessary features compiled
 in.
@@ -246,14 +247,11 @@ virtual console is set up for each file.
 
 ### Architecture Detection
 
-Depending on the presence of the environment variables `VIRTRUN_ARCH`,
-`GOARCH`, or with the runtime arch, the correct qemu-system binary and machine
-type is used. KVM is enabled if present and accessible. Those things can be
-overridden by flags. See `virtrun -help` for all flags.
-
-Virtrun supports different QEMU IO transport types. Which is needed depends on
-the kernel and machine type used. If you don't get any output, try different
-transport types with flag `-transport`
+The given main binary determines the architecture that is used for setting 
+the defaults. The QEMU executable, machine type and transport type are set
+based on the main binaries architecture if not given explicitly by flags. KVM
+is enabled if present and accessible and not disabled explicitly. See 
+`virtrun -help` for all flags.
 
 [pkg-go-dev]:           https://pkg.go.dev/github.com/aibor/virtrun
 [pkg-go-dev-badge]:     https://pkg.go.dev/badge/github.com/aibor/virtrun

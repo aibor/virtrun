@@ -71,10 +71,6 @@ func TestLoopbackInterface(t *testing.T) {
 }
 
 func TestEnv(t *testing.T) {
-	if os.Getpid() == 1 {
-		t.Skip("env only tested when called by default init")
-	}
-
 	envPath, envPathExists := os.LookupEnv("PATH")
 
 	if assert.True(t, envPathExists, "PATH env var should be present") {

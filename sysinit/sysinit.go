@@ -47,10 +47,14 @@ func Poweroff() {
 	os.Exit(0)
 }
 
+// EnvVars is a map of environment variable values by name.
+type EnvVars map[string]string
+
 // Config defines basic system configuration.
 type Config struct {
 	MountPoints       MountPoints
 	Symlinks          Symlinks
+	Env               EnvVars
 	ConfigureLoopback bool
 	ModulesDir        string
 }
@@ -72,6 +76,7 @@ func DefaultConfig() Config {
 			"/dev/stdout": "/proc/self/fd/1",
 			"/dev/stderr": "/proc/self/fd/2",
 		},
+		Env:               EnvVars{},
 		ConfigureLoopback: true,
 	}
 }
@@ -91,7 +96,7 @@ func DefaultConfig() Config {
 // with an error. If the error is an [exec.ExitError], it is parsed and its
 // exit code is used. Otherwise the exit code is 127 in case it was never set
 // or 126 in case there was an error.
-func Run(cfg Config, fn func() (int, error)) error {
+func Run(cfg Config, fn func() (int, error)) error { //nolint:cyclop
 	if !IsPidOne() {
 		return ErrNotPidOne
 	}
@@ -144,6 +149,12 @@ func Run(cfg Config, fn func() (int, error)) error {
 
 	if err = CreateSymlinks(cfg.Symlinks); err != nil {
 		return err
+	}
+
+	for key, value := range cfg.Env {
+		if err := os.Setenv(key, value); err != nil {
+			return fmt.Errorf("set env var %s: %w", key, err)
+		}
 	}
 
 	// Run callers function. The returned exit code is irrelevant if any error

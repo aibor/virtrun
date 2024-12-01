@@ -15,21 +15,17 @@ import (
 )
 
 func main() {
-	env := []string{
-		// Set PATH environment variable to the directory all additional files
-		// are written to by virtrun.
-		"PATH=/data",
-	}
-
 	cfg := sysinit.DefaultConfig()
 	cfg.ModulesDir = "/lib/modules"
+	// Set PATH environment variable to the directory all additional files
+	// are written to by virtrun.
+	cfg.Env["PATH"] = "/data"
 
 	err := sysinit.Run(cfg, func() (int, error) {
 		// "/main" is the file virtrun copies the given binary to.
 		cmd := exec.Command("/main", os.Args[1:]...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		cmd.Env = append(cmd.Environ(), env...)
 
 		return 0, cmd.Run()
 	})

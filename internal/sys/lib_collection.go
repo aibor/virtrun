@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"maps"
 	"path/filepath"
+	"slices"
 )
 
 // LibCollection is a deduplicated collection of dynamically linked libraries
@@ -21,7 +23,7 @@ type LibCollection struct {
 
 func (c *LibCollection) Libs() iter.Seq[string] {
 	return func(yield func(string) bool) {
-		for name := range c.libs {
+		for _, name := range slices.Sorted(maps.Keys(c.libs)) {
 			if !yield(name) {
 				return
 			}
@@ -31,7 +33,7 @@ func (c *LibCollection) Libs() iter.Seq[string] {
 
 func (c *LibCollection) SearchPaths() iter.Seq[string] {
 	return func(yield func(string) bool) {
-		for name := range c.searchPaths {
+		for _, name := range slices.Sorted(maps.Keys(c.searchPaths)) {
 			if !yield(name) {
 				return
 			}

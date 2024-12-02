@@ -6,6 +6,7 @@ package virtrun
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -165,7 +166,7 @@ func buildInitramFS(
 	}
 
 	err = builder.symlinkTo(libsDir, slices.Collect(libs.SearchPaths()))
-	if err != nil {
+	if err != nil && !errors.Is(err, initramfs.ErrFileExist) {
 		return nil, err
 	}
 

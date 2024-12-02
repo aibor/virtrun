@@ -11,7 +11,10 @@ import (
 	"strings"
 )
 
-const defaultFileMode = 0o755
+const (
+	defaultFileMode = 0o755
+	symlinkDepth    = 10
+)
 
 // FileOpenFunc returns an open [fs.File] or an error if opening fails.
 type FileOpenFunc func() (fs.File, error)
@@ -52,7 +55,7 @@ func New() *FS {
 // It returns a [PathError] in case of errors. It does not follow symbolic
 // links and returns symbolic links directly.
 func (fsys *FS) Open(name string) (fs.File, error) {
-	file, err := fsys.open(name)
+	file, err := fsys.open(name, true)
 	if err != nil {
 		return nil, &PathError{
 			Op:   "open",
@@ -133,7 +136,7 @@ func (fsys *FS) Mkdir(name string) error {
 func (fsys *FS) MkdirAll(name string) error {
 	cleaned := clean(name)
 
-	file, err := fsys.find(cleaned)
+	file, err := fsys.find(cleaned, true, symlinkDepth)
 	if err == nil {
 		if file.mode().IsDir() {
 			return nil
@@ -201,7 +204,7 @@ func (fsys *FS) Symlink(oldname, newname string) error {
 }
 
 func (fsys *FS) subDir(name string) (*directory, error) {
-	file, err := fsys.find(name)
+	file, err := fsys.find(name, true, symlinkDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -230,8 +233,8 @@ func (fsys *FS) add(name string, file file) error {
 	return nil
 }
 
-func (fsys *FS) open(name string) (fs.File, error) {
-	file, err := fsys.find(name)
+func (fsys *FS) open(name string, follow bool) (fs.File, error) {
+	file, err := fsys.find(name, follow, symlinkDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +248,7 @@ func (fsys *FS) open(name string) (fs.File, error) {
 }
 
 func (fsys *FS) readlink(name string) (string, error) {
-	file, err := fsys.find(name)
+	file, err := fsys.find(name, false, symlinkDepth)
 	if err != nil {
 		return "", err
 	}
@@ -259,7 +262,7 @@ func (fsys *FS) readlink(name string) (string, error) {
 }
 
 func (fsys *FS) lstat(name string) (fs.FileInfo, error) {
-	file, err := fsys.open(name)
+	file, err := fsys.open(name, false)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +277,7 @@ func (fsys *FS) lstat(name string) (fs.FileInfo, error) {
 }
 
 //nolint:ireturn
-func (fsys *FS) find(name string) (file, error) {
+func (fsys *FS) find(name string, follow bool, depth uint) (file, error) {
 	var file file = &fsys.root
 
 	if name == "" || name == "." {
@@ -287,6 +290,13 @@ func (fsys *FS) find(name string) (file, error) {
 
 	nodes := strings.Split(name, string(filepath.Separator))
 	for _, name = range nodes {
+		var err error
+
+		file, err = fsys.follow(file, depth)
+		if err != nil {
+			return nil, err
+		}
+
 		dir, isDir := file.(*directory)
 		if !isDir {
 			return nil, ErrFileNotExist
@@ -300,7 +310,27 @@ func (fsys *FS) find(name string) (file, error) {
 		file = next
 	}
 
+	if follow {
+		return fsys.follow(file, depth)
+	}
+
 	return file, nil
+}
+
+//nolint:ireturn
+func (fsys *FS) follow(f file, depth uint) (file, error) {
+	symlink, isSymlink := f.(symbolicLink)
+	if !isSymlink {
+		return f, nil
+	}
+
+	if depth == 0 {
+		return nil, ErrSymlinkTooDeep
+	}
+
+	depth--
+
+	return fsys.find(clean(string(symlink)), true, depth)
 }
 
 func clean(path string) string {

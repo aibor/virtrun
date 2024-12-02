@@ -40,7 +40,7 @@ func TestFiles_TestFS(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = fsys.Symlink("target", "dir/link")
+		err = fsys.Symlink("dir/file", "dir/link")
 		require.NoError(t, err)
 
 		err = fstest.TestFS(fsys, "dir", "dir/a/b/c", "dir/file", "dir/link")
@@ -73,6 +73,13 @@ func TestFS_Add(t *testing.T) {
 			},
 		},
 		{
+			name: "parent valid symlink",
+			path: "dir/test",
+			prepare: func(fsys *initramfs.FS) error {
+				return fsys.Symlink("/", "dir")
+			},
+		},
+		{
 			name: "exists as file",
 			path: "test",
 			prepare: func(fsys *initramfs.FS) error {
@@ -86,7 +93,7 @@ func TestFS_Add(t *testing.T) {
 			name: "exists as other",
 			path: "test",
 			prepare: func(fsys *initramfs.FS) error {
-				return fsys.Symlink("somewhere", "test")
+				return fsys.Mkdir("test")
 			},
 			expectedErr: initramfs.ErrFileExist,
 		},
@@ -94,7 +101,9 @@ func TestFS_Add(t *testing.T) {
 			name: "parent not a dir",
 			path: "dir/test",
 			prepare: func(fsys *initramfs.FS) error {
-				return fsys.Symlink("somewhere", "dir")
+				return fsys.Add("dir", func() (fs.File, error) {
+					return nil, assert.AnError
+				})
 			},
 			expectedErr: initramfs.ErrFileNotDir,
 		},
@@ -141,6 +150,13 @@ func TestFS_Mkdir(t *testing.T) {
 			},
 		},
 		{
+			name: "parent valid symlink",
+			path: "dir/sub",
+			prepare: func(fsys *initramfs.FS) error {
+				return fsys.Symlink("/", "dir")
+			},
+		},
+		{
 			name: "exists as dir",
 			path: "dir",
 			prepare: func(fsys *initramfs.FS) error {
@@ -160,7 +176,9 @@ func TestFS_Mkdir(t *testing.T) {
 			name: "parent not a dir",
 			path: "dir/sub",
 			prepare: func(fsys *initramfs.FS) error {
-				return fsys.Symlink("somewhere", "dir")
+				return fsys.Add("dir", func() (fs.File, error) {
+					return nil, assert.AnError
+				})
 			},
 			expectedErr: initramfs.ErrFileNotDir,
 		},
@@ -215,7 +233,9 @@ func TestFS_MkdirAll(t *testing.T) {
 			name: "exists as other",
 			path: "dir",
 			prepare: func(fsys *initramfs.FS) error {
-				return fsys.Symlink("somewhere", "dir")
+				return fsys.Add("dir", func() (fs.File, error) {
+					return nil, assert.AnError
+				})
 			},
 			expectedErr: initramfs.ErrFileNotDir,
 		},
@@ -223,7 +243,9 @@ func TestFS_MkdirAll(t *testing.T) {
 			name: "parent not a dir",
 			path: "dir/sub/subsub",
 			prepare: func(fsys *initramfs.FS) error {
-				return fsys.Symlink("somewhere", "dir")
+				return fsys.Add("dir", func() (fs.File, error) {
+					return nil, assert.AnError
+				})
 			},
 			expectedErr: initramfs.ErrFileNotDir,
 		},
@@ -267,6 +289,21 @@ func TestFS_Symlink(t *testing.T) {
 			},
 		},
 		{
+			name: "parent valid symlink",
+			path: "dir/link",
+			prepare: func(fsys *initramfs.FS) error {
+				return fsys.Symlink("/", "dir")
+			},
+		},
+		{
+			name: "parent self symlink",
+			path: "dir/sub",
+			prepare: func(fsys *initramfs.FS) error {
+				return fsys.Symlink("dir", "dir")
+			},
+			expectedErr: initramfs.ErrSymlinkTooDeep,
+		},
+		{
 			name: "exists as link",
 			path: "link",
 			prepare: func(fsys *initramfs.FS) error {
@@ -286,7 +323,9 @@ func TestFS_Symlink(t *testing.T) {
 			name: "parent not a dir",
 			path: "dir/link",
 			prepare: func(fsys *initramfs.FS) error {
-				return fsys.Symlink("somewhere", "dir")
+				return fsys.Add("dir", func() (fs.File, error) {
+					return nil, assert.AnError
+				})
 			},
 			expectedErr: initramfs.ErrFileNotDir,
 		},

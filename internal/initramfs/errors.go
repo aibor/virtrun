@@ -29,6 +29,10 @@ var (
 
 	// ErrInvalidArgument is returned if an invalid argument is given.
 	ErrInvalidArgument = errors.New("invalid argument")
+
+	// ErrSymlinkTooDeep is returned if there are too many symbolic links to
+	// follow.
+	ErrSymlinkTooDeep = errors.New("nested links too deep")
 )
 
 // PathError records an error and the operation and file path that caused it.

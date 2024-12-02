@@ -185,8 +185,13 @@ func (c *CommandSpec) kernelCmdlineArgs() []string {
 		"console=" + c.TransportType.ConsoleDeviceName(0),
 		"panic=-1",
 		"mitigations=off",
-		"acpi=off",
 		"initcall_blacklist=ahci_pci_driver_init",
+	}
+
+	// ACPI is necessary for SMP. With a single CPU, we can disable it to speed
+	// up the boot considerably.
+	if c.SMP == 1 {
+		cmdline = append(cmdline, "acpi=off")
 	}
 
 	if !c.Verbose {

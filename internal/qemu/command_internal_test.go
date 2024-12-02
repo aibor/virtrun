@@ -160,7 +160,6 @@ func TestNewCommand(t *testing.T) {
 					"console=ttyS0",
 					"panic=-1",
 					"mitigations=off",
-					"acpi=off",
 					"initcall_blacklist=ahci_pci_driver_init",
 				),
 				stdoutParser: stdoutParser{

@@ -9,7 +9,7 @@ import "io/fs"
 // ReadLinkFS is a [fs.FS] with an additional method for reading the target of
 // a symbolic link.
 //
-// Replace with [fs.ReadLinkFS] once available. See
+// Replace with [fs.ReadLinkFS] once available (planned for 1.25). See
 // https://github.com/golang/go/issues/49580
 type ReadLinkFS interface {
 	fs.FS
@@ -57,8 +57,8 @@ func (fsys *readLinkFS) Lstat(name string) (fs.FileInfo, error) {
 // them directly so the destination can be read and returned by the ReadLink
 // method.
 //
-// This is a workaround until the standard librariy's implementations implement
-// [ReadLinkFS] themself (Pallend for 1.24). See
+// This is a workaround until the standard library's implementations implement
+// [ReadLinkFS] themself (planned for 1.25). See
 // https://github.com/golang/go/issues/49580
 func WithReadLinkNoFollowOpen(fsys fs.FS) fs.FS {
 	return &readLinkFS{

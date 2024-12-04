@@ -136,7 +136,7 @@ func (fsys *FS) Mkdir(name string) error {
 func (fsys *FS) MkdirAll(name string) error {
 	cleaned := clean(name)
 
-	file, err := fsys.find(cleaned, true, symlinkDepth)
+	file, err := fsys.find(cleaned, symlinkDepth)
 	if err == nil {
 		if file.mode().IsDir() {
 			return nil
@@ -204,7 +204,7 @@ func (fsys *FS) Symlink(oldname, newname string) error {
 }
 
 func (fsys *FS) subDir(name string) (*directory, error) {
-	file, err := fsys.find(name, true, symlinkDepth)
+	file, err := fsys.find(name, symlinkDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +234,12 @@ func (fsys *FS) add(name string, file file) error {
 }
 
 func (fsys *FS) open(name string, follow bool) (fs.File, error) {
-	file, err := fsys.find(name, follow, symlinkDepth)
+	findFn := fsys.findNoFollow
+	if follow {
+		findFn = fsys.find
+	}
+
+	file, err := findFn(name, symlinkDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +253,7 @@ func (fsys *FS) open(name string, follow bool) (fs.File, error) {
 }
 
 func (fsys *FS) readlink(name string) (string, error) {
-	file, err := fsys.find(name, false, symlinkDepth)
+	file, err := fsys.findNoFollow(name, symlinkDepth)
 	if err != nil {
 		return "", err
 	}
@@ -277,7 +282,17 @@ func (fsys *FS) lstat(name string) (fs.FileInfo, error) {
 }
 
 //nolint:ireturn
-func (fsys *FS) find(name string, follow bool, depth uint) (file, error) {
+func (fsys *FS) find(name string, depth uint) (file, error) {
+	file, err := fsys.findNoFollow(name, depth)
+	if err != nil {
+		return nil, err
+	}
+
+	return fsys.follow(file, depth)
+}
+
+//nolint:ireturn
+func (fsys *FS) findNoFollow(name string, depth uint) (file, error) {
 	var file file = &fsys.root
 
 	if name == "" || name == "." {
@@ -310,10 +325,6 @@ func (fsys *FS) find(name string, follow bool, depth uint) (file, error) {
 		file = next
 	}
 
-	if follow {
-		return fsys.follow(file, depth)
-	}
-
 	return file, nil
 }
 
@@ -330,7 +341,7 @@ func (fsys *FS) follow(f file, depth uint) (file, error) {
 
 	depth--
 
-	return fsys.find(clean(string(symlink)), true, depth)
+	return fsys.find(clean(string(symlink)), depth)
 }
 
 func clean(path string) string {

@@ -292,7 +292,7 @@ func TestCommand_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer goleak.VerifyNone(t)
 
-			err := tt.cmd.Run(nil, nil)
+			err := tt.cmd.Run(nil, nil, nil)
 			tt.assertErr(t, err)
 		})
 	}

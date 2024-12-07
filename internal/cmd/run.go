@@ -16,8 +16,8 @@ import (
 	"github.com/aibor/virtrun/internal/virtrun"
 )
 
-func run(args []string, outWriter, errWriter io.Writer) error {
-	flags := newFlags(args[0], errWriter)
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	flags := newFlags(args[0], stderr)
 
 	err := flags.ParseArgs(PrependEnvArgs(args[1:]))
 	if err != nil {
@@ -29,7 +29,7 @@ func run(args []string, outWriter, errWriter io.Writer) error {
 		return fmt.Errorf("validate: %w", err)
 	}
 
-	setupLogging(errWriter, flags.Debug())
+	setupLogging(stderr, flags.Debug())
 
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),
@@ -41,7 +41,7 @@ func run(args []string, outWriter, errWriter io.Writer) error {
 	)
 	defer cancel()
 
-	err = virtrun.Run(ctx, flags.spec, outWriter, errWriter)
+	err = virtrun.Run(ctx, flags.spec, stdin, stdout, stderr)
 	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
@@ -86,7 +86,7 @@ func handleRunError(err error, errWriter io.Writer) int {
 	return exitCode
 }
 
-func Run(args []string, outWriter, errWriter io.Writer) int {
-	err := run(args, outWriter, errWriter)
-	return handleRunError(err, errWriter)
+func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	err := run(args, stdin, stdout, stderr)
+	return handleRunError(err, stderr)
 }

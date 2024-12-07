@@ -319,7 +319,7 @@ func (c *Command) close() {
 // a [CommandError] with the guest flag unset is returned. If the guest
 // returned an error or failed a [CommandError] with guest flag set is
 // returned.
-func (c *Command) Run(stdout, stderr io.Writer) error {
+func (c *Command) Run(stdin io.Reader, stdout, stderr io.Writer) error {
 	defer c.close()
 
 	var processors errgroup.Group
@@ -333,6 +333,7 @@ func (c *Command) Run(stdout, stderr io.Writer) error {
 		processors.Go(processor.run)
 	}
 
+	c.cmd.Stdin = stdin
 	c.cmd.Stderr = stderr
 
 	stdoutProcessor, err := c.stdoutProcessor(stdout)

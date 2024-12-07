@@ -31,7 +31,8 @@ type Spec struct {
 func Run(
 	ctx context.Context,
 	spec *Spec,
-	outWriter, errWriter io.Writer,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
 ) error {
 	arch, err := sys.ReadELFArch(spec.Initramfs.Binary)
 	if err != nil {
@@ -56,7 +57,7 @@ func Run(
 		return err
 	}
 
-	err = cmd.Run(outWriter, errWriter)
+	err = cmd.Run(stdin, stdout, stderr)
 	if err != nil {
 		return fmt.Errorf("qemu run: %w", err)
 	}

@@ -24,6 +24,7 @@ func main() {
 	err := sysinit.Run(cfg, func() (int, error) {
 		// "/main" is the file virtrun copies the given binary to.
 		cmd := exec.Command("/main", os.Args[1:]...)
+		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 

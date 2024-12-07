@@ -167,7 +167,7 @@ func TestIntegration(t *testing.T) {
 
 			var stdOut, stdErr bytes.Buffer
 
-			err = virtrun.Run(ctx, spec, &stdOut, &stdErr)
+			err = virtrun.Run(ctx, spec, nil, &stdOut, &stdErr)
 
 			t.Log(stdOut.String())
 			t.Log(stdErr.String())

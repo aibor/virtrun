@@ -69,7 +69,9 @@ func DefaultConfig() Config {
 			"/sys/kernel/tracing": {FSType: FSTypeTracing, MayFail: true},
 		},
 		Symlinks: Symlinks{
+			"/dev/core":   "/proc/kcore",
 			"/dev/fd":     "/proc/self/fd/",
+			"/dev/rtc":    "rtc0",
 			"/dev/stdin":  "/proc/self/fd/0",
 			"/dev/stdout": "/proc/self/fd/1",
 			"/dev/stderr": "/proc/self/fd/2",

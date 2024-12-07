@@ -82,7 +82,9 @@ func TestEnv(t *testing.T) {
 
 func TestCommonSymlinks(t *testing.T) {
 	symlinks := map[string]string{
+		"/dev/core":   "/proc/kcore",
 		"/dev/fd":     "/proc/self/fd/",
+		"/dev/rtc":    "rtc0",
 		"/dev/stdin":  "/proc/self/fd/0",
 		"/dev/stdout": "/proc/self/fd/1",
 		"/dev/stderr": "/proc/self/fd/2",

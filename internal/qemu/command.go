@@ -241,6 +241,13 @@ func NewCommand(ctx context.Context, spec CommandSpec) (*Command, error) {
 		},
 	}
 
+	// The default cancel function set by [exec.CommandContext] sends SIGKILL
+	// to the process. This makes it impossible for QEMU to shutdown gracefully
+	// which messes up terminal stdio and leaves the terminal in a broken state.
+	cmd.cmd.Cancel = func() error {
+		return cmd.cmd.Process.Signal(os.Interrupt)
+	}
+
 	return cmd, nil
 }
 

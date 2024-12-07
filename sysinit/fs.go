@@ -27,14 +27,14 @@ const (
 	defaultDirMode = 0o755
 )
 
-// MountPoint is a single mount point for a virtual system FS.
-type MountPoint struct {
-	Path   string
-	FSType FSType
+// MountOptions is a single mount point for a virtual system FS.
+type MountOptions struct {
+	FSType  FSType
+	MayFail bool
 }
 
 // MountPoints is a collection of MountPoints.
-type MountPoints []MountPoint
+type MountPoints map[string]MountOptions
 
 // Symlinks is a collection of symbolic links. Keys are symbolic links to
 // create with the value being the target to link to.
@@ -44,17 +44,17 @@ type Symlinks map[string]string
 //
 // If path does not exist, it is created. An error is returned if this or the
 // mount syscall fails.
-func Mount(mount MountPoint) error {
-	err := os.MkdirAll(mount.Path, defaultDirMode)
+func Mount(path string, fsType FSType) error {
+	err := os.MkdirAll(path, defaultDirMode)
 	if err != nil {
-		return fmt.Errorf("mkdir %s: %w", mount.Path, err)
+		return fmt.Errorf("mkdir %s: %w", path, err)
 	}
 
-	fsType := string(mount.FSType)
+	fsTypeStr := string(fsType)
 
-	err = syscall.Mount(fsType, mount.Path, fsType, 0, "")
+	err = syscall.Mount(fsTypeStr, path, fsTypeStr, 0, "")
 	if err != nil {
-		return fmt.Errorf("mount %s (%s): %w", mount.Path, mount.FSType, err)
+		return fmt.Errorf("mount %s (%s): %w", path, fsType, err)
 	}
 
 	return nil
@@ -65,8 +65,8 @@ func Mount(mount MountPoint) error {
 // All special file systems required for usual operations, like accessing
 // kernel variables, modifying kernel knobs or accessing devices are mounted.
 func MountAll(mountPoints MountPoints) error {
-	for _, mp := range mountPoints {
-		if err := Mount(mp); err != nil {
+	for path, opts := range mountPoints {
+		if err := Mount(path, opts.FSType); err != nil && !opts.MayFail {
 			return err
 		}
 	}

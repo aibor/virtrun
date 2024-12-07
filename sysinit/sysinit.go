@@ -60,13 +60,13 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		MountPoints: MountPoints{
-			{"/proc", FSTypeProc},
-			{"/sys", FSTypeSys},
-			{"/sys/fs/bpf", FSTypeBpf},
-			{"/sys/kernel/tracing", FSTypeTracing},
-			{"/dev", FSTypeDevTmp},
-			{"/run", FSTypeTmp},
-			{"/tmp", FSTypeTmp},
+			"/proc":               {FSType: FSTypeProc},
+			"/sys":                {FSType: FSTypeSys},
+			"/dev":                {FSType: FSTypeDevTmp},
+			"/run":                {FSType: FSTypeTmp},
+			"/tmp":                {FSType: FSTypeTmp},
+			"/sys/fs/bpf":         {FSType: FSTypeBpf, MayFail: true},
+			"/sys/kernel/tracing": {FSType: FSTypeTracing, MayFail: true},
 		},
 		Symlinks: Symlinks{
 			"/dev/fd":     "/proc/self/fd/",

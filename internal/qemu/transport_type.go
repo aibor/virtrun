@@ -7,6 +7,7 @@ package qemu
 import (
 	"fmt"
 	"slices"
+	"strings"
 )
 
 const (
@@ -72,42 +73,41 @@ func (t *TransportType) ConsoleDeviceName(num uint) string {
 	return fmt.Sprintf(f, num)
 }
 
-func prepareConsoleArgs(transportType TransportType) []Argument {
-	switch transportType {
-	case TransportTypePCI:
-		return []Argument{
-			RepeatableArg("device", "virtio-serial-pci,max_ports=8"),
-		}
-	case TransportTypeMMIO:
-		return []Argument{
-			RepeatableArg("device", "virtio-serial-device,max_ports=8"),
-		}
-	default: // Ignore invalid transport types.
-		return nil
+type consoleFunc func(backend string, args ...string) []Argument
+
+func consoleArgsFunc(transportType TransportType) consoleFunc {
+	consoleID := 0
+
+	sharedDevices := map[TransportType]string{
+		TransportTypePCI:  "virtio-serial-pci,max_ports=8",
+		TransportTypeMMIO: "virtio-serial-device,max_ports=8",
 	}
-}
+	sharedDeviceValue := sharedDevices[transportType]
 
-func consoleArgsFunc(transportType TransportType) func(int) []Argument {
-	switch transportType {
-	case TransportTypeISA:
-		return func(fd int) []Argument {
-			return []Argument{
-				RepeatableArg("serial", "file:"+fdPath(fd)),
-			}
-		}
-	case TransportTypePCI, TransportTypeMMIO:
-		return func(fd int) []Argument {
-			vcon := fmt.Sprintf("vcon%d", fd)
-			chardev := fmt.Sprintf("file,id=%s,path=%s", vcon, fdPath(fd))
-			device := "virtconsole,chardev=" + vcon
+	return func(backend string, args ...string) []Argument {
+		var a []Argument
 
-			return []Argument{
-				RepeatableArg("chardev", chardev),
-				RepeatableArg("device", device),
-			}
+		if consoleID == 0 && sharedDeviceValue != "" {
+			a = append(a, RepeatableArg("device", sharedDeviceValue))
 		}
-	default: // Ignore invalid transport types.
-		return func(_ int) []Argument { return nil }
+
+		conID := fmt.Sprintf("con%d", consoleID)
+		chardevArgs := []string{backend, "id=" + conID}
+		chardevArgs = append(chardevArgs, args...)
+		a = append(a, RepeatableArg("chardev", strings.Join(chardevArgs, ",")))
+
+		switch transportType {
+		case TransportTypeISA:
+			a = append(a, RepeatableArg("serial", "chardev:"+conID))
+		case TransportTypePCI, TransportTypeMMIO:
+			a = append(a, RepeatableArg("device", "virtconsole,chardev="+conID))
+		default: // Ignore invalid transport types.
+			return nil
+		}
+
+		consoleID++
+
+		return a
 	}
 }
 

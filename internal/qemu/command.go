@@ -145,17 +145,17 @@ func (c *CommandSpec) arguments() []Argument {
 		args = append(args, UniqueArg("enable-kvm", ""))
 	}
 
-	args = append(args, prepareConsoleArgs(c.TransportType)...)
 	addConsoleArgs := consoleArgsFunc(c.TransportType)
 
 	// Add stdout console.
-	args = append(args, addConsoleArgs(1)...)
+	args = append(args, addConsoleArgs("stdio")...)
 
 	// Write console output to file descriptors. Those are provided by the
 	// [exec.Cmd.ExtraFiles].
 	for idx := range c.AdditionalConsoles {
 		// FDs 0, 1, 2 are standard in, out, err, so start at 3.
-		args = append(args, addConsoleArgs(minAdditionalFileDescriptor+idx)...)
+		path := fdPath(minAdditionalFileDescriptor + idx)
+		args = append(args, addConsoleArgs("file", "path="+path)...)
 	}
 
 	args = append(args,

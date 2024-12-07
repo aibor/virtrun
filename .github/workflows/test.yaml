@@ -115,6 +115,7 @@ jobs:
       VIRTRUN_ARGS: "-kernel /boot/vmlinuz-virt \
                      -addModule /lib/modules/kernel/drivers/net/tun.ko.gz \
                      -addModule /lib/modules/kernel/drivers/net/veth.ko.gz \
+                     -smp 2 \
                      -transport pci \
                      -verbose \
                      -debug"
@@ -167,7 +168,8 @@ jobs:
             -covermode atomic \
             -coverprofile /tmp/cover.out \
             ./testing/guest/ \
-            -testModules tun,veth
+            -testModules tun,veth \
+            -cpus 2
 
       - name: Run covdata
         run: go tool covdata percent -i "${{ env.GOCOVERDIR }}"

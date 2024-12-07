@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -119,4 +120,15 @@ func TestModules(t *testing.T) {
 	t.Log("actual: ", actual)
 
 	assert.ElementsMatch(t, actual, expected)
+}
+
+var testCPUs = flag.Int("cpus", 0, "cpus to expect")
+
+func TestCPUs(t *testing.T) {
+	expected := 1
+	if *testCPUs > 0 {
+		expected = *testCPUs
+	}
+
+	assert.Equal(t, expected, runtime.NumCPU())
 }

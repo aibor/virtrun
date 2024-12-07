@@ -120,6 +120,7 @@ func TestIntegration(t *testing.T) {
 			bin:  "bin/guest.test",
 			args: []string{
 				verboseFlag(),
+				"-cpus", "2",
 			},
 			requireErr: require.NoError,
 		},
@@ -131,6 +132,7 @@ func TestIntegration(t *testing.T) {
 				verboseFlag(),
 				"-test.gocoverdir=/tmp/",
 				"-test.coverprofile=/tmp/cover.out",
+				"-cpus", "2",
 			},
 			requireErr: require.NoError,
 		},
@@ -149,7 +151,7 @@ func TestIntegration(t *testing.T) {
 					Verbose:  Verbose,
 					CPU:      "max",
 					Memory:   128,
-					SMP:      1,
+					SMP:      2,
 					InitArgs: tt.args,
 				},
 				Initramfs: virtrun.Initramfs{

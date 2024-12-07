@@ -63,6 +63,7 @@ func DefaultConfig() Config {
 			{"/proc", FSTypeProc},
 			{"/sys", FSTypeSys},
 			{"/sys/fs/bpf", FSTypeBpf},
+			{"/sys/kernel/tracing", FSTypeTracing},
 			{"/dev", FSTypeDevTmp},
 			{"/run", FSTypeTmp},
 			{"/tmp", FSTypeTmp},

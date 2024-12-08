@@ -55,14 +55,17 @@ type Config struct {
 // DefaultConfig creates a new default config.
 func DefaultConfig() Config {
 	return Config{
+		// All special file systems required for usual operations, like
+		// accessing kernel variables, modifying kernel knobs or accessing
+		// devices.
 		MountPoints: MountPoints{
-			"/proc":               {FSType: FSTypeProc},
-			"/sys":                {FSType: FSTypeSys},
 			"/dev":                {FSType: FSTypeDevTmp},
+			"/proc":               {FSType: FSTypeProc},
 			"/run":                {FSType: FSTypeTmp},
-			"/tmp":                {FSType: FSTypeTmp},
+			"/sys":                {FSType: FSTypeSys},
 			"/sys/fs/bpf":         {FSType: FSTypeBpf, MayFail: true},
 			"/sys/kernel/tracing": {FSType: FSTypeTracing, MayFail: true},
+			"/tmp":                {FSType: FSTypeTmp},
 		},
 		Symlinks: Symlinks{
 			"/dev/core":   "/proc/kcore",

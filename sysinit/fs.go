@@ -7,8 +7,10 @@ package sysinit
 import (
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 // FSType is a file system type.
@@ -39,7 +41,7 @@ type MountPoints map[string]MountOptions
 // create with the value being the target to link to.
 type Symlinks map[string]string
 
-// Mount mounts the special file system with type FsType at the given path.
+// Mount mounts the system file system of [FSType] at the given path.
 //
 // If path does not exist, it is created. An error is returned if this or the
 // mount syscall fails.
@@ -52,12 +54,13 @@ func Mount(path string, fsType FSType) error {
 	return mount(path, "", string(fsType))
 }
 
-// MountAll mounts all known essential special file systems at the usual paths.
+// MountAll mounts the given set of system file systems.
 //
-// All special file systems required for usual operations, like accessing
-// kernel variables, modifying kernel knobs or accessing devices are mounted.
+// The mounts are executed in lexicographic order of the paths.
 func MountAll(mountPoints MountPoints) error {
-	for path, opts := range mountPoints {
+	sortedPaths := slices.Sorted(maps.Keys(mountPoints))
+	for _, path := range sortedPaths {
+		opts := mountPoints[path]
 		if err := Mount(path, opts.FSType); err != nil && !opts.MayFail {
 			return err
 		}

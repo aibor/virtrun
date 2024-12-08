@@ -13,10 +13,34 @@ import (
 	"os"
 	"slices"
 	"strings"
-	"syscall"
-
-	"golang.org/x/sys/unix"
 )
+
+const (
+	moduleTypeUnknown moduleType = ""
+	moduleTypePlain   moduleType = ".ko"
+	moduleTypeGZIP    moduleType = ".ko.gz"
+	moduleTypeXZ      moduleType = ".ko.xz"
+	moduleTypeZSTD    moduleType = ".ko.zst"
+)
+
+type moduleType string
+
+func parseModuleType(fileName string) moduleType {
+	types := []moduleType{
+		moduleTypePlain,
+		moduleTypeGZIP,
+		moduleTypeXZ,
+		moduleTypeZSTD,
+	}
+
+	for _, typ := range types {
+		if strings.HasSuffix(fileName, string(typ)) {
+			return typ
+		}
+	}
+
+	return moduleTypeUnknown
+}
 
 // LoadModules loads all files found in the given directory as kernel modules.
 func LoadModules(dir string) error {
@@ -26,8 +50,7 @@ func LoadModules(dir string) error {
 	}
 
 	for _, file := range files {
-		err := LoadModule(file, "")
-		if err != nil {
+		if err := LoadModule(file, ""); err != nil {
 			return fmt.Errorf("load module %s: %w", file, err)
 		}
 	}
@@ -41,102 +64,74 @@ func LoadModules(dir string) error {
 // The file may be compressed. The caller is responsible to ensure the module
 // belongs to the running kernel and all dependencies are satisfied.
 func LoadModule(path string, params string) error {
-	f, err := os.Open(path)
+	module, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)
 	}
-	defer f.Close()
+	defer module.Close()
+
+	return loadModule(module, params)
+}
+
+func loadModule(module *os.File, params string) error {
+	typ := parseModuleType(module.Name())
 
 	// Try finit_module(2) first, as it is the more comfortable syscall. If it
 	// is not available try again with init_module(2).
-	err = finitModule(f, params)
-	if err != nil {
-		if errors.Is(err, errors.ErrUnsupported) {
-			return initModule(f, params)
-		}
-
+	err := finitModule(int(module.Fd()), params, finitFlagsFor(typ))
+	if !errors.Is(err, errors.ErrUnsupported) {
 		return err
 	}
 
-	return nil
-}
-
-func initModule(f *os.File, params string) error {
-	decompressed, err := decompress(f)
+	moduleReader, err := newModuleReader(module, typ)
 	if err != nil {
-		return fmt.Errorf("decompress: %w", err)
+		return fmt.Errorf("module reader: %w", err)
 	}
 
 	var data bytes.Buffer
 
-	_, err = io.Copy(&data, decompressed)
+	_, err = data.ReadFrom(moduleReader)
 	if err != nil {
-		return fmt.Errorf("read file: %w", err)
+		return fmt.Errorf("read module: %w", err)
 	}
 
-	err = unix.InitModule(data.Bytes(), params)
-	if err != nil {
-		return fmt.Errorf("init_module: %w", err)
-	}
-
-	return nil
+	return initModule(data.Bytes(), params)
 }
 
-type namedReader interface {
-	io.Reader
-	Name() string
-}
-
-func decompress(r namedReader) (io.Reader, error) {
-	switch fileNameExtension(r.Name()) {
-	case "ko":
-		return r, nil
-	case "gz":
-		gzipReader, err := gzip.NewReader(r)
+func newModuleReader(fileReader io.Reader, typ moduleType) (io.Reader, error) {
+	switch typ {
+	case moduleTypePlain:
+		return fileReader, nil
+	case moduleTypeGZIP:
+		gzipReader, err := gzip.NewReader(fileReader)
 		if err != nil {
-			return nil, fmt.Errorf("new gzip reader: %w", err)
+			return nil, fmt.Errorf("gzip reader: %w", err)
 		}
 
 		return gzipReader, nil
 	default:
-		return nil, fmt.Errorf("unknown extension: %w", errors.ErrUnsupported)
+		return nil, fmt.Errorf("extension %s: %w", typ, errors.ErrUnsupported)
 	}
 }
 
-func finitModule(f *os.File, params string) error {
-	flags := 0
-	if hasFinitCompressionExtension(f.Name()) {
-		flags |= unix.MODULE_INIT_COMPRESSED_FILE
+func finitFlagsFor(typ moduleType) finitFlags {
+	var flags finitFlags
+
+	if isSupportedFinitCompressionType(typ) {
+		flags |= finitFlagCompressedFile
 	}
 
-	fd := int(f.Fd())
-
-	err := unix.FinitModule(fd, params, flags)
-	if err != nil {
-		// If finit_module is not available, an EOPNOTSUPP is returned.
-		if errors.Is(err, syscall.EOPNOTSUPP) {
-			return fmt.Errorf("finit_module: %w", errors.ErrUnsupported)
-		}
-
-		return fmt.Errorf("finit_module: %w", err)
-	}
-
-	return nil
+	return flags
 }
 
-func fileNameExtension(fileName string) string {
-	fileNameParts := strings.Split(fileName, ".")
-	return fileNameParts[len(fileNameParts)-1]
-}
-
-func hasFinitCompressionExtension(fileName string) bool {
-	extension := fileNameExtension(fileName)
-	return isFinitCompressionExtension(extension)
-}
-
-// isFinitCompressionExtension checks if the given extension is one of the
+// isSupportedFinitCompressionType checks if the given extension is one of the
 // known extensions finit_module(2) supports.
-func isFinitCompressionExtension(extension string) bool {
-	supportedExtensions := []string{"gz", "xz", "zst"}
-	return slices.Contains(supportedExtensions, extension)
+func isSupportedFinitCompressionType(typ moduleType) bool {
+	supportedTypes := []moduleType{
+		moduleTypeGZIP,
+		moduleTypeXZ,
+		moduleTypeZSTD,
+	}
+
+	return slices.Contains(supportedTypes, typ)
 }

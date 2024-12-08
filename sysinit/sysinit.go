@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"syscall"
 )
 
 const sysFileMode = 0o600
@@ -39,7 +38,7 @@ func Poweroff() {
 
 	// Use restart instead of poweroff for shutting down the system since it
 	// does not require ACPI. The guest system should be started with noreboot.
-	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {
+	if err := reboot(); err != nil {
 		fmt.Fprintf(os.Stderr, "error calling power off: %v\n", err)
 	}
 }

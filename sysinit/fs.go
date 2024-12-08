@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"syscall"
 )
 
 // FSType is a file system type.
@@ -50,14 +49,7 @@ func Mount(path string, fsType FSType) error {
 		return fmt.Errorf("mkdir %s: %w", path, err)
 	}
 
-	fsTypeStr := string(fsType)
-
-	err = syscall.Mount(fsTypeStr, path, fsTypeStr, 0, "")
-	if err != nil {
-		return fmt.Errorf("mount %s (%s): %w", path, fsType, err)
-	}
-
-	return nil
+	return mount(path, "", string(fsType))
 }
 
 // MountAll mounts all known essential special file systems at the usual paths.

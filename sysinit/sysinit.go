@@ -11,8 +11,6 @@ import (
 	"os/exec"
 )
 
-const sysFileMode = 0o600
-
 // ErrNotPidOne may be returned if the process is expected to be run as PID 1
 // but is not.
 var ErrNotPidOne = errors.New("process does not have ID 1")
@@ -34,7 +32,7 @@ func IsPidOneChild() bool {
 // function.
 func Poweroff() {
 	// Silence the kernel so it does not show up in our test output.
-	_ = os.WriteFile("/proc/sys/kernel/printk", []byte("0"), sysFileMode)
+	_ = sysctl("kernel/printk", "0")
 
 	// Use restart instead of poweroff for shutting down the system since it
 	// does not require ACPI. The guest system should be started with noreboot.

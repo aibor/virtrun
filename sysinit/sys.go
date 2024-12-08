@@ -7,6 +7,7 @@ package sysinit
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"golang.org/x/sys/unix"
 )
@@ -71,6 +72,18 @@ func setInterfaceUp(name string) error {
 
 	if err := unix.IoctlIfreq(sock, unix.SIOCSIFFLAGS, ifReq); err != nil {
 		return fmt.Errorf("ioctl: %w", err)
+	}
+
+	return nil
+}
+
+func sysctl(key, value string) error {
+	const mode = 0o600
+
+	path := "/proc/sys/" + key
+
+	if err := os.WriteFile(path, []byte(value), mode); err != nil {
+		return fmt.Errorf("sysctl %s: %w", key, err)
 	}
 
 	return nil

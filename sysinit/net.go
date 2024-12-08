@@ -4,33 +4,14 @@
 
 package sysinit
 
-import (
-	"fmt"
-
-	"golang.org/x/sys/unix"
-)
-
 // ConfigureLoopbackInterface brings the loopback interface up.
 //
-// Kernel should configure address already automatically.
+// Kernel configures addresses automatically.
 func ConfigureLoopbackInterface() error {
-	// Any socket can be used for sending ioctls.
-	sock, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
-	if err != nil {
-		return fmt.Errorf("create control socket: %w", err)
-	}
+	return SetInterfaceUp("lo")
+}
 
-	ifReq, err := unix.NewIfreq("lo")
-	if err != nil {
-		return fmt.Errorf("new request: %w", err)
-	}
-
-	ifReq.SetUint16(unix.IFF_UP)
-
-	err = unix.IoctlIfreq(sock, unix.SIOCSIFFLAGS, ifReq)
-	if err != nil {
-		return fmt.Errorf("ioctl: %w", err)
-	}
-
-	return nil
+// SetInterfaceUp brings the interface with the given name up.
+func SetInterfaceUp(name string) error {
+	return setInterfaceUp(name)
 }

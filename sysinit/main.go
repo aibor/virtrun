@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 )
 
 // ErrNotPidOne may be returned if the process is expected to be run as PID 1
@@ -78,73 +77,81 @@ func DefaultConfig() Config {
 	}
 }
 
-// Run is the entry point for an actual init system. It prepares the system
-// to be used. Preparing steps are:
+// Main is the entry point for an actual init system.
+//
+// It sets up the system and ensures proper shut down. Preparation steps are:
 // - Guarding itself to be actually PID 1.
-// - Setup system poweroff on its exit.
+// - Setup system poweroff (on function termination!).
+// - Load additional kernel modules.
 // - Mount all known virtual system file systems.
+// - Add well known symlinks in /dev.
+// - Bring loopback interface up.
+// - Set environment variables.
 //
-// Once this is done, the given function is run. The function must not call
-// [os.Exit] itself since the program would not be able to ensure a correct
-// system termination.
+// Once this is done, the given function is run. The function must not
+// terminate the process itself (by calling [os.Exit] or panicking)! Otherwise
+// the proper system termination is missing and the system will panic due to
+// the init program terminating unexpectedly.
 //
-// After that, an exit code is sent to stdout for consumption by the host
-// process. The exit code returned by the function is used, unless it returned
-// with an error. If the error is an [exec.ExitError], it is parsed and its
-// exit code is used. Otherwise the exit code is 127 in case it was never set
-// or 126 in case there was an error.
-func Run(cfg Config, fn func() (int, error)) error { //nolint:cyclop
-	if !IsPidOne() {
-		return ErrNotPidOne
-	}
+// The proper termination by this function includes communicating its exit code
+// via stdout for consumption by the host process. The exit code returned by
+// the given function is used, unless it returned with an error. It is ensured
+// that in case of any error a noon-zero exit code is sent (-1).
+func Main(cfg Config, fn func() (int, error)) {
+	exitCode, err := main(cfg, fn)
+	if err != nil {
+		// Always print the error before printing the exit code, since
+		// output processing stops once exit code line is found and we want
+		// to make sure the error can be seen by the user.
+		PrintError(os.Stderr, err)
 
-	// From here on we can assume we are a system's init program. Termination
-	// will lead to system shutdown, or kernel panic, if we do not shutdown
-	// correctly.
-	defer Poweroff()
-
-	var (
-		// Set fall through exit code to non zero value, so it must be set to
-		// zero explicitly by the callers function later.
-		exitCode    = 127 // Fall through exit code.
-		errExitCode = 126 // Exit code that is used in case of errors.
-		err         error
-		exitErr     *exec.ExitError
-	)
-
-	// Setup the error and exit code printing so it is always printed. In
-	// case of setup errors, the failure is communicated properly as well.
-	defer func() {
-		if err != nil {
-			// Always print the error before printing the exit code, since
-			// output processing stops once exit code line is found and we want
-			// to make sure the error can be seen by the user.
-			PrintError(os.Stderr, err)
-			// Always return a non zero exit code in case of error.
-			exitCode = errExitCode
+		// Always return a non zero exit code in case of error.
+		if exitCode == 0 {
+			exitCode = -1
 		}
 
-		PrintExitCode(os.Stdout, exitCode)
-	}()
+		// If this is not the init system, exit the process without shutting
+		// down the system.
+		if errors.Is(err, ErrNotPidOne) {
+			os.Exit(exitCode)
+		}
+	}
+
+	PrintExitCode(os.Stdout, exitCode)
+	Poweroff()
+}
+
+func main(cfg Config, fn func() (int, error)) (int, error) {
+	if !IsPidOne() {
+		return -2, ErrNotPidOne
+	}
 
 	// Setup the system.
+	if err := setup(cfg); err != nil {
+		return -1, err
+	}
+
+	return fn()
+}
+
+func setup(cfg Config) error {
 	if cfg.ModulesDir != "" {
-		if err = LoadModules(cfg.ModulesDir); err != nil {
+		if err := LoadModules(cfg.ModulesDir); err != nil {
 			return err
 		}
 	}
 
 	if cfg.ConfigureLoopback {
-		if err = ConfigureLoopbackInterface(); err != nil {
+		if err := ConfigureLoopbackInterface(); err != nil {
 			return err
 		}
 	}
 
-	if err = MountAll(cfg.MountPoints); err != nil {
+	if err := MountAll(cfg.MountPoints); err != nil {
 		return err
 	}
 
-	if err = CreateSymlinks(cfg.Symlinks); err != nil {
+	if err := CreateSymlinks(cfg.Symlinks); err != nil {
 		return err
 	}
 
@@ -154,13 +161,5 @@ func Run(cfg Config, fn func() (int, error)) error { //nolint:cyclop
 		}
 	}
 
-	// Run callers function. The returned exit code is irrelevant if any error
-	// is returned, because the deferred error handling will override it.
-	exitCode, err = fn()
-	if errors.As(err, &exitErr) {
-		exitCode = exitErr.ExitCode()
-		err = nil
-	}
-
-	return err
+	return nil
 }

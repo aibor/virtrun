@@ -5,8 +5,6 @@
 package sysinit
 
 import (
-	"errors"
-	"os"
 	"testing"
 )
 
@@ -17,16 +15,7 @@ import (
 // PID 1, since the intention of this library is to run test binaries in an
 // isolated system.
 func RunTests(m *testing.M, cfg Config) {
-	err := Run(cfg, func() (int, error) {
+	Main(cfg, func() (int, error) {
 		return m.Run(), nil
 	})
-
-	exitCode := 126
-	if errors.Is(err, ErrNotPidOne) {
-		exitCode = 127
-	}
-
-	PrintError(os.Stderr, err)
-
-	os.Exit(exitCode)
 }

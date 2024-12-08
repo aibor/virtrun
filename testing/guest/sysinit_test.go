@@ -53,7 +53,7 @@ func TestNotPidOne(t *testing.T) {
 	require.Error(t, cmd.Wait(), "command should have exited with error")
 
 	if assert.NotNil(t, cmd.ProcessState, "process state should be present") {
-		assert.Equal(t, 127, cmd.ProcessState.ExitCode(), "exit code should be as expected")
+		assert.Equal(t, int8(-2), int8(cmd.ProcessState.ExitCode()), "exit code should be as expected")
 	}
 }
 

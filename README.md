@@ -184,14 +184,14 @@ the system.
 The sub-package [sysinit](https://pkg.go.dev/github.com/aibor/virtrun/sysinit)
 provides helper functions for the necessary tasks.
 
-A simple init can be built using `sysinit.Run` which is a wrapper for those
+A simple init can be built using `sysinit.Main` which is a wrapper for those
 essential tasks. For an example, see the
 [simple init program](internal/virtrun/init/main.go) that is used in the
 default wrapped mode.
 
 For go test binaries `sysinit.RunTests` can be used in a custom `TestMain`
 function if you need to do any additional set up for your test run. It is just
-a wrapper for `sysinit.Run` around `testing.M.Run`.
+a wrapper for `sysinit.Main` around `testing.M.Run`.
 
 ```go
 package some_test
@@ -211,7 +211,7 @@ See the [testing/guest](testing/guest) directory for a working example.
 
 Instead of using `sysinit.RunTests` you can call the various parts
 individually, of course. Like just mounting the file systems you need or
-additional ones. See `sysinit.Run` for the steps it does.
+additional ones. See `sysinit.Main` for the steps it does.
 
 ## Internals
 

@@ -8,6 +8,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -21,23 +22,24 @@ func main() {
 	// are written to by virtrun.
 	cfg.Env["PATH"] = "/data"
 
-	err := sysinit.Run(cfg, func() (int, error) {
+	sysinit.Main(cfg, func() (int, error) {
 		// "/main" is the file virtrun copies the given binary to.
 		cmd := exec.Command("/main", os.Args[1:]...)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-		return 0, cmd.Run()
-	})
-	if err != nil {
-		exitCode := 126
-		if errors.Is(err, sysinit.ErrNotPidOne) {
-			exitCode = 127
+		var exitErr *exec.ExitError
+
+		err := cmd.Run()
+		if err != nil {
+			if errors.As(err, &exitErr) {
+				return exitErr.ExitCode(), nil
+			}
+
+			return -1, fmt.Errorf("main: %w", err)
 		}
 
-		sysinit.PrintError(os.Stderr, err)
-
-		os.Exit(exitCode)
-	}
+		return 0, nil
+	})
 }

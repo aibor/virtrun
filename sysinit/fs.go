@@ -43,13 +43,6 @@ type MountOptions struct {
 	MayFail bool
 }
 
-// MountPoints is a collection of MountPoints.
-type MountPoints map[string]MountOptions
-
-// Symlinks is a collection of symbolic links. Keys are symbolic links to
-// create with the value being the target to link to.
-type Symlinks map[string]string
-
 // Mount mounts the system file system of [FSType] at the given path.
 //
 // If path does not exist, it is created. An error is returned if this or the
@@ -62,6 +55,9 @@ func Mount(path string, fsType FSType) error {
 
 	return mount(path, "", string(fsType), 0, "")
 }
+
+// MountPoints is a collection of MountPoints.
+type MountPoints map[string]MountOptions
 
 // MountAll mounts the given set of system file systems.
 //
@@ -81,6 +77,10 @@ func MountAll(mountPoints MountPoints) error {
 
 	return nil
 }
+
+// Symlinks is a collection of symbolic links. Keys are symbolic links to
+// create with the value being the target to link to.
+type Symlinks map[string]string
 
 // CreateSymlinks creates common symbolic links in the file system.
 //

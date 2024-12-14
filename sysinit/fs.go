@@ -5,8 +5,10 @@
 package sysinit
 
 import (
+	"cmp"
 	"fmt"
 	"io/fs"
+	"iter"
 	"maps"
 	"os"
 	"path/filepath"
@@ -79,9 +81,7 @@ type MountPoints map[string]MountOptions
 //
 // The mounts are executed in lexicographic order of the paths.
 func MountAll(mountPoints MountPoints) error {
-	sortedPaths := slices.Sorted(maps.Keys(mountPoints))
-	for _, path := range sortedPaths {
-		opts := mountPoints[path]
+	for path, opts := range sortedByKeys(mountPoints) {
 		if err := Mount(path, opts); err != nil {
 			if !opts.MayFail {
 				return err
@@ -134,4 +134,16 @@ func ListRegularFiles(dir string) ([]string, error) {
 	}
 
 	return files, nil
+}
+
+// sortedByKeys returns an iterator that iterates the given map in
+// lexicographic order of the keys.
+func sortedByKeys[K cmp.Ordered, V any](m map[K]V) iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		for _, key := range slices.Sorted(maps.Keys(m)) {
+			if !yield(key, m[key]) {
+				return
+			}
+		}
+	}
 }

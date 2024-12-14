@@ -88,3 +88,23 @@ func sysctl(key, value string) error {
 
 	return nil
 }
+
+func getpid() int {
+	return unix.Getpid()
+}
+
+func getppid() int {
+	return unix.Getppid()
+}
+
+func exit(code int) {
+	unix.Exit(code)
+}
+
+func setenv(key, value string) error {
+	if err := unix.Setenv(key, value); err != nil {
+		return fmt.Errorf("setenv %s: %w", key, err)
+	}
+
+	return nil
+}

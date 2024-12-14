@@ -6,8 +6,6 @@ package sysinit
 
 import (
 	"errors"
-	"fmt"
-	"os"
 )
 
 // ErrNotPidOne may be returned if the process is expected to be run as PID 1
@@ -16,13 +14,13 @@ var ErrNotPidOne = errors.New("process does not have ID 1")
 
 // IsPidOne returns true if the running process has PID 1.
 func IsPidOne() bool {
-	return os.Getpid() == 1
+	return getpid() == 1
 }
 
 // IsPidOneChild returns true if the running process is a child of the process
 // with PID 1.
 func IsPidOneChild() bool {
-	return os.Getppid() == 1
+	return getppid() == 1
 }
 
 // Poweroff shuts down the system.
@@ -126,7 +124,7 @@ func Main(cfg Config, fn func() (int, error)) {
 		// If this is not the init system, exit the process without shutting
 		// down the system.
 		if errors.Is(err, ErrNotPidOne) {
-			os.Exit(exitCode)
+			exit(exitCode)
 		}
 	}
 
@@ -169,8 +167,8 @@ func setup(cfg Config) error {
 	}
 
 	for key, value := range cfg.Env {
-		if err := os.Setenv(key, value); err != nil {
-			return fmt.Errorf("set env var %s: %w", key, err)
+		if err := setenv(key, value); err != nil {
+			return err
 		}
 	}
 

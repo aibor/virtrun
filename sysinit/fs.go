@@ -60,7 +60,7 @@ func Mount(path string, fsType FSType) error {
 		return fmt.Errorf("mkdir %s: %w", path, err)
 	}
 
-	return mount(path, "", string(fsType))
+	return mount(path, "", string(fsType), 0, "")
 }
 
 // MountAll mounts the given set of system file systems.

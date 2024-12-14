@@ -12,16 +12,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type finitFlags int
+type MountFlags int
 
-const finitFlagCompressedFile finitFlags = unix.MODULE_INIT_COMPRESSED_FILE
-
-func mount(path, source, fsType string) error {
+func mount(path, source, fsType string, flags MountFlags, data string) error {
 	if source == "" {
 		source = fsType
 	}
 
-	if err := unix.Mount(source, path, fsType, 0, ""); err != nil {
+	if err := unix.Mount(source, path, fsType, uintptr(flags), data); err != nil {
 		return fmt.Errorf("mount %s: %w", path, err)
 	}
 
@@ -35,6 +33,10 @@ func initModule(data []byte, params string) error {
 
 	return nil
 }
+
+type finitFlags int
+
+const finitFlagCompressedFile finitFlags = unix.MODULE_INIT_COMPRESSED_FILE
 
 func finitModule(fd int, params string, flags finitFlags) error {
 	if err := unix.FinitModule(fd, params, int(flags)); err != nil {

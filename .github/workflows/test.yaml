@@ -52,7 +52,7 @@ jobs:
     name: Run integration tests
     runs-on: ubuntu-latest
     container:
-      image: alpine:3.20
+      image: alpine:3.21
     needs:
       - lint-and-test
     strategy:
@@ -107,7 +107,7 @@ jobs:
     name: Run integration tests for kernel modules
     runs-on: ubuntu-latest
     container: 
-      image: alpine:3.20
+      image: alpine:3.21
     needs:
       - lint-and-test
     env:

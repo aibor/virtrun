@@ -7,9 +7,9 @@
 package main_test
 
 import (
+	"bufio"
 	"context"
 	"flag"
-	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -23,23 +23,36 @@ import (
 )
 
 func TestMountPoints(t *testing.T) {
-	mountPoints := []string{
-		"/dev",
-		"/proc",
-		"/run",
-		"/sys",
-		"/sys/fs/bpf",
-		"/sys/kernel/tracing",
-		"/tmp",
+	mounts := map[string]string{
+		"/dev":                "devtmpfs",
+		"/dev/shm":            "tmpfs",
+		"/proc":               "proc",
+		"/run":                "tmpfs",
+		"/sys":                "sysfs",
+		"/sys/fs/bpf":         "bpf",
+		"/sys/kernel/debug":   "debugfs",
+		"/sys/kernel/tracing": "tracefs",
+		"/tmp":                "tmpfs",
 	}
 
-	mounts, err := os.ReadFile("/proc/mounts")
-	require.NoError(t, err, "must read mounts file")
-	t.Log("\n", string(mounts))
+	mountsFile, err := os.Open("/proc/mounts")
+	require.NoError(t, err, "must open mounts file")
+	defer mountsFile.Close()
 
-	for _, mp := range mountPoints {
-		t.Run(mp, func(t *testing.T) {
-			assert.Contains(t, string(mounts), fmt.Sprintf(" %s ", mp))
+	actual := map[string]string{}
+
+	scanner := bufio.NewScanner(mountsFile)
+	for scanner.Scan() {
+		columns := strings.Split(scanner.Text(), " ")
+		actual[columns[1]] = columns[2]
+	}
+	require.NoError(t, scanner.Err(), "must read mounts file")
+
+	for path, fsType := range mounts {
+		t.Run(strings.ReplaceAll(path, "/", "_"), func(t *testing.T) {
+			if assert.Contains(t, actual, path, "path should exist") {
+				assert.Equal(t, fsType, actual[path], "type should match")
+			}
 		})
 	}
 }
@@ -91,7 +104,7 @@ func TestCommonSymlinks(t *testing.T) {
 	}
 
 	for link, expectedTarget := range symlinks {
-		t.Run(link, func(t *testing.T) {
+		t.Run(strings.ReplaceAll(link, "/", "_"), func(t *testing.T) {
 			target, err := os.Readlink(link)
 			require.NoError(t, err, "link must be readable")
 			assert.Equal(t, expectedTarget, target, "link target should be as expected")

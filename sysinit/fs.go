@@ -16,14 +16,23 @@ import (
 // FSType is a file system type.
 type FSType string
 
-// Special essential file system types.
+// Special file system types.
 const (
-	FSTypeDevTmp  FSType = "devtmpfs"
-	FSTypeProc    FSType = "proc"
-	FSTypeSys     FSType = "sysfs"
-	FSTypeTmp     FSType = "tmpfs"
-	FSTypeBpf     FSType = "bpf"
-	FSTypeTracing FSType = "tracefs"
+	FSTypeBpf      FSType = "bpf"
+	FSTypeCgroup2  FSType = "cgroup2"
+	FSTypeConfig   FSType = "configfs"
+	FSTypeDebug    FSType = "debugfs"
+	FSTypeDevPts   FSType = "devpts"
+	FSTypeDevTmp   FSType = "devtmpfs"
+	FSTypeFuseCtl  FSType = "fusectl"
+	FSTypeHugeTlb  FSType = "hugetlbfs"
+	FSTypeMqueue   FSType = "mqueue"
+	FSTypeProc     FSType = "proc"
+	FSTypePstore   FSType = "pstore"
+	FSTypeSecurity FSType = "securityfs"
+	FSTypeSys      FSType = "sysfs"
+	FSTypeTmp      FSType = "tmpfs"
+	FSTypeTracing  FSType = "tracefs"
 
 	defaultDirMode = 0o755
 )

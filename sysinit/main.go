@@ -36,7 +36,7 @@ func Poweroff() {
 	// Use restart instead of poweroff for shutting down the system since it
 	// does not require ACPI. The guest system should be started with noreboot.
 	if err := reboot(); err != nil {
-		PrintError(os.Stderr, err)
+		PrintError(err)
 	}
 }
 
@@ -116,7 +116,7 @@ func Main(cfg Config, fn func() (int, error)) {
 		// Always print the error before printing the exit code, since
 		// output processing stops once exit code line is found and we want
 		// to make sure the error can be seen by the user.
-		PrintError(os.Stderr, err)
+		PrintError(err)
 
 		// Always return a non zero exit code in case of error.
 		if exitCode == 0 {
@@ -130,7 +130,7 @@ func Main(cfg Config, fn func() (int, error)) {
 		}
 	}
 
-	PrintExitCode(os.Stdout, exitCode)
+	PrintExitCode(exitCode)
 	Poweroff()
 }
 

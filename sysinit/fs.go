@@ -37,9 +37,25 @@ const (
 	defaultDirMode = 0o755
 )
 
-// MountOptions is a single mount point for a virtual system FS.
+// MountOptions contains parameters for a mount point.
 type MountOptions struct {
-	FSType  FSType
+	// FSType is the files system type. It must be set to an available [FSType].
+	FSType FSType
+
+	// Source is the source device to mount. Can be empty for all the special
+	// file system types [FSType]s. If empty it is set to the string of the
+	// type.
+	Source string
+
+	// Flags are optional mount flags as defined by mount(2).
+	Flags MountFlags
+
+	// Data are optional additional parameters that depend of the [FSType] used.
+	Data string
+
+	// MayFail determines if the mount operation may fail. If set to true, a
+	// mount error does not fail a [MountAll] operation. Instead, a warning is
+	// printed to stdout and the next mount point is tried.
 	MayFail bool
 }
 
@@ -47,13 +63,13 @@ type MountOptions struct {
 //
 // If path does not exist, it is created. An error is returned if this or the
 // mount syscall fails.
-func Mount(path string, fsType FSType) error {
+func Mount(path string, opts MountOptions) error {
 	err := os.MkdirAll(path, defaultDirMode)
 	if err != nil {
 		return fmt.Errorf("mkdir %s: %w", path, err)
 	}
 
-	return mount(path, "", string(fsType), 0, "")
+	return mount(path, opts.Source, string(opts.FSType), opts.Flags, opts.Data)
 }
 
 // MountPoints is a collection of MountPoints.
@@ -66,7 +82,7 @@ func MountAll(mountPoints MountPoints) error {
 	sortedPaths := slices.Sorted(maps.Keys(mountPoints))
 	for _, path := range sortedPaths {
 		opts := mountPoints[path]
-		if err := Mount(path, opts.FSType); err != nil {
+		if err := Mount(path, opts); err != nil {
 			if !opts.MayFail {
 				return err
 			}

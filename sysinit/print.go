@@ -28,3 +28,8 @@ func PrintExitCode(exitCode int) {
 func PrintError(err error) {
 	_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 }
+
+// PrintWarning prints the given error as warning to os.Stderr).
+func PrintWarning(err error) {
+	_, _ = fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+}

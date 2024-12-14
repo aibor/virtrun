@@ -70,8 +70,12 @@ func MountAll(mountPoints MountPoints) error {
 	sortedPaths := slices.Sorted(maps.Keys(mountPoints))
 	for _, path := range sortedPaths {
 		opts := mountPoints[path]
-		if err := Mount(path, opts.FSType); err != nil && !opts.MayFail {
-			return err
+		if err := Mount(path, opts.FSType); err != nil {
+			if !opts.MayFail {
+				return err
+			}
+
+			PrintWarning(err)
 		}
 	}
 

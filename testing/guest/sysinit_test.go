@@ -46,6 +46,7 @@ func TestMountPoints(t *testing.T) {
 		columns := strings.Split(scanner.Text(), " ")
 		actual[columns[1]] = columns[2]
 	}
+
 	require.NoError(t, scanner.Err(), "must read mounts file")
 
 	for path, fsType := range mounts {
@@ -66,7 +67,8 @@ func TestNotPidOne(t *testing.T) {
 	require.Error(t, cmd.Wait(), "command should have exited with error")
 
 	if assert.NotNil(t, cmd.ProcessState, "process state should be present") {
-		assert.Equal(t, int8(-2), int8(cmd.ProcessState.ExitCode()), "exit code should be as expected")
+		actual := cmd.ProcessState.ExitCode()
+		assert.Equal(t, 254, actual, "exit code should be as expected")
 	}
 }
 
@@ -112,6 +114,7 @@ func TestCommonSymlinks(t *testing.T) {
 	}
 }
 
+//nolint:gochecknoglobals
 var testModules = flag.String("testModules", "", "module names to test")
 
 func TestModules(t *testing.T) {
@@ -124,6 +127,7 @@ func TestModules(t *testing.T) {
 	}
 
 	actual := []string{}
+
 	for _, line := range strings.Split(string(modules), "\n") {
 		if line == "" {
 			continue
@@ -138,6 +142,7 @@ func TestModules(t *testing.T) {
 	assert.ElementsMatch(t, actual, expected)
 }
 
+//nolint:gochecknoglobals
 var testCPUs = flag.Int("cpus", 0, "cpus to expect")
 
 func TestCPUs(t *testing.T) {

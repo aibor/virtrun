@@ -36,7 +36,7 @@ func Poweroff() {
 	// Use restart instead of poweroff for shutting down the system since it
 	// does not require ACPI. The guest system should be started with noreboot.
 	if err := reboot(); err != nil {
-		fmt.Fprintf(os.Stderr, "error calling power off: %v\n", err)
+		PrintError(os.Stderr, err)
 	}
 }
 

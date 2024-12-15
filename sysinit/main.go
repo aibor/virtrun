@@ -43,11 +43,25 @@ type EnvVars map[string]string
 
 // Config defines basic system configuration.
 type Config struct {
-	MountPoints       MountPoints
-	Symlinks          Symlinks
-	Env               EnvVars
+	// MountPoints defines the special file systems that are mounted on init.
+	// [MountPoint]s that have the MayFail flag set just produce a warning
+	// instead of failing the process.
+	MountPoints MountPoints
+
+	// Symlinks is a set of symbolic links that are created on init.
+	Symlinks Symlinks
+
+	// Env is a set of environment variables that are added to the process's
+	// environment.
+	Env EnvVars
+
+	// ConfigureLoopback determines if the loopback interface is brought up on
+	// init.
 	ConfigureLoopback bool
-	ModulesDir        string
+
+	// ModulesDir defines the directory that contains kernel modules. They are
+	// load on init automatically.
+	ModulesDir string
 }
 
 // DefaultConfig creates a new default config.

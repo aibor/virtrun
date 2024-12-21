@@ -145,17 +145,30 @@ func (c *CommandSpec) arguments() []Argument {
 		args = append(args, UniqueArg("enable-kvm", ""))
 	}
 
-	addConsoleArgs := consoleArgsFunc(c.TransportType)
+	sharedDevices := map[TransportType]string{
+		TransportTypePCI:  "virtio-serial-pci,max_ports=8",
+		TransportTypeMMIO: "virtio-serial-device,max_ports=8",
+	}
+	if value, exists := sharedDevices[c.TransportType]; exists {
+		args = append(args, RepeatableArg("device", value))
+	}
 
 	// Add stdout console.
-	args = append(args, addConsoleArgs("stdio")...)
+	args = c.appendConsoleArgs(args, console{
+		id:      "stdio",
+		backend: "stdio",
+	})
 
 	// Write console output to file descriptors. Those are provided by the
 	// [exec.Cmd.ExtraFiles].
 	for idx := range c.AdditionalConsoles {
 		// FDs 0, 1, 2 are standard in, out, err, so start at 3.
 		path := fdPath(minAdditionalFileDescriptor + idx)
-		args = append(args, addConsoleArgs("file", "path="+path)...)
+		args = c.appendConsoleArgs(args, console{
+			id:      fmt.Sprintf("con%d", idx),
+			backend: "file",
+			opts:    []string{"path=" + path},
+		})
 	}
 
 	args = append(args,
@@ -204,6 +217,39 @@ func (c *CommandSpec) kernelCmdlineArgs() []string {
 	}
 
 	return cmdline
+}
+
+type console struct {
+	id      string
+	backend string
+	opts    []string
+}
+
+func (c *CommandSpec) appendConsoleArgs(
+	args []Argument,
+	console console,
+) []Argument {
+	var devArg Argument
+
+	switch c.TransportType {
+	case TransportTypeISA:
+		devArg = RepeatableArg("serial", "chardev:"+console.id)
+	case TransportTypePCI, TransportTypeMMIO:
+		devArg = RepeatableArg("device", "virtconsole,chardev="+console.id)
+	default: // Ignore invalid transport types.
+		return args
+	}
+
+	chardevOpts := []string{console.backend, "id=" + console.id}
+	chardevOpts = append(chardevOpts, console.opts...)
+
+	chardevArg := RepeatableArg("chardev", strings.Join(chardevOpts, ","))
+
+	return append(args, chardevArg, devArg)
+}
+
+func fdPath(fd int) string {
+	return fmt.Sprintf("/dev/fd/%d", fd)
 }
 
 type Command struct {

@@ -275,23 +275,12 @@ func (c *Command) stdoutProcessor(dst io.Writer) (*consoleProcessor, error) {
 	return processor, nil
 }
 
-// consoleProcessor opens the console output file at path and returns the
-// processor function that cleans the output from carriage returns.
-func (c *Command) consoleProcessor(path string) (*consoleProcessor, error) {
-	f, err := os.Create(path)
-	if err != nil {
-		return nil, fmt.Errorf("open console output: %w", err)
-	}
-
+func (c *Command) addPipeConsoleProcessor(
+	dst io.Writer,
+) (*consoleProcessor, error) {
 	readPipe, writePipe, err := os.Pipe()
 	if err != nil {
-		_ = f.Close()
 		return nil, fmt.Errorf("pipe: %w", err)
-	}
-
-	processor := &consoleProcessor{
-		dst: f,
-		src: readPipe,
 	}
 
 	// Append the write end of the console processor pipe as extra file, so it
@@ -300,7 +289,12 @@ func (c *Command) consoleProcessor(path string) (*consoleProcessor, error) {
 	// read end of the pipe, cleans the output and writes it into the actual
 	// target file on the host.
 	c.cmd.ExtraFiles = append(c.cmd.ExtraFiles, writePipe)
-	c.closer = append(c.closer, f, writePipe)
+	c.closer = append(c.closer, writePipe)
+
+	processor := &consoleProcessor{
+		dst: dst,
+		src: readPipe,
+	}
 
 	return processor, nil
 }
@@ -325,7 +319,14 @@ func (c *Command) Run(stdin io.Reader, stdout, stderr io.Writer) error {
 	var processors errgroup.Group
 
 	for _, path := range c.consoleOutput {
-		processor, err := c.consoleProcessor(path)
+		dst, err := os.Create(path)
+		if err != nil {
+			return fmt.Errorf("output file: %w", err)
+		}
+
+		c.closer = append(c.closer, dst)
+
+		processor, err := c.addPipeConsoleProcessor(dst)
 		if err != nil {
 			return err
 		}

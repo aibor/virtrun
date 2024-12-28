@@ -173,10 +173,10 @@ func buildInitramFS(
 	return irfs, nil
 }
 
-// writeFSToTempFile writes the [fs.FS] as CPIO archive into a temporary file
-// and returns the absolute path to this file.
+// writeFSToTempFile writes the [fs.FS] as CPIO archive into a new temporary
+// file and returns the absolute path to this file.
 //
-// If the given dir is not empty, th efile is create din this directory.
+// If the given dir name is not empty, the file is created in this directory.
 // Otherwise the default tempdir is used. See [os.CreateTemp].
 func writeFSToTempFile(fsys fs.FS, dir string) (string, error) {
 	file, err := os.CreateTemp(dir, "initramfs")

@@ -9,9 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -253,16 +253,15 @@ func fdPath(fd int) string {
 }
 
 type Command struct {
-	cmd          *exec.Cmd
+	name         string
+	args         []string
 	stdoutParser stdoutParser
 
 	consoleOutput []string
-
-	closer []io.Closer
 }
 
 // NewCommand builds the final [Command] with the given [CommandSpec].
-func NewCommand(ctx context.Context, spec CommandSpec) (*Command, error) {
+func NewCommand(spec CommandSpec) (*Command, error) {
 	// Do some simple input validation to catch most obvious issues.
 	err := spec.Validate()
 	if err != nil {
@@ -279,7 +278,8 @@ func NewCommand(ctx context.Context, spec CommandSpec) (*Command, error) {
 	}
 
 	cmd := &Command{
-		cmd:           exec.CommandContext(ctx, spec.Executable, cmdArgs...),
+		name:          spec.Executable,
+		args:          cmdArgs,
 		consoleOutput: spec.AdditionalConsoles,
 		stdoutParser: stdoutParser{
 			ExitCodeFmt: spec.ExitCodeFmt,
@@ -287,71 +287,16 @@ func NewCommand(ctx context.Context, spec CommandSpec) (*Command, error) {
 		},
 	}
 
-	// The default cancel function set by [exec.CommandContext] sends SIGKILL
-	// to the process. This makes it impossible for QEMU to shutdown gracefully
-	// which messes up terminal stdio and leaves the terminal in a broken state.
-	cmd.cmd.Cancel = func() error {
-		return cmd.cmd.Process.Signal(os.Interrupt)
-	}
-
 	return cmd, nil
 }
 
 // String prints the human readable string representation of the command.
-//
-// It just wraps [exec.Command.String].
 func (c *Command) String() string {
-	return c.cmd.String()
+	elems := append([]string{c.name}, c.args...)
+	return strings.Join(elems, " ")
 }
 
-// stdoutProcessor creates a new [consoleProcessor] with the command's
-// [stdoutParser].
-func (c *Command) stdoutProcessor(dst io.Writer) (*consoleProcessor, error) {
-	outPipe, err := c.cmd.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf("stdout pipe: %w", err)
-	}
-
-	processor := &consoleProcessor{
-		dst: dst,
-		src: outPipe,
-		fn:  c.stdoutParser.Parse,
-	}
-
-	return processor, nil
-}
-
-func (c *Command) addPipeConsoleProcessor(
-	dst io.Writer,
-) (*consoleProcessor, error) {
-	readPipe, writePipe, err := os.Pipe()
-	if err != nil {
-		return nil, fmt.Errorf("pipe: %w", err)
-	}
-
-	// Append the write end of the console processor pipe as extra file, so it
-	// is present as additional file descriptor which can be used with the
-	// "file" backend for QEMU console devices. The processor reads from the
-	// read end of the pipe, cleans the output and writes it into the actual
-	// target file on the host.
-	c.cmd.ExtraFiles = append(c.cmd.ExtraFiles, writePipe)
-	c.closer = append(c.closer, writePipe)
-
-	processor := &consoleProcessor{
-		dst: dst,
-		src: readPipe,
-	}
-
-	return processor, nil
-}
-
-func (c *Command) close() {
-	for _, closer := range slices.Backward(c.closer) {
-		_ = closer.Close()
-	}
-}
-
-// Run the [Command].
+// Run the [Command] with the given [context.Context].
 //
 // Output processors are setup and the command is executed. Returns without
 // error only if the guest system correctly communicated exit code 0. In any
@@ -359,10 +304,29 @@ func (c *Command) close() {
 // a [CommandError] with the guest flag unset is returned. If the guest
 // returned an error or failed a [CommandError] with guest flag set is
 // returned.
-func (c *Command) Run(stdin io.Reader, stdout, stderr io.Writer) error {
-	defer c.close()
+func (c *Command) Run(
+	ctx context.Context,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
+) error {
+	outputs := []io.Closer{}
+
+	defer func() {
+		for _, closer := range outputs {
+			closeLog(closer)
+		}
+	}()
 
 	var processors errgroup.Group
+
+	cmd := exec.CommandContext(ctx, c.name, c.args...)
+
+	// The default cancel function set by [exec.CommandContext] sends SIGKILL
+	// to the process. This makes it impossible for QEMU to shutdown gracefully
+	// which messes up terminal stdio and leaves the terminal in a broken state.
+	cmd.Cancel = func() error {
+		return cmd.Process.Signal(os.Interrupt)
+	}
 
 	for _, path := range c.consoleOutput {
 		dst, err := os.Create(path)
@@ -370,25 +334,64 @@ func (c *Command) Run(stdin io.Reader, stdout, stderr io.Writer) error {
 			return fmt.Errorf("output file: %w", err)
 		}
 
-		c.closer = append(c.closer, dst)
+		outputs = append(outputs, dst)
 
-		processor, err := c.addPipeConsoleProcessor(dst)
+		readPipe, writePipe, err := os.Pipe()
 		if err != nil {
-			return err
+			return fmt.Errorf("pipe: %w", err)
+		}
+
+		// Append the write end of the console processor pipe as extra file, so it
+		// is present as additional file descriptor which can be used with the
+		// "file" backend for QEMU console devices. The processor reads from the
+		// read end of the pipe, cleans the output and writes it into the actual
+		// target file on the host.
+		cmd.ExtraFiles = append(cmd.ExtraFiles, writePipe)
+
+		processor := consoleProcessor{
+			dst: dst,
+			src: readPipe,
 		}
 
 		processors.Go(processor.run)
 	}
 
-	c.cmd.Stdin = stdin
-	c.cmd.Stderr = stderr
+	cmd.Stdin = stdin
+	cmd.Stderr = stderr
 
-	stdoutProcessor, err := c.stdoutProcessor(stdout)
+	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		return fmt.Errorf("stdout pipe: %w", err)
 	}
 
-	if err := c.cmd.Start(); err != nil {
+	stdoutProcessor := consoleProcessor{
+		dst: stdout,
+		src: outPipe,
+		fn:  c.stdoutParser.Parse,
+	}
+
+	runErr := run(cmd, stdoutProcessor)
+
+	err = processors.Wait()
+	if err != nil {
+		return fmt.Errorf("processors: %w", err)
+	}
+
+	if runErr != nil {
+		return runErr
+	}
+
+	return c.stdoutParser.GuestSuccessful()
+}
+
+func run(cmd *exec.Cmd, stdoutProcessor consoleProcessor) error {
+	defer func() {
+		for _, f := range cmd.ExtraFiles {
+			closeLog(f)
+		}
+	}()
+
+	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start: %w", err)
 	}
 
@@ -396,21 +399,20 @@ func (c *Command) Run(stdin io.Reader, stdout, stderr io.Writer) error {
 		return fmt.Errorf("stdout parser: %w", err)
 	}
 
-	if err := c.cmd.Wait(); err != nil {
+	if err := cmd.Wait(); err != nil {
 		return wrapExitError(err)
 	}
 
-	// Close all FDs so processors stop.
-	for _, f := range c.cmd.ExtraFiles {
-		_ = f.Close()
-	}
+	return nil
+}
 
-	err = processors.Wait()
-	if err != nil {
-		return fmt.Errorf("processor wait: %w", err)
+func closeLog(closer io.Closer) {
+	if err := closer.Close(); err != nil {
+		slog.Error(
+			"Failed to close qemu output listener",
+			slog.Any("error", err),
+		)
 	}
-
-	return c.stdoutParser.GuestSuccessful()
 }
 
 func wrapExitError(err error) error {

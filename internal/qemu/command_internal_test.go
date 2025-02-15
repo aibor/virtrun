@@ -5,7 +5,6 @@
 package qemu
 
 import (
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -170,9 +169,8 @@ func TestNewCommand(t *testing.T) {
 				ExitCodeFmt:        "rrr",
 			},
 			expectedCmd: &Command{
-				cmd: exec.CommandContext(
-					t.Context(),
-					"test",
+				name: "test",
+				args: []string{
 					"-kernel",
 					"-initrd",
 					"-chardev", "stdio,id=stdio",
@@ -189,7 +187,7 @@ func TestNewCommand(t *testing.T) {
 					"panic=-1",
 					"mitigations=off",
 					"initcall_blacklist=ahci_pci_driver_init",
-				),
+				},
 				stdoutParser: stdoutParser{
 					ExitCodeFmt: "rrr",
 					Verbose:     true,
@@ -202,7 +200,7 @@ func TestNewCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, err := NewCommand(t.Context(), tt.spec)
+			actual, err := NewCommand(tt.spec)
 			tt.assertErr(t, err)
 
 			if tt.expectedCmd != nil {
@@ -225,7 +223,8 @@ func TestCommand_Run(t *testing.T) {
 		{
 			name: "success no consoles",
 			cmd: Command{
-				cmd: exec.Command("echo", "rc: 0"),
+				name: "echo",
+				args: []string{"rc: 0"},
 				stdoutParser: stdoutParser{
 					ExitCodeFmt: "rc: %d",
 				},
@@ -235,7 +234,8 @@ func TestCommand_Run(t *testing.T) {
 		{
 			name: "success with consoles",
 			cmd: Command{
-				cmd: exec.Command("echo", "rc: 0"),
+				name: "echo",
+				args: []string{"rc: 0"},
 				stdoutParser: stdoutParser{
 					ExitCodeFmt: "rc: %d",
 				},
@@ -251,7 +251,8 @@ func TestCommand_Run(t *testing.T) {
 		{
 			name: "fail with consoles",
 			cmd: Command{
-				cmd: exec.Command("echo", "rc: 42"),
+				name: "echo",
+				args: []string{"rc: 42"},
 				stdoutParser: stdoutParser{
 					ExitCodeFmt: "rc: %d",
 				},
@@ -272,7 +273,7 @@ func TestCommand_Run(t *testing.T) {
 		{
 			name: "start error with consoles",
 			cmd: Command{
-				cmd: exec.Command("nonexistingprogramthatdoesnotexistanywhere"),
+				name: "nonexistingprogramthatdoesnotexistanywhere",
 				consoleOutput: []string{
 					tempDir + "/out1",
 					tempDir + "/out2",
@@ -291,7 +292,7 @@ func TestCommand_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer goleak.VerifyNone(t)
 
-			err := tt.cmd.Run(nil, nil, nil)
+			err := tt.cmd.Run(t.Context(), nil, nil, nil)
 			tt.assertErr(t, err)
 		})
 	}

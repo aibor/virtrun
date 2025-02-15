@@ -164,7 +164,7 @@ func TestIntegration(t *testing.T) {
 				spec.Qemu.TransportType = qemu.TransportTypePCI
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 			t.Cleanup(cancel)
 
 			var stdOut, stdErr bytes.Buffer

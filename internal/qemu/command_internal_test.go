@@ -5,7 +5,6 @@
 package qemu
 
 import (
-	"context"
 	"os/exec"
 	"testing"
 
@@ -172,7 +171,7 @@ func TestNewCommand(t *testing.T) {
 			},
 			expectedCmd: &Command{
 				cmd: exec.CommandContext(
-					context.Background(),
+					t.Context(),
 					"test",
 					"-kernel",
 					"-initrd",
@@ -203,7 +202,7 @@ func TestNewCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, err := NewCommand(context.Background(), tt.spec)
+			actual, err := NewCommand(t.Context(), tt.spec)
 			tt.assertErr(t, err)
 
 			if tt.expectedCmd != nil {

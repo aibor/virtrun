@@ -35,7 +35,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: "v1.62"
+          version: "v1.64"
           args: "--build-tags testing,integration,integration_guest,standalone ./..."
 
       - name: Run vet with all constraints

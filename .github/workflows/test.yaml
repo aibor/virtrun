@@ -15,7 +15,7 @@ concurrency:
 
 env:
   GOPATH: "${{ github.workspace }}/.go"
-  GOVERSION: "1.23.x"
+  GOVERSION: "1.24.x"
 
 jobs:
   lint-and-test:

@@ -24,10 +24,3 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "chore"
-
-  - package-ecosystem: "docker"
-    directory: "/testing/"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "chore"

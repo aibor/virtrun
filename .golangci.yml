@@ -64,6 +64,10 @@ issues:
     - EXC0014
 
   exclude-rules:
-    - linters:
+    - source: "^\\s+defer \\S+\\.Close()"
+      linters:
         - errcheck
-      source: "^\\s+defer \\S+\\.Close()"
+    - path: '(.+)_test\.go'
+      linters:
+        - gochecknoglobals
+        - gochecknoinits

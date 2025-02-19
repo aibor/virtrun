@@ -114,7 +114,6 @@ func TestCommonSymlinks(t *testing.T) {
 	}
 }
 
-//nolint:gochecknoglobals
 var testModules = flag.String("testModules", "", "module names to test")
 
 func TestModules(t *testing.T) {
@@ -142,7 +141,6 @@ func TestModules(t *testing.T) {
 	assert.ElementsMatch(t, actual, expected)
 }
 
-//nolint:gochecknoglobals
 var testCPUs = flag.Int("cpus", 0, "cpus to expect")
 
 func TestCPUs(t *testing.T) {

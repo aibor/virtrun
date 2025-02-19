@@ -25,14 +25,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//nolint:gochecknoglobals
 var (
 	KernelPath            = "/kernels/vmlinuz"
 	ForceTransportTypePCI bool
 	Verbose               bool
 )
 
-//nolint:gochecknoinits
 func init() {
 	flag.Var(
 		(*cmd.FilePath)(&KernelPath),

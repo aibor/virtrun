@@ -17,6 +17,32 @@ env:
   GOPATH: "${{ github.workspace }}/.go"
 
 jobs:
+  go-deps-check:
+    name: Go dependency check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
+
+      - name: Go mod tidy
+        run: go mod tidy && git diff --exit-code
+
+      - name: Go mod verify
+        run: go mod verify
+
+      - name: Install govulncheck
+        working-directory: .github/workflows
+        run: go install golang.org/x/vuln/cmd/govulncheck
+
+      - name: Run govulncheck
+        run: govulncheck -test ./...
+
   go-lint:
     name: Go lint
     runs-on: ubuntu-24.04
@@ -196,11 +222,12 @@ jobs:
     runs-on: ubuntu-24.04
     name: Test Results
     needs:
-    - go-lint
-    - go-test
-    - integration-tests
-    - integration-tests-modules
-    - reuse-lint
+      - go-deps-check
+      - go-lint
+      - go-test
+      - integration-tests
+      - integration-tests-modules
+      - reuse-lint
     steps:
     - run: exit 1
       if: |

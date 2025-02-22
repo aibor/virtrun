@@ -17,9 +17,31 @@ env:
   GOPATH: "${{ github.workspace }}/.go"
 
 jobs:
+  go-setup:
+    name: Go setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
+
+      - name: Go mod download
+        run: go mod download
+
+      - name: Go mod download tools
+        working-directory: .github/workflows
+        run: go mod download
+
   go-deps-check:
     name: Go dependency check
     runs-on: ubuntu-latest
+    needs:
+      - go-setup
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,6 +68,8 @@ jobs:
   go-lint:
     name: Go lint
     runs-on: ubuntu-24.04
+    needs:
+      - go-setup
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,6 +91,8 @@ jobs:
   go-test:
     name: Go test
     runs-on: ubuntu-24.04
+    needs:
+      - go-setup
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -103,6 +129,8 @@ jobs:
   integration-tests:
     name: Run integration tests
     runs-on: ubuntu-24.04
+    needs:
+      - go-setup
     container:
       image: alpine:3.21
     strategy:
@@ -169,7 +197,9 @@ jobs:
   integration-tests-modules:
     name: Run integration tests for kernel modules
     runs-on: ubuntu-24.04
-    container: 
+    needs:
+      - go-setup
+    container:
       image: alpine:3.21
     env:
       GOCOVERDIR: "/tmp/gocoverdir"

@@ -15,7 +15,6 @@ concurrency:
 
 env:
   GOPATH: "${{ github.workspace }}/.go"
-  GOVERSION: "1.24.x"
 
 jobs:
   lint-and-test:
@@ -28,7 +27,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "${{ env.GOVERSION }}"
+          go-version-file: go.mod
 
       - name: Run go generate
         run: go generate -tags testdata ./...
@@ -76,7 +75,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "${{ env.GOVERSION }}"
+          go-version-file: go.mod
 
       - name: Run go generate testdata
         run: go generate -tags testdata ./...
@@ -138,7 +137,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "${{ env.GOVERSION }}"
+          go-version-file: go.mod
 
       - name: Create gocoverdir
         run: mkdir -pv "${{ env.GOCOVERDIR }}"

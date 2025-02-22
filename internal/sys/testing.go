@@ -8,9 +8,6 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func AssertContainsPaths(tb testing.TB, actual, expected []string) bool {
@@ -19,15 +16,13 @@ func AssertContainsPaths(tb testing.TB, actual, expected []string) bool {
 	expectedAbs := make(map[string]string, len(expected))
 
 	for _, path := range expected {
-		abs, err := filepath.Abs(path)
-		require.NoErrorf(tb, err, "must absolute path %s", path)
+		abs := MustAbsPath(tb, path)
 
 		expectedAbs[abs] = path
 	}
 
 	for _, path := range actual {
-		abs, err := filepath.Abs(path)
-		require.NoErrorf(tb, err, "must absolute path %s", path)
+		abs := MustAbsPath(tb, path)
 
 		relPath, exists := expectedAbs[abs]
 		if !exists {
@@ -40,14 +35,21 @@ func AssertContainsPaths(tb testing.TB, actual, expected []string) bool {
 		}
 	}
 
-	return assert.Empty(tb, expected)
+	if len(expected) > 0 {
+		tb.Errorf("expected paths not present: % s", expected)
+		return false
+	}
+
+	return true
 }
 
 func MustAbsPath(tb testing.TB, path string) string {
 	tb.Helper()
 
 	abs, err := filepath.Abs(path)
-	require.NoError(tb, err)
+	if err != nil {
+		tb.Fatalf("failed to get absolute path %s: %v", path, err)
+	}
 
 	return abs
 }

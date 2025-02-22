@@ -12,6 +12,33 @@ import (
 	"go.uber.org/goleak"
 )
 
+// ArgumentValueAssertionFunc returns an [assert.ComparisonAssertionFunc] that
+// can be used to assert the value of the Argument with the given name.
+func ArgumentValueAssertionFunc(
+	name string,
+	assertion assert.ComparisonAssertionFunc,
+) assert.ComparisonAssertionFunc {
+	return func(t assert.TestingT, s, contains any, msgAndArgs ...any) bool {
+		args, ok := s.([]Argument)
+		if !ok {
+			t.Errorf("argument should be []Argument")
+			return false
+		}
+
+		for _, arg := range args {
+			if name != arg.name {
+				continue
+			}
+
+			return assertion(t, arg.value, contains, msgAndArgs...)
+		}
+
+		t.Errorf("Argument %s not found", name)
+
+		return false
+	}
+}
+
 func TestCommandSpec_Arguments(t *testing.T) {
 	tests := []struct {
 		name   string

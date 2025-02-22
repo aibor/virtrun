@@ -17,8 +17,29 @@ env:
   GOPATH: "${{ github.workspace }}/.go"
 
 jobs:
-  lint-and-test:
-    name: Go lint and test
+  go-lint:
+    name: Go lint
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run vet with all constraints
+        run: go vet -tags testing,integration,integration_guest,standalone ./...
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: "v1.64"
+          args: "--build-tags testing,integration,integration_guest,standalone ./..."
+
+  go-test:
+    name: Go test
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -31,15 +52,6 @@ jobs:
 
       - name: Run go generate
         run: go generate -tags testdata ./...
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: "v1.64"
-          args: "--build-tags testing,integration,integration_guest,standalone ./..."
-
-      - name: Run vet with all constraints
-        run: go vet -tags testing,integration,integration_guest,standalone ./...
 
       - name: Run go tests
         run: |
@@ -54,8 +66,6 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: alpine:3.21
-    needs:
-      - lint-and-test
     strategy:
       matrix:
         arch:
@@ -109,8 +119,6 @@ jobs:
     runs-on: ubuntu-24.04
     container: 
       image: alpine:3.21
-    needs:
-      - lint-and-test
     env:
       GOCOVERDIR: "/tmp/gocoverdir"
       VIRTRUN_ARGS: "-kernel /boot/vmlinuz-virt \
@@ -188,7 +196,8 @@ jobs:
     runs-on: ubuntu-24.04
     name: Test Results
     needs:
-    - lint-and-test
+    - go-lint
+    - go-test
     - integration-tests
     - integration-tests-modules
     - reuse-lint

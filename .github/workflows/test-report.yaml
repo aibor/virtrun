@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2025 Tobias Böhm <code@aibor.de>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+name: Test Report
+
+on:
+  workflow_run:
+    workflows: [ Test ]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: dorny/test-reporter@v1
+      with:
+        artifact: /test-results-(.+)/
+        name: Tests $1
+        path: 'junit-report.xml'
+        reporter: java-junit

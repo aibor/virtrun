@@ -75,9 +75,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
 
       - name: Run go generate
         run: go generate -tags testdata ./...
+
+      - name: Install go-junit-report
+        working-directory: .github/workflows
+        run: go install github.com/jstemmer/go-junit-report/v2
 
       - name: Run go tests
         run: |
@@ -85,7 +90,15 @@ jobs:
             -race \
             -cover \
             -covermode=atomic \
-            ./...
+            ./... \
+            | go-junit-report -set-exit-code > junit-report.xml
+
+      - name: Upload test output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-unit
+          path: junit-report.xml
 
   integration-tests:
     name: Run integration tests
@@ -112,6 +125,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
 
       - name: Run go generate testdata
         run: go generate -tags testdata ./...
@@ -120,6 +134,10 @@ jobs:
         env:
           GOARCH: ${{ matrix.arch.go }}
         run: go generate -tags integration ./testing/...
+
+      - name: Install go-junit-report
+        working-directory: .github/workflows
+        run: go install github.com/jstemmer/go-junit-report/v2
 
       - name: Fetch kernel files
         run: |
@@ -138,7 +156,15 @@ jobs:
             ./testing/ \
             -kernel.path "/boot/vmlinuz-virt" \
             -force-pci \
-            -verbose
+            -verbose \
+            | go-junit-report -set-exit-code > junit-report.xml
+
+      - name: Upload test output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-integration-${{ matrix.arch.go }}
+          path: junit-report.xml
 
   integration-tests-modules:
     name: Run integration tests for kernel modules
@@ -172,12 +198,17 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
 
       - name: Create gocoverdir
         run: mkdir -pv "${{ env.GOCOVERDIR }}"
 
       - name: Run go generate
         run: go generate ./...
+
+      - name: Install go-junit-report
+        working-directory: .github/workflows
+        run: go install github.com/jstemmer/go-junit-report/v2
 
       - name: Build virtrun
         run: go build -cover -covermode atomic -o /virtrun .
@@ -204,10 +235,18 @@ jobs:
             -coverprofile /tmp/cover.out \
             ./testing/guest/ \
             -testModules tun,veth \
-            -cpus 2
+            -cpus 2 \
+            | go-junit-report -set-exit-code > junit-report.xml
 
       - name: Run covdata
         run: go tool covdata percent -i "${{ env.GOCOVERDIR }}"
+
+      - name: Upload test output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-integration-with-modules-${{ matrix.arch.go }}
+          path: junit-report.xml
 
   reuse-lint:
     name: FSFE REUSE Compliance Check

@@ -11,6 +11,13 @@ updates:
     commit-message:
       prefix: "chore"
 
+  - package-ecosystem: "gomod"
+    directory: "/.github/workflows"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

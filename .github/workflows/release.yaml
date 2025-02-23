@@ -33,7 +33,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           version: nightly
-          args: release --clean
+          args: release --clean --draft
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

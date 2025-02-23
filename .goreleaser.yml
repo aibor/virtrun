@@ -51,3 +51,11 @@ nfpms:
       - apk
       - archlinux
     file_name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+changelog:
+  sort: "asc"
+  use: "github-native"
+  filters:
+    include:
+      - "^feat"
+      - "^fix"

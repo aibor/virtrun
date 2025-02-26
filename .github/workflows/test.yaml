@@ -15,6 +15,7 @@ concurrency:
 
 env:
   GOPATH: "${{ github.workspace }}/.go"
+  GOCOVERDIR: "/tmp/gocoverdir"
 
 jobs:
   go-setup:
@@ -103,6 +104,9 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: "**/go.sum"
 
+      - name: Create gocoverdir
+        run: mkdir -pv "${{ env.GOCOVERDIR }}"
+
       - name: Run go generate
         run: go generate -tags testdata ./...
 
@@ -117,6 +121,7 @@ jobs:
             -cover \
             -covermode=atomic \
             ./... \
+            -test.gocoverdir="${{ env.GOCOVERDIR }}" \
             | go-junit-report -set-exit-code > junit-report.xml
 
       - name: Upload test output
@@ -125,6 +130,14 @@ jobs:
         with:
           name: test-results-unit
           path: junit-report.xml
+          retention-days: 2
+
+      - name: Upload gocoverdir
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverdir-unit
+          path: "${{ env.GOCOVERDIR }}/*"
+          retention-days: 2
 
   integration-tests:
     name: Run integration tests
@@ -155,6 +168,9 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: "**/go.sum"
 
+      - name: Create gocoverdir
+        run: mkdir -pv "${{ env.GOCOVERDIR }}"
+
       - name: Run go generate testdata
         run: go generate -tags testdata ./...
 
@@ -179,9 +195,9 @@ jobs:
             -tags integration \
             -skip "${{ matrix.arch.skip }}" \
             -covermode atomic \
-            -coverpkg "$(go list ./internal/... | tr '\n' ,)" \
-            -coverprofile /tmp/cover.testing.out \
+            -coverpkg "$(go list ./internal/... | paste -s -d ',' -)" \
             ./testing/ \
+            -test.gocoverdir="${{ env.GOCOVERDIR }}" \
             -kernel.path "/boot/vmlinuz-virt" \
             -force-pci \
             -verbose \
@@ -193,6 +209,14 @@ jobs:
         with:
           name: test-results-integration-${{ matrix.arch.go }}
           path: junit-report.xml
+          retention-days: 2
+
+      - name: Upload gocoverdir
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverdir-integration-${{ matrix.arch.go }}
+          path: "${{ env.GOCOVERDIR }}/*"
+          retention-days: 2
 
   integration-tests-modules:
     name: Run integration tests for kernel modules
@@ -202,7 +226,6 @@ jobs:
     container:
       image: alpine:3.21
     env:
-      GOCOVERDIR: "/tmp/gocoverdir"
       VIRTRUN_ARGS: "-kernel /boot/vmlinuz-virt \
                      -addModule /lib/modules/kernel/drivers/net/tun.ko.gz \
                      -addModule /lib/modules/kernel/drivers/net/veth.ko.gz \
@@ -233,9 +256,6 @@ jobs:
       - name: Create gocoverdir
         run: mkdir -pv "${{ env.GOCOVERDIR }}"
 
-      - name: Run go generate
-        run: go generate ./...
-
       - name: Install go-junit-report
         working-directory: .github/workflows
         run: go install github.com/jstemmer/go-junit-report/v2
@@ -258,18 +278,16 @@ jobs:
           GOARCH: "${{ matrix.arch.go }}"
         run: |
           go test -v \
-            -tags integration_guest \
-            -exec "env GOCOVERDIR=${{ env.GOCOVERDIR }} /virtrun" \
+            -tags integration_guest,standalone \
+            -exec "env GOCOVERDIR=${{ env.GOCOVERDIR }} /virtrun -standalone" \
             -cover \
             -covermode atomic \
-            -coverprofile /tmp/cover.out \
+            -coverpkg github.com/aibor/virtrun/sysinit \
+            -coverprofile "${{ env.GOCOVERDIR }}/coverage-guest.txt" \
             ./testing/guest/ \
             -testModules tun,veth \
             -cpus 2 \
             | go-junit-report -set-exit-code > junit-report.xml
-
-      - name: Run covdata
-        run: go tool covdata percent -i "${{ env.GOCOVERDIR }}"
 
       - name: Upload test output
         uses: actions/upload-artifact@v4
@@ -277,6 +295,72 @@ jobs:
         with:
           name: test-results-integration-with-modules-${{ matrix.arch.go }}
           path: junit-report.xml
+          retention-days: 2
+
+      - name: Upload gocoverdir
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverdir-integration-with-modules-${{ matrix.arch.go }}
+          path: "${{ env.GOCOVERDIR }}/*"
+          retention-days: 2
+
+  go-coverage:
+    name: Go coverage
+    runs-on: ubuntu-24.04
+    needs:
+      - go-test
+      - integration-tests
+      - integration-tests-modules
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
+
+      - name: Create gocoverdir
+        run: mkdir -pv "${{ env.GOCOVERDIR }}"
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: go-coverdir-*
+          path: /tmp/artifacts
+
+      - name: Merge covdata
+        run: |
+          go tool covdata merge \
+            -i "$(find /tmp/artifacts -type d -name 'go-coverdir-*' | paste -s -d ',' -)" \
+            -o "${{ env.GOCOVERDIR }}"
+
+      - name: Output coverage percentage
+        run: go tool covdata percent -i "${{ env.GOCOVERDIR }}"
+
+      - name: Convert to text file
+        run: go tool covdata textfmt -i "${{ env.GOCOVERDIR }}" -o coverage.txt
+
+      - name: Install go-cobertura
+        working-directory: .github/workflows
+        run: go install github.com/boumenot/gocover-cobertura
+
+      - name: Run go-cobertura
+        run: gocover-cobertura -by-files < coverage.txt > coverage.xml
+
+      - name: Run go-cobertura for guest
+        run: |
+          gocover-cobertura \
+            -by-files \
+            < /tmp/artifacts/go-coverdir-integration-with-modules-amd64/coverage-guest.txt \
+            > coverage-guest.xml
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverage
+          path: coverage*
 
   reuse-lint:
     name: FSFE REUSE Compliance Check

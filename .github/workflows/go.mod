@@ -7,6 +7,7 @@ module tools
 go 1.24
 
 require (
+	github.com/boumenot/gocover-cobertura v1.3.0
 	github.com/jstemmer/go-junit-report/v2 v2.1.0
 	golang.org/x/vuln v1.1.4
 )

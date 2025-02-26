@@ -7,3 +7,4 @@
 /internal/sys/testdata/lib/
 /testing/kernels/
 /testing/bin/
+/cover.*

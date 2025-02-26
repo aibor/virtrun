@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-name: Test Report
+name: Test Reports
 
 on:
   workflow_run:
@@ -16,12 +16,31 @@ permissions:
   checks: write
 
 jobs:
-  report:
+  test-report:
+    name: Test report
     runs-on: ubuntu-latest
     steps:
-    - uses: dorny/test-reporter@v1
+    - name: Report test results
+      uses: dorny/test-reporter@v1
       with:
         artifact: /test-results-(.+)/
-        name: Tests $1
+        name: Tests results $1
         path: 'junit-report.xml'
         reporter: java-junit
+
+  coverage-report:
+    name: Coverage report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: go-coverage
+          github-token: "${{ github.token }}"
+          run-id: "${{ github.event.workflow_run.id }}"
+
+      - name: Report coverage
+        uses: 5monkeys/cobertura-action@master
+        with:
+          path: coverage*.xml
+          minimum_coverage: 75

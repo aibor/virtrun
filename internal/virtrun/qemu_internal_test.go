@@ -78,6 +78,34 @@ func TestProcessGoTestFlags(t *testing.T) {
 				"outputdir/trace.out",
 			},
 		},
+		{
+			name: "go output dir dependent flags absolute paths",
+			inputArgs: []string{
+				"-test.paniconexit0",
+				"-test.blockprofile=/tmp/block.out",
+				"-test.cpuprofile=/tmp/cpu.out",
+				"-test.memprofile=/tmp/mem.out",
+				"-test.mutexprofile=/tmp/mutex.out",
+				"-test.trace=/tmp/trace.out",
+				"-test.outputdir=outputdir",
+			},
+			expectedArgs: []string{
+				"-test.paniconexit0",
+				"-test.blockprofile=/dev/hvc1",
+				"-test.cpuprofile=/dev/hvc2",
+				"-test.memprofile=/dev/hvc3",
+				"-test.mutexprofile=/dev/hvc4",
+				"-test.trace=/dev/hvc5",
+				"-test.outputdir=/tmp",
+			},
+			expectedFiles: []string{
+				"/tmp/block.out",
+				"/tmp/cpu.out",
+				"/tmp/mem.out",
+				"/tmp/mutex.out",
+				"/tmp/trace.out",
+			},
+		},
 	}
 
 	for _, tt := range tests {

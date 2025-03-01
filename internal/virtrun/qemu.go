@@ -118,43 +118,42 @@ func NewQemuCommand(cfg Qemu, initramfsPath string) (*qemu.Command, error) {
 // separated form the flag by "=". This is the format the "go test" tool
 // invokes the test binary with.
 func rewriteGoTestFlagsPath(c *qemu.CommandSpec) {
-	// Only coverprofile has a relative path to the test pwd and can be
-	// replaced immediately. All other profile files are relative to the actual
-	// test running and need to be prefixed with -test.outputdir. So, collect
-	// them and process them afterwards when "outputdir" is found.
-	needsOutputDirPrefix := make([]int, 0)
 	outputDir := ""
 
 	for idx, posArg := range c.InitArgs {
 		splits := strings.Split(posArg, "=")
 		switch splits[0] {
-		case "-test.coverprofile":
-			splits[1] = "/dev/" + c.AddConsole(splits[1])
-			c.InitArgs[idx] = strings.Join(splits, "=")
+		case "-test.outputdir":
+			outputDir = splits[1]
+			fallthrough
+		case "-test.gocoverdir":
+			splits[1] = "/tmp"
+		}
+
+		c.InitArgs[idx] = strings.Join(splits, "=")
+	}
+
+	// Only coverprofile has a relative path to the test pwd and can be
+	// replaced immediately. All other profile files are relative to the actual
+	// test running and need to be prefixed with -test.outputdir. So, collect
+	// them and process them afterwards when "outputdir" is found.
+	for idx, posArg := range c.InitArgs {
+		splits := strings.Split(posArg, "=")
+		switch splits[0] {
 		case "-test.blockprofile",
 			"-test.cpuprofile",
 			"-test.memprofile",
 			"-test.mutexprofile",
 			"-test.trace":
-			needsOutputDirPrefix = append(needsOutputDirPrefix, idx)
-
-			continue
-		case "-test.outputdir":
-			outputDir = splits[1]
+			if !filepath.IsAbs(splits[1]) {
+				splits[1] = filepath.Join(outputDir, splits[1])
+			}
 
 			fallthrough
-		case "-test.gocoverdir":
-			splits[1] = "/tmp"
-			c.InitArgs[idx] = strings.Join(splits, "=")
+		case "-test.coverprofile":
+			splits[1] = "/dev/" + c.AddConsole(splits[1])
 		}
-	}
 
-	if outputDir != "" {
-		for _, argsIdx := range needsOutputDirPrefix {
-			splits := strings.Split(c.InitArgs[argsIdx], "=")
-			path := filepath.Join(outputDir, splits[1])
-			splits[1] = "/dev/" + c.AddConsole(path)
-			c.InitArgs[argsIdx] = strings.Join(splits, "=")
-		}
+		c.InitArgs[idx] = strings.Join(splits, "=")
 	}
 }

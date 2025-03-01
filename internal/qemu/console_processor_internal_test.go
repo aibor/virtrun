@@ -35,11 +35,16 @@ func TestConsoleProcessor_Run(t *testing.T) {
 		{
 			name:     "with crlf",
 			input:    "some first\r\nand second\r\nand third line",
-			expected: "some first\nand second\nand third line\n",
+			expected: "some first\nand second\nand third line",
 		},
 		{
 			name:     "with lf",
 			input:    "some first\nand second\nand third line",
+			expected: "some first\nand second\nand third line",
+		},
+		{
+			name:     "with trailing lf",
+			input:    "some first\nand second\nand third line\n",
 			expected: "some first\nand second\nand third line\n",
 		},
 	}

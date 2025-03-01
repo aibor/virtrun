@@ -27,7 +27,15 @@ type consoleProcessor struct {
 }
 
 func (p consoleProcessor) run() error {
+	// Collect information about reaching EOF.
+	var eofReached bool
+
 	scanner := bufio.NewScanner(p.src)
+	scanner.Split(func(data []byte, atEOF bool) (int, []byte, error) {
+		eofReached = atEOF
+		return bufio.ScanLines(data, atEOF)
+	})
+
 	for scanner.Scan() {
 		data := scanner.Bytes()
 
@@ -35,34 +43,28 @@ func (p consoleProcessor) run() error {
 			data = p.fn(data)
 		}
 
-		err := p.writeLn(data)
+		if p.dst == nil || data == nil {
+			continue
+		}
+
+		_, err := p.dst.Write(data)
 		if err != nil {
-			return err
+			return fmt.Errorf("write data: %w", err)
+		}
+
+		if eofReached {
+			break
+		}
+
+		_, err = p.dst.Write([]byte("\n"))
+		if err != nil {
+			return fmt.Errorf("write newline: %w", err)
 		}
 	}
 
 	if scanner.Err() != nil && !errors.Is(scanner.Err(), os.ErrClosed) {
 		//nolint:wrapcheck
 		return scanner.Err()
-	}
-
-	return nil
-}
-
-func (p consoleProcessor) writeLn(data []byte) error {
-	// If the there is no output writer or the passed data is nil, discard it.
-	if p.dst == nil || data == nil {
-		return nil
-	}
-
-	_, err := p.dst.Write(data)
-	if err != nil {
-		return fmt.Errorf("write data: %w", err)
-	}
-
-	_, err = p.dst.Write([]byte("\n"))
-	if err != nil {
-		return fmt.Errorf("write newline: %w", err)
 	}
 
 	return nil

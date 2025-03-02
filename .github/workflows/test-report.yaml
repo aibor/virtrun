@@ -24,7 +24,7 @@ jobs:
       uses: dorny/test-reporter@v1
       with:
         artifact: /test-results-(.+)/
-        name: Tests results $1
+        name: Test Report $1
         path: 'junit-report.xml'
         reporter: java-junit
 
@@ -42,5 +42,7 @@ jobs:
       - name: Report coverage
         uses: 5monkeys/cobertura-action@master
         with:
+          report_name: Coverage Report
           path: coverage*.xml
           minimum_coverage: 75
+          skip_covered: false

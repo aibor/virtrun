@@ -65,20 +65,23 @@ func TestIntegration(t *testing.T) {
 	tests := []struct {
 		name       string
 		bin        string
-		args       []string
-		standalone bool
+		prepare    func(spec *virtrun.Spec)
 		requireErr require.ErrorAssertionFunc
 	}{
 		{
-			name:       "return 0",
-			bin:        "bin/return",
-			args:       []string{"0"},
+			name: "return 0",
+			bin:  "bin/return",
+			prepare: func(spec *virtrun.Spec) {
+				spec.Qemu.InitArgs = []string{"0"}
+			},
 			requireErr: require.NoError,
 		},
 		{
 			name: "return 55",
 			bin:  "bin/return",
-			args: []string{"55"},
+			prepare: func(spec *virtrun.Spec) {
+				spec.Qemu.InitArgs = []string{"55"}
+			},
 			requireErr: func(t require.TestingT, err error, _ ...any) {
 				var qemuErr *qemu.CommandError
 
@@ -87,9 +90,11 @@ func TestIntegration(t *testing.T) {
 			},
 		},
 		{
-			name:       "panic",
-			bin:        "bin/panic",
-			standalone: true,
+			name: "panic",
+			bin:  "bin/panic",
+			prepare: func(spec *virtrun.Spec) {
+				spec.Initramfs.StandaloneInit = true
+			},
 			requireErr: func(t require.TestingT, err error, _ ...any) {
 				require.ErrorIs(t, err, qemu.ErrGuestPanic)
 			},
@@ -97,14 +102,16 @@ func TestIntegration(t *testing.T) {
 		{
 			name: "oom",
 			bin:  "bin/oom",
-			args: []string{"128"},
+			prepare: func(spec *virtrun.Spec) {
+				spec.Qemu.InitArgs = []string{"128"}
+			},
 			requireErr: func(t require.TestingT, err error, _ ...any) {
 				require.ErrorIs(t, err, qemu.ErrGuestOom)
 			},
 		},
 		{
-			name:       "linked",
-			bin:        "../internal/sys/testdata/bin/main",
+			name: "linked",
+			bin:  "../internal/sys/testdata/bin/main",
 			requireErr: func(t require.TestingT, err error, _ ...any) {
 				var qemuErr *qemu.CommandError
 				require.ErrorAs(t, err, &qemuErr)
@@ -114,21 +121,25 @@ func TestIntegration(t *testing.T) {
 		{
 			name: "guest test",
 			bin:  "bin/guest.test",
-			args: []string{
-				verboseFlag(),
-				"-cpus", "2",
+			prepare: func(spec *virtrun.Spec) {
+				spec.Qemu.InitArgs = []string{
+					verboseFlag(),
+					"-cpus", "2",
+				}
 			},
 			requireErr: require.NoError,
 		},
 		{
-			name:       "guest standalone test",
-			bin:        "bin/guest.standalone.test",
-			standalone: true,
-			args: []string{
-				verboseFlag(),
-				"-test.gocoverdir=/tmp/",
-				"-test.coverprofile=/tmp/cover.out",
-				"-cpus", "2",
+			name: "guest standalone test",
+			bin:  "bin/guest.standalone.test",
+			prepare: func(spec *virtrun.Spec) {
+				spec.Initramfs.StandaloneInit = true
+				spec.Qemu.InitArgs = []string{
+					verboseFlag(),
+					"-test.gocoverdir=/tmp/",
+					"-test.coverprofile=/tmp/cover.out",
+					"-cpus", "2",
+				}
 			},
 			requireErr: require.NoError,
 		},
@@ -143,17 +154,19 @@ func TestIntegration(t *testing.T) {
 
 			spec := &virtrun.Spec{
 				Qemu: virtrun.Qemu{
-					Kernel:   KernelPath,
-					Verbose:  Verbose,
-					CPU:      "max",
-					Memory:   128,
-					SMP:      2,
-					InitArgs: tt.args,
+					Kernel:  KernelPath,
+					Verbose: Verbose,
+					CPU:     "max",
+					Memory:  128,
+					SMP:     2,
 				},
 				Initramfs: virtrun.Initramfs{
-					Binary:         binary,
-					StandaloneInit: tt.standalone,
+					Binary: binary,
 				},
+			}
+
+			if tt.prepare != nil {
+				tt.prepare(spec)
 			}
 
 			if ForceTransportTypePCI {

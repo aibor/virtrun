@@ -12,6 +12,10 @@ import (
 const megaByte = 1024 * 1024
 
 func main() {
+	if os.Getppid() != 1 {
+		panic("not child of PID 1")
+	}
+
 	var grow []byte
 
 	memMB, err := strconv.Atoi(os.Args[1])

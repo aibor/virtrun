@@ -67,7 +67,6 @@ func TestIntegration(t *testing.T) {
 		bin        string
 		args       []string
 		standalone bool
-		nativeOnly bool
 		requireErr require.ErrorAssertionFunc
 	}{
 		{
@@ -106,7 +105,6 @@ func TestIntegration(t *testing.T) {
 		{
 			name:       "linked",
 			bin:        "../internal/sys/testdata/bin/main",
-			nativeOnly: true,
 			requireErr: func(t require.TestingT, err error, _ ...any) {
 				var qemuErr *qemu.CommandError
 				require.ErrorAs(t, err, &qemuErr)

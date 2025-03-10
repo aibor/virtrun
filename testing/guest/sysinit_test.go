@@ -126,14 +126,13 @@ func TestModules(t *testing.T) {
 
 	actual := []string{}
 
-	for _, line := range strings.Split(string(modules), "\n") {
-		if line == "" {
-			continue
-		}
-
-		fields := strings.Fields(line)
+	scanner := bufio.NewScanner(strings.NewReader(string(modules)))
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
 		actual = append(actual, fields[0])
 	}
+
+	require.NoError(t, scanner.Err(), "must read modules file")
 
 	t.Log("actual: ", actual)
 

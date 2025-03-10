@@ -81,13 +81,13 @@ jobs:
           go-version-file: go.mod
 
       - name: Run vet with all constraints
-        run: go vet -tags testing,integration,integration_guest,standalone ./...
+        run: go vet -tags integration ./...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: "v1.64"
-          args: "--build-tags testing,integration,integration_guest,standalone ./..."
+          args: "--build-tags integration ./..."
 
   go-test:
     name: Go test
@@ -218,8 +218,8 @@ jobs:
           path: "${{ env.GOCOVERDIR }}/*"
           retention-days: 2
 
-  integration-tests-modules:
-    name: Run integration tests for kernel modules
+  integration-tests-binary:
+    name: Run integration tests of the binary
     runs-on: ubuntu-24.04
     needs:
       - go-setup
@@ -229,7 +229,6 @@ jobs:
       VIRTRUN_ARGS: "-kernel /boot/vmlinuz-virt \
                      -addModule /lib/modules/kernel/drivers/net/tun.ko.gz \
                      -addModule /lib/modules/kernel/drivers/net/veth.ko.gz \
-                     -smp 2 \
                      -transport pci \
                      -verbose \
                      -debug"
@@ -273,33 +272,42 @@ jobs:
             lib/modules/*/kernel/drivers/net/tun.ko.gz
           ln -s /lib/modules/*/kernel /lib/modules/
 
-      - name: Run test
+      - name: Run sysinit test
         env:
           GOARCH: "${{ matrix.arch.go }}"
         run: |
           go test -v \
-            -tags integration_guest,standalone \
+            -tags integration \
             -exec "env GOCOVERDIR=${{ env.GOCOVERDIR }} /virtrun -standalone" \
             -cover \
             -covermode atomic \
-            -coverpkg github.com/aibor/virtrun/sysinit \
-            -coverprofile "${{ env.GOCOVERDIR }}/coverage-guest.txt" \
-            ./testing/guest/ \
+            -coverprofile "${{ env.GOCOVERDIR }}/coverage-sysinit.txt" \
+            ./sysinit/ \
+            | go-junit-report -set-exit-code -iocopy -out junit-report-sysinit.xml
+
+      - name: Run init test
+        env:
+          GOARCH: "${{ matrix.arch.go }}"
+        run: |
+          go test -v \
+            -tags integration \
+            -exec "env GOCOVERDIR=${{ env.GOCOVERDIR }} /virtrun" \
+            ./internal/virtrun/init/ \
             -testModules tun,veth \
-            | go-junit-report -set-exit-code -iocopy -out junit-report.xml
+            | go-junit-report -set-exit-code -iocopy -out junit-report-init.xml
 
       - name: Upload test output
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-integration-with-modules-${{ matrix.arch.go }}
-          path: junit-report.xml
+          name: test-results-integration-binary-${{ matrix.arch.go }}
+          path: junit-report*.xml
           retention-days: 2
 
       - name: Upload gocoverdir
         uses: actions/upload-artifact@v4
         with:
-          name: go-coverdir-integration-with-modules-${{ matrix.arch.go }}
+          name: go-coverdir-integration-binary-${{ matrix.arch.go }}
           path: "${{ env.GOCOVERDIR }}/*"
           retention-days: 2
 
@@ -309,7 +317,7 @@ jobs:
     needs:
       - go-test
       - integration-tests
-      - integration-tests-modules
+      - integration-tests-binary
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -348,12 +356,12 @@ jobs:
       - name: Run go-cobertura
         run: gocover-cobertura -by-files < coverage.txt > coverage.xml
 
-      - name: Run go-cobertura for guest
+      - name: Run go-cobertura for sysinit
         run: |
           gocover-cobertura \
             -by-files \
-            < /tmp/artifacts/go-coverdir-integration-with-modules-amd64/coverage-guest.txt \
-            > coverage-guest.xml
+            < /tmp/artifacts/go-coverdir-integration-binary-amd64/coverage-sysinit.txt \
+            > coverage-sysinit.xml
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
@@ -404,7 +412,7 @@ jobs:
       - go-lint
       - go-test
       - integration-tests
-      - integration-tests-modules
+      - integration-tests-binary
       - reuse-lint
       - goreleaser-lint
     steps:

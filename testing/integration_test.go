@@ -6,10 +6,6 @@
 
 //go:generate env CGO_ENABLED=0 go build -v -trimpath -buildvcs=false -o bin/ ./cmd/...
 
-//go:generate -command guesttest env CGO_ENABLED=0 go test -c -cover -covermode atomic -coverpkg github.com/aibor/virtrun/sysinit ./guest/
-//go:generate guesttest -c -tags integration_guest -o bin/guest.test
-//go:generate guesttest -c -tags integration_guest,standalone -o bin/guest.standalone.test
-
 package integration_test
 
 import (
@@ -53,14 +49,6 @@ func init() {
 
 func TestIntegration(t *testing.T) {
 	t.Parallel()
-
-	verboseFlag := func() string {
-		if Verbose {
-			return "-test.v"
-		}
-
-		return ""
-	}
 
 	tests := []struct {
 		name       string
@@ -126,29 +114,6 @@ func TestIntegration(t *testing.T) {
 				require.ErrorAs(t, err, &qemuErr)
 				require.Equal(t, 73, qemuErr.ExitCode)
 			},
-		},
-		{
-			name: "guest test",
-			bin:  "bin/guest.test",
-			prepare: func(spec *virtrun.Spec) {
-				spec.Qemu.InitArgs = []string{
-					verboseFlag(),
-				}
-			},
-			requireErr: require.NoError,
-		},
-		{
-			name: "guest standalone test",
-			bin:  "bin/guest.standalone.test",
-			prepare: func(spec *virtrun.Spec) {
-				spec.Initramfs.StandaloneInit = true
-				spec.Qemu.InitArgs = []string{
-					verboseFlag(),
-					"-test.gocoverdir=/tmp/",
-					"-test.coverprofile=/tmp/cover.out",
-				}
-			},
-			requireErr: require.NoError,
 		},
 	}
 

@@ -17,5 +17,7 @@ func TestMain(m *testing.M) {
 	cfg.ModulesDir = "/lib/modules"
 	cfg.Env["PATH"] = "/data"
 
-	sysinit.RunTests(m, cfg)
+	sysinit.Main(cfg, func() (int, error) {
+		return m.Run(), nil
+	})
 }

@@ -189,9 +189,9 @@ essential tasks. For an example, see the
 [simple init program](internal/virtrun/init/main.go) that is used in the
 default wrapped mode.
 
-For go test binaries `sysinit.RunTests` can be used in a custom `TestMain`
-function if you need to do any additional set up for your test run. It is just
-a wrapper for `sysinit.Main` around `testing.M.Run`.
+For go test binaries a custom `TestMain` function can be used if you need to do
+any additional set up for your test run. Either use the `sysinit.DefaultConfig`
+or a custom `sysinit.Config` according to your needs.
 
 ```go
 package some_test
@@ -203,14 +203,16 @@ import (
 )
 
 func TestMain(m *testing.M) {
-    sysinit.RunTests(m, sysinit.DefaultConfig())
+    sysinit.Main(sysinit.DefaultConfig(), func() (int, error) {
+        return m.Run(), nil
+    })
 }
 ```
 
 See the [testing/guest](testing/guest) directory for a working example.
 
-Instead of using `sysinit.RunTests` you can call the various parts
-individually, of course. Like just mounting the file systems you need or
+Instead of using `sysinit.Main` you can als ocall the various parts
+individually, of course. Like, just mounting the file systems you need or
 additional ones. See `sysinit.Main` for the steps it does.
 
 ## Internals

@@ -15,9 +15,6 @@ import (
 )
 
 func TestFlags_ParseArgs(t *testing.T) {
-	absBinPath, err := AbsoluteFilePath("bin.test")
-	require.NoError(t, err)
-
 	tests := []struct {
 		name              string
 		args              []string
@@ -71,7 +68,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 			},
 			expectedSpec: &virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
-					Binary: absBinPath,
+					Binary: MustAbsoluteFilePath(t, "bin.test"),
 				},
 				Qemu: virtrun.Qemu{
 					Kernel:   "/boot/this",
@@ -94,7 +91,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 			},
 			expectedSpec: &virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
-					Binary: absBinPath,
+					Binary: MustAbsoluteFilePath(t, "bin.test"),
 				},
 				Qemu: virtrun.Qemu{
 					Kernel: "/boot/this",
@@ -132,7 +129,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 			},
 			expectedSpec: &virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
-					Binary: absBinPath,
+					Binary: MustAbsoluteFilePath(t, "bin.test"),
 					Files: []string{
 						"/file2",
 						"/dir/file3",
@@ -170,7 +167,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 			},
 			expectedSpec: &virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
-					Binary: absBinPath,
+					Binary: MustAbsoluteFilePath(t, "bin.test"),
 				},
 				Qemu: virtrun.Qemu{
 					Kernel: "/boot/this",

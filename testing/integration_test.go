@@ -156,9 +156,6 @@ func TestIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			binary, err := cmd.AbsoluteFilePath(tt.bin)
-			require.NoError(t, err)
-
 			spec := &virtrun.Spec{
 				Qemu: virtrun.Qemu{
 					Kernel:  KernelPath,
@@ -168,7 +165,7 @@ func TestIntegration(t *testing.T) {
 					SMP:     1,
 				},
 				Initramfs: virtrun.Initramfs{
-					Binary: binary,
+					Binary: cmd.MustAbsoluteFilePath(t, tt.bin),
 				},
 			}
 
@@ -185,7 +182,7 @@ func TestIntegration(t *testing.T) {
 
 			var stdOut, stdErr bytes.Buffer
 
-			err = virtrun.Run(ctx, spec, nil, &stdOut, &stdErr)
+			err := virtrun.Run(ctx, spec, nil, &stdOut, &stdErr)
 
 			t.Log(stdOut.String())
 			t.Log(stdErr.String())

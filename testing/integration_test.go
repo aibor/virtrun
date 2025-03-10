@@ -110,6 +110,15 @@ func TestIntegration(t *testing.T) {
 			},
 		},
 		{
+			name: "cputest",
+			bin:  "bin/cputest",
+			prepare: func(spec *virtrun.Spec) {
+				spec.Qemu.SMP = 2
+				spec.Qemu.InitArgs = []string{"2"}
+			},
+			requireErr: require.NoError,
+		},
+		{
 			name: "linked",
 			bin:  "../internal/sys/testdata/bin/main",
 			requireErr: func(t require.TestingT, err error, _ ...any) {
@@ -124,7 +133,6 @@ func TestIntegration(t *testing.T) {
 			prepare: func(spec *virtrun.Spec) {
 				spec.Qemu.InitArgs = []string{
 					verboseFlag(),
-					"-cpus", "2",
 				}
 			},
 			requireErr: require.NoError,
@@ -138,7 +146,6 @@ func TestIntegration(t *testing.T) {
 					verboseFlag(),
 					"-test.gocoverdir=/tmp/",
 					"-test.coverprofile=/tmp/cover.out",
-					"-cpus", "2",
 				}
 			},
 			requireErr: require.NoError,
@@ -158,7 +165,7 @@ func TestIntegration(t *testing.T) {
 					Verbose: Verbose,
 					CPU:     "max",
 					Memory:  128,
-					SMP:     2,
+					SMP:     1,
 				},
 				Initramfs: virtrun.Initramfs{
 					Binary: binary,

@@ -286,7 +286,6 @@ jobs:
             -coverprofile "${{ env.GOCOVERDIR }}/coverage-guest.txt" \
             ./testing/guest/ \
             -testModules tun,veth \
-            -cpus 2 \
             | go-junit-report -set-exit-code > junit-report.xml
 
       - name: Upload test output

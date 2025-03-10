@@ -122,7 +122,7 @@ jobs:
             -covermode=atomic \
             ./... \
             -test.gocoverdir="${{ env.GOCOVERDIR }}" \
-            | go-junit-report -set-exit-code > junit-report.xml
+            | go-junit-report -set-exit-code -iocopy -out junit-report.xml
 
       - name: Upload test output
         uses: actions/upload-artifact@v4
@@ -201,7 +201,7 @@ jobs:
             -kernel.path "/boot/vmlinuz-virt" \
             -force-pci \
             -verbose \
-            | go-junit-report -set-exit-code > junit-report.xml
+            | go-junit-report -set-exit-code -iocopy -out junit-report.xml
 
       - name: Upload test output
         uses: actions/upload-artifact@v4
@@ -286,7 +286,7 @@ jobs:
             -coverprofile "${{ env.GOCOVERDIR }}/coverage-guest.txt" \
             ./testing/guest/ \
             -testModules tun,veth \
-            | go-junit-report -set-exit-code > junit-report.xml
+            | go-junit-report -set-exit-code -iocopy -out junit-report.xml
 
       - name: Upload test output
         uses: actions/upload-artifact@v4

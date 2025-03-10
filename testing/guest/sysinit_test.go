@@ -35,15 +35,14 @@ func TestMountPoints(t *testing.T) {
 		"/tmp":                "tmpfs",
 	}
 
-	mountsFile, err := os.Open("/proc/mounts")
-	require.NoError(t, err, "must open mounts file")
-	defer mountsFile.Close()
+	mountsFile, err := os.ReadFile("/proc/mounts")
+	require.NoError(t, err)
 
 	actual := map[string]string{}
 
-	scanner := bufio.NewScanner(mountsFile)
+	scanner := bufio.NewScanner(strings.NewReader(string(mountsFile)))
 	for scanner.Scan() {
-		columns := strings.Split(scanner.Text(), " ")
+		columns := strings.Fields(scanner.Text())
 		actual[columns[1]] = columns[2]
 	}
 

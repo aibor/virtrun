@@ -28,9 +28,10 @@ var (
 )
 
 func init() {
-	flag.Var(
-		(*cmd.FilePath)(&KernelPath),
+	flag.StringVar(
+		&KernelPath,
 		"kernel.path",
+		KernelPath,
 		"absolute path of the test kernel",
 	)
 	flag.BoolVar(
@@ -130,7 +131,7 @@ func TestIntegration(t *testing.T) {
 					SMP:     1,
 				},
 				Initramfs: virtrun.Initramfs{
-					Binary: cmd.MustAbsoluteFilePath(t, tt.bin),
+					Binary: cmd.MustAbsoluteFilePath(tt.bin),
 				},
 			}
 

@@ -51,10 +51,19 @@ func AbsoluteFilePath(path string) (string, error) {
 
 	path, err := filepath.Abs(path)
 	if err != nil {
-		return "", fmt.Errorf("ensure absolute path: %w", err)
+		return "", fmt.Errorf("absolute path: %w", err)
 	}
 
 	return path, nil
+}
+
+func MustAbsoluteFilePath(path string) string {
+	abs, err := AbsoluteFilePath(path)
+	if err != nil {
+		panic(err)
+	}
+
+	return abs
 }
 
 func ValidateFilePath(name string) error {

@@ -59,7 +59,7 @@ func (f *flags) initFlagset(output io.Writer) {
 
 	fs.StringVar(
 		&f.spec.Qemu.Executable,
-		"qemu-bin",
+		"qemuBin",
 		f.spec.Qemu.Executable,
 		"QEMU binary to use (default depends on binary arch)",
 	)

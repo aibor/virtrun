@@ -177,7 +177,7 @@ jobs:
       - name: Run go generate integration tests
         env:
           GOARCH: ${{ matrix.arch.go }}
-        run: go generate -tags integration ./testing/...
+        run: go generate -tags integration ./...
 
       - name: Install go-junit-report
         working-directory: .github/workflows
@@ -196,7 +196,7 @@ jobs:
             -skip "${{ matrix.arch.skip }}" \
             -covermode atomic \
             -coverpkg "$(go list ./internal/... | paste -s -d ',' -)" \
-            ./testing/ \
+            ./internal/cmd/run_integration_test.go \
             -test.gocoverdir="${{ env.GOCOVERDIR }}" \
             -virtrun.kernel "/boot/vmlinuz-virt" \
             -virtrun.forcepci \

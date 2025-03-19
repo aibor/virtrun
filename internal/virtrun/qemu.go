@@ -118,10 +118,12 @@ func NewQemuCommand(cfg Qemu, initramfsPath string) (*qemu.Command, error) {
 // separated form the flag by "=". This is the format the "go test" tool
 // invokes the test binary with.
 func rewriteGoTestFlagsPath(c *qemu.CommandSpec) {
+	const splitNum = 2
+
 	outputDir := ""
 
 	for idx, posArg := range c.InitArgs {
-		splits := strings.Split(posArg, "=")
+		splits := strings.SplitN(posArg, "=", splitNum)
 		switch splits[0] {
 		case "-test.outputdir":
 			outputDir = splits[1]
@@ -138,7 +140,7 @@ func rewriteGoTestFlagsPath(c *qemu.CommandSpec) {
 	// test running and need to be prefixed with -test.outputdir. So, collect
 	// them and process them afterwards when "outputdir" is found.
 	for idx, posArg := range c.InitArgs {
-		splits := strings.Split(posArg, "=")
+		splits := strings.SplitN(posArg, "=", splitNum)
 		switch splits[0] {
 		case "-test.blockprofile",
 			"-test.cpuprofile",

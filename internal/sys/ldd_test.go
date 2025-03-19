@@ -33,5 +33,5 @@ func TestFilesLdd(t *testing.T) {
 		"testdata/lib/libfunc1.so",
 	}
 
-	sys.AssertContainsPaths(t, actual, expected)
+	sys.AssertContainsPaths(t, expected, actual)
 }

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/aibor/virtrun/internal/sys"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,15 +29,9 @@ func TestLibCollection_CollectLibsFor(t *testing.T) {
 		"testdata/lib",
 	}
 
-	for _, name := range expectedLibs {
-		expected := sys.MustAbsPath(t, name)
-		actual := slices.Collect(collection.Libs())
-		assert.Contains(t, actual, expected, name)
-	}
+	actualLibs := slices.Collect(collection.Libs())
+	sys.AssertContainsPaths(t, expectedLibs, actualLibs)
 
-	for _, name := range expectedLinks {
-		expected := sys.MustAbsPath(t, name)
-		actual := slices.Collect(collection.SearchPaths())
-		assert.Contains(t, actual, expected, name)
-	}
+	actualLinks := slices.Collect(collection.SearchPaths())
+	sys.AssertContainsPaths(t, expectedLinks, actualLinks)
 }

@@ -52,7 +52,7 @@ func TestELFFileLdd(t *testing.T) {
 			require.NoError(t, err, "must resolve")
 
 			actual := infos.realPaths()
-			AssertContainsPaths(t, actual, tt.expected)
+			AssertContainsPaths(t, tt.expected, actual)
 		})
 	}
 }

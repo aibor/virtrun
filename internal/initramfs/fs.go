@@ -296,8 +296,7 @@ func (fsys *FS) findNoFollow(name string, depth uint) (dirEntry, error) {
 		return dirEntry{}, ErrFileInvalid
 	}
 
-	nodes := strings.Split(name, string(filepath.Separator))
-	for _, name = range nodes {
+	for name = range strings.SplitSeq(name, string(filepath.Separator)) {
 		var err error
 
 		dEntry, err = fsys.follow(dEntry, depth)

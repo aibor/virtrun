@@ -30,19 +30,19 @@ var (
 func init() {
 	flag.StringVar(
 		&KernelPath,
-		"kernel.path",
+		"virtrun.kernel",
 		KernelPath,
-		"absolute path of the test kernel",
+		"path of the test kernel",
 	)
 	flag.BoolVar(
 		&ForceTransportTypePCI,
-		"force-pci",
+		"virtrun.forcepci",
 		ForceTransportTypePCI,
 		"force transport type virtio-pci instead of arch default",
 	)
 	flag.BoolVar(
 		&Verbose,
-		"verbose",
+		"virtrun.verbose",
 		Verbose,
 		"show complete guest output",
 	)
@@ -124,7 +124,7 @@ func TestIntegration(t *testing.T) {
 
 			spec := &virtrun.Spec{
 				Qemu: virtrun.Qemu{
-					Kernel:  KernelPath,
+					Kernel:  sys.MustAbsolutePath(KernelPath),
 					Verbose: Verbose,
 					CPU:     "max",
 					Memory:  128,

@@ -24,7 +24,7 @@ Supported architectures:
 QEMU must be present for the architecture matching the binary. By default,
 `qemu-system-x86_64`, `qemu-system-aarch64` or `qemu-system-riscv64` are used.
 The architecture of the binary determines which one is used. The flag
-`-qemu-bin` can be used to override the default choice.
+`-qemuBin` can be used to override the default choice.
 
 ### Linux Kernel
 
@@ -131,7 +131,7 @@ invocation as string to that flag. It will be invoked for each test binary.
 
 Since go test changes into the package directory for running the test, absolute
 paths must be used for any file path that is passed to virtrun by flag
-(`-kernel`, `-addFile`, `qemu-bin`, ...).
+(`-kernel`, `-addFile`, `qemuBin`, ...).
 
 Installed into `$PATH`:
 

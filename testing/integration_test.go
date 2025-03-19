@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aibor/virtrun/internal/cmd"
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/internal/virtrun"
 	"github.com/stretchr/testify/require"
 )
@@ -131,7 +131,7 @@ func TestIntegration(t *testing.T) {
 					SMP:     1,
 				},
 				Initramfs: virtrun.Initramfs{
-					Binary: cmd.MustAbsoluteFilePath(tt.bin),
+					Binary: sys.MustAbsolutePath(tt.bin),
 				},
 			}
 

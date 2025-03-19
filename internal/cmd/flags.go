@@ -10,6 +10,7 @@ import (
 	"io"
 	"runtime/debug"
 
+	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/internal/virtrun"
 )
 
@@ -225,7 +226,7 @@ func (f *flags) ParseArgs(args []string) error {
 		return f.fail("no binary given", nil)
 	}
 
-	binary, err := AbsoluteFilePath(positionalArgs[0])
+	binary, err := sys.AbsolutePath(positionalArgs[0])
 	if err != nil {
 		return f.fail("binary path", err)
 	}

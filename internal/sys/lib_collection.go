@@ -93,9 +93,9 @@ func collectLibsFor(
 	}
 
 	for _, p := range paths {
-		absPath, err := filepath.Abs(p)
+		absPath, err := AbsolutePath(p)
 		if err != nil {
-			return fmt.Errorf("absolute path: %w", err)
+			return err
 		}
 
 		libs[absPath]++

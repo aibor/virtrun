@@ -5,10 +5,10 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
+
+	"github.com/aibor/virtrun/internal/sys"
 )
 
 type FilePath string
@@ -18,11 +18,14 @@ func (f *FilePath) String() string {
 }
 
 func (f *FilePath) Set(s string) error {
-	path, err := AbsoluteFilePath(s)
+	path, err := sys.AbsolutePath(s)
+	if err != nil {
+		return err //nolint:wrapcheck
+	}
 
 	*f = FilePath(path)
 
-	return err
+	return nil
 }
 
 type FilePathList []string
@@ -33,37 +36,15 @@ func (f *FilePathList) String() string {
 
 func (f *FilePathList) Set(s string) error {
 	for _, e := range strings.Split(s, ",") {
-		path, err := AbsoluteFilePath(e)
+		path, err := sys.AbsolutePath(e)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck
 		}
 
 		*f = append(*f, path)
 	}
 
 	return nil
-}
-
-func AbsoluteFilePath(path string) (string, error) {
-	if path == "" {
-		return "", ErrEmptyFilePath
-	}
-
-	path, err := filepath.Abs(path)
-	if err != nil {
-		return "", fmt.Errorf("absolute path: %w", err)
-	}
-
-	return path, nil
-}
-
-func MustAbsoluteFilePath(path string) string {
-	abs, err := AbsoluteFilePath(path)
-	if err != nil {
-		panic(err)
-	}
-
-	return abs
 }
 
 func ValidateFilePath(name string) error {

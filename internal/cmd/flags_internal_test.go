@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/internal/virtrun"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -68,7 +69,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 			},
 			expectedSpec: &virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
-					Binary: MustAbsoluteFilePath("bin.test"),
+					Binary: sys.MustAbsolutePath("bin.test"),
 				},
 				Qemu: virtrun.Qemu{
 					Kernel:   "/boot/this",
@@ -91,7 +92,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 			},
 			expectedSpec: &virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
-					Binary: MustAbsoluteFilePath("bin.test"),
+					Binary: sys.MustAbsolutePath("bin.test"),
 				},
 				Qemu: virtrun.Qemu{
 					Kernel: "/boot/this",
@@ -129,7 +130,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 			},
 			expectedSpec: &virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
-					Binary: MustAbsoluteFilePath("bin.test"),
+					Binary: sys.MustAbsolutePath("bin.test"),
 					Files: []string{
 						"/file2",
 						"/dir/file3",
@@ -167,7 +168,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 			},
 			expectedSpec: &virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
-					Binary: MustAbsoluteFilePath("bin.test"),
+					Binary: sys.MustAbsolutePath("bin.test"),
 				},
 				Qemu: virtrun.Qemu{
 					Kernel: "/boot/this",

@@ -20,4 +20,7 @@ var (
 	// ErrMachineNotSupported is returned if the machine type of an ELF file
 	// is not supported.
 	ErrMachineNotSupported = errors.New("machine type not supported")
+
+	// ErrEmptyPath is returned if an empty path is given.
+	ErrEmptyPath = errors.New("path must not be empty")
 )

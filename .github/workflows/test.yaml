@@ -198,9 +198,9 @@ jobs:
             -coverpkg "$(go list ./internal/... | paste -s -d ',' -)" \
             ./testing/ \
             -test.gocoverdir="${{ env.GOCOVERDIR }}" \
-            -kernel.path "/boot/vmlinuz-virt" \
-            -force-pci \
-            -verbose \
+            -virtrun.kernel "/boot/vmlinuz-virt" \
+            -virtrun.forcepci \
+            -virtrun.verbose \
             | go-junit-report -set-exit-code -iocopy -out junit-report.xml
 
       - name: Upload test output

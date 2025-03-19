@@ -35,7 +35,7 @@ func (f *FilePathList) String() string {
 }
 
 func (f *FilePathList) Set(s string) error {
-	for _, e := range strings.Split(s, ",") {
+	for e := range strings.SplitSeq(s, ",") {
 		path, err := sys.AbsolutePath(e)
 		if err != nil {
 			return err //nolint:wrapcheck

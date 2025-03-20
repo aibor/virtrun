@@ -6,6 +6,14 @@
 // embedded into the main binary.
 package main
 
+// Pre-compile init programs for all supported architectures. Statically linked
+// so they can be used on any host platform.
+//
+//go:generate -command myenv env CGO_ENABLED=0 GOOS=linux
+//go:generate myenv GOARCH=amd64 go build -buildvcs=false -trimpath -ldflags "-s -w" -o ../bin/amd64 .
+//go:generate myenv GOARCH=arm64 go build -buildvcs=false -trimpath -ldflags "-s -w" -o ../bin/arm64 .
+//go:generate myenv GOARCH=riscv64 go build -buildvcs=false -trimpath -ldflags "-s -w" -o ../bin/riscv64 .
+
 import (
 	"errors"
 	"fmt"
@@ -29,10 +37,8 @@ func main() {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-		var exitErr *exec.ExitError
-
-		err := cmd.Run()
-		if err != nil {
+		if err := cmd.Run(); err != nil {
+			var exitErr *exec.ExitError
 			if errors.As(err, &exitErr) {
 				return exitErr.ExitCode(), nil
 			}

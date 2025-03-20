@@ -107,7 +107,9 @@ func TestCommonSymlinks(t *testing.T) {
 		t.Run(strings.ReplaceAll(link, "/", "_"), func(t *testing.T) {
 			target, err := os.Readlink(link)
 			require.NoError(t, err, "link must be readable")
-			assert.Equal(t, expectedTarget, target, "link target should be as expected")
+
+			assert.Equal(t, expectedTarget, target,
+				"link target should be as expected")
 		})
 	}
 }

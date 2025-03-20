@@ -293,7 +293,7 @@ jobs:
           go test -v \
             -tags integration \
             -exec "env GOCOVERDIR=${{ env.GOCOVERDIR }} /virtrun" \
-            ./internal/virtrun/init/ \
+            ./internal/virtrun/init/cmd \
             -testModules tun,veth \
             | go-junit-report -set-exit-code -iocopy -out junit-report-init.xml
 

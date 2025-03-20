@@ -419,7 +419,7 @@ func wrapExitError(err error) error {
 	var exitErr *exec.ExitError
 
 	if !errors.As(err, &exitErr) {
-		return fmt.Errorf("qemu command: %w", err)
+		return fmt.Errorf("command: %w", err)
 	}
 
 	return &CommandError{

@@ -283,6 +283,7 @@ jobs:
             -covermode atomic \
             -coverprofile "${{ env.GOCOVERDIR }}/coverage-sysinit.txt" \
             ./sysinit/ \
+            -testModules tun,veth \
             | go-junit-report -set-exit-code -iocopy -out junit-report-sysinit.xml
 
       - name: Run init test

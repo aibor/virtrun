@@ -7,6 +7,8 @@
 package sysinit_test
 
 import (
+	"bufio"
+	"flag"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +20,17 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var testModules = flag.String("testModules", "", "module names to test")
+
+func passedModules() []string {
+	var passedModules []string
+	if *testModules != "" {
+		passedModules = strings.Split(*testModules, ",")
+	}
+
+	return passedModules
+}
+
 func TestLoadModule(t *testing.T) {
 	tempDir := t.TempDir()
 	fileTxtPath := filepath.Join(tempDir, "mod.txt")
@@ -26,6 +39,11 @@ func TestLoadModule(t *testing.T) {
 	require.NoError(t, err)
 
 	_ = fileTxt.Close()
+
+	modules, err := os.ReadDir("/lib/modules/")
+	require.NoError(t, err)
+
+	validMod := "/lib/modules/" + modules[0].Name()
 
 	tests := []struct {
 		name        string
@@ -47,10 +65,20 @@ func TestLoadModule(t *testing.T) {
 			path:        fileTxtPath,
 			expectedErr: unix.EINVAL,
 		},
+		{
+			name: "valid mod",
+			path: validMod,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				for _, module := range passedModules() {
+					_ = unix.DeleteModule(module, 0)
+				}
+			})
+
 			err := sysinit.LoadModule(tt.path, tt.params)
 			require.ErrorIs(t, err, tt.expectedErr)
 		})
@@ -59,9 +87,10 @@ func TestLoadModule(t *testing.T) {
 
 func TestLoadModules(t *testing.T) {
 	tests := []struct {
-		name        string
-		dir         func(t *testing.T) string
-		expectedErr error
+		name            string
+		dir             func(t *testing.T) string
+		expectedModules []string
+		expectedErr     error
 	}{
 		{
 			name: "empty dir path",
@@ -107,29 +136,37 @@ func TestLoadModules(t *testing.T) {
 				t.Helper()
 				return "/lib/modules"
 			},
+			expectedModules: passedModules(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				for _, module := range passedModules() {
+					_ = unix.DeleteModule(module, 0)
+				}
+			})
+
 			dir := tt.dir(t)
 
 			err := sysinit.LoadModules(dir)
 			require.ErrorIs(t, err, tt.expectedErr)
 
-			if tt.expectedErr != nil || dir == "" {
-				return
-			}
-
-			entries, err := os.ReadDir(dir)
-			require.NoError(t, err, "must read dir")
-
 			modules, err := os.ReadFile("/proc/modules")
 			require.NoError(t, err, "must read modules")
 
-			t.Log(string(modules))
+			actual := []string{}
 
-			assert.Equal(t, len(entries), strings.Count(string(modules), "\n"))
+			scanner := bufio.NewScanner(strings.NewReader(string(modules)))
+			for scanner.Scan() {
+				fields := strings.Fields(scanner.Text())
+				actual = append(actual, fields[0])
+			}
+
+			require.NoError(t, scanner.Err(), "must read modules file")
+
+			assert.ElementsMatch(t, tt.expectedModules, actual)
 		})
 	}
 }

@@ -59,7 +59,7 @@ func Run(
 
 	err = cmd.Run(ctx, stdin, stdout, stderr)
 	if err != nil {
-		return fmt.Errorf("qemu run: %w", err)
+		return fmt.Errorf("qemu: %w", err)
 	}
 
 	return nil

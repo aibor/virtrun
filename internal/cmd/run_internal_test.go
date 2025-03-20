@@ -39,7 +39,7 @@ func TestHandleRunError(t *testing.T) {
 				ExitCode: 42,
 			},
 			expectedExitCode: 42,
-			expectedOutput: "Error [virtrun]: qemu host: " +
+			expectedOutput: "Error [virtrun]: host: " +
 				"assert.AnError general error for testing\n",
 		},
 		{
@@ -58,8 +58,8 @@ func TestHandleRunError(t *testing.T) {
 				Guest: true,
 			},
 			expectedExitCode: -1,
-			expectedOutput: "Error [virtrun]: qemu guest: " +
-				"guest did not print init exit code\n",
+			expectedOutput: "Error [virtrun]: guest: " +
+				"init did not print exit code\n",
 		},
 		{
 			name: "qemu command guest oom error",
@@ -68,8 +68,8 @@ func TestHandleRunError(t *testing.T) {
 				Guest: true,
 			},
 			expectedExitCode: -1,
-			expectedOutput: "Error [virtrun]: qemu guest: " +
-				"guest system ran out of memory\n",
+			expectedOutput: "Error [virtrun]: guest: " +
+				"system ran out of memory\n",
 		},
 		{
 			name: "qemu command guest panic error",
@@ -78,8 +78,8 @@ func TestHandleRunError(t *testing.T) {
 				Guest: true,
 			},
 			expectedExitCode: -1,
-			expectedOutput: "Error [virtrun]: qemu guest: " +
-				"guest system panicked\n",
+			expectedOutput: "Error [virtrun]: guest: " +
+				"system panicked\n",
 		},
 		{
 			name:             "any error",

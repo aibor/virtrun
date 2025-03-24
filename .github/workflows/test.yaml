@@ -218,8 +218,8 @@ jobs:
           path: "${{ env.GOCOVERDIR }}/*"
           retention-days: 2
 
-  integration-tests-binary:
-    name: Run integration tests of the binary
+  integration-tests-sysinit:
+    name: Run integration tests of sysinit package and binaries
     runs-on: ubuntu-24.04
     needs:
       - go-setup
@@ -252,15 +252,12 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: "**/go.sum"
 
-      - name: Create gocoverdir
-        run: mkdir -pv "${{ env.GOCOVERDIR }}"
-
       - name: Install go-junit-report
         working-directory: .github/workflows
         run: go install github.com/jstemmer/go-junit-report/v2
 
       - name: Build virtrun
-        run: go build -cover -covermode atomic -o /virtrun .
+        run: go build -o /virtrun .
 
       - name: Fetch kernel files
         run: |
@@ -278,10 +275,9 @@ jobs:
         run: |
           go test -v \
             -tags integration \
-            -exec "env GOCOVERDIR=${{ env.GOCOVERDIR }} /virtrun -standalone" \
-            -cover \
+            -exec "/virtrun -standalone" \
             -covermode atomic \
-            -coverprofile "${{ env.GOCOVERDIR }}/coverage-sysinit.txt" \
+            -coverprofile coverage.txt \
             ./sysinit/ \
             -testModules tun,veth \
             | go-junit-report -set-exit-code -iocopy -out junit-report-sysinit.xml
@@ -292,25 +288,31 @@ jobs:
         run: |
           go test -v \
             -tags integration \
-            -exec "env GOCOVERDIR=${{ env.GOCOVERDIR }} /virtrun" \
-            ./internal/virtrun/init/cmd \
+            -exec "/virtrun" \
             -testModules tun,veth \
             | go-junit-report -set-exit-code -iocopy -out junit-report-init.xml
+
+      - name: Install go-cobertura
+        working-directory: .github/workflows
+        run: go install github.com/boumenot/gocover-cobertura
+
+      - name: Run go-cobertura
+        run: gocover-cobertura -by-files < coverage.txt > coverage.xml
 
       - name: Upload test output
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-integration-binary-${{ matrix.arch.go }}
+          name: test-results-integration-sysinit-${{ matrix.arch.go }}
           path: junit-report*.xml
           retention-days: 2
 
-      - name: Upload gocoverdir
+      - name: Upload coverage data
         uses: actions/upload-artifact@v4
+        if: ${{ matrix.arch.go == 'amd64' }}
         with:
-          name: go-coverdir-integration-binary-${{ matrix.arch.go }}
-          path: "${{ env.GOCOVERDIR }}/*"
-          retention-days: 2
+          name: go-coverage-sysinit
+          path: coverage*
 
   go-coverage:
     name: Go coverage
@@ -318,7 +320,7 @@ jobs:
     needs:
       - go-test
       - integration-tests
-      - integration-tests-binary
+      - integration-tests-sysinit
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -356,13 +358,6 @@ jobs:
 
       - name: Run go-cobertura
         run: gocover-cobertura -by-files < coverage.txt > coverage.xml
-
-      - name: Run go-cobertura for sysinit
-        run: |
-          gocover-cobertura \
-            -by-files \
-            < /tmp/artifacts/go-coverdir-integration-binary-amd64/coverage-sysinit.txt \
-            > coverage-sysinit.xml
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
@@ -413,7 +408,7 @@ jobs:
       - go-lint
       - go-test
       - integration-tests
-      - integration-tests-binary
+      - integration-tests-sysinit
       - reuse-lint
       - goreleaser-lint
     steps:

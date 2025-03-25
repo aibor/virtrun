@@ -186,34 +186,8 @@ provides helper functions for the necessary tasks.
 
 A simple init can be built using `sysinit.Main` which is a wrapper for those
 essential tasks. For an example, see the
-[simple init program](internal/virtrun/init/main.go) that is used in the
+[simple init program](internal/virtrun/init/cmd/main.go) that is used in the
 default wrapped mode.
-
-For go test binaries a custom `TestMain` function can be used if you need to do
-any additional set up for your test run. Either use the `sysinit.DefaultConfig`
-or a custom `sysinit.Config` according to your needs.
-
-```go
-package some_test
-
-import (
-    "testing"
-
-    "github.com/aibor/virtrun/sysinit"
-)
-
-func TestMain(m *testing.M) {
-    sysinit.Main(sysinit.DefaultConfig(), func() (int, error) {
-        return m.Run(), nil
-    })
-}
-```
-
-See the [testing/guest](testing/guest) directory for a working example.
-
-Instead of using `sysinit.Main` you can als ocall the various parts
-individually, of course. Like, just mounting the file systems you need or
-additional ones. See `sysinit.Main` for the steps it does.
 
 ## Internals
 

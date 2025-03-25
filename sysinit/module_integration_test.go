@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//go:build integration
+//go:build integration_sysinit
 
 package sysinit_test
 
@@ -32,6 +32,9 @@ func passedModules() []string {
 }
 
 func TestLoadModule(t *testing.T) {
+	WithMountPoint(t, "/proc", sysinit.FSTypeProc)
+	WithMountPoint(t, "/tmp", sysinit.FSTypeTmp)
+
 	tempDir := t.TempDir()
 	fileTxtPath := filepath.Join(tempDir, "mod.txt")
 
@@ -86,6 +89,9 @@ func TestLoadModule(t *testing.T) {
 }
 
 func TestLoadModules(t *testing.T) {
+	WithMountPoint(t, "/proc", sysinit.FSTypeProc)
+	WithMountPoint(t, "/tmp", sysinit.FSTypeTmp)
+
 	tests := []struct {
 		name            string
 		dir             func(t *testing.T) string
@@ -103,18 +109,18 @@ func TestLoadModules(t *testing.T) {
 			name: "empty dir",
 			dir: func(t *testing.T) string {
 				t.Helper()
-				return t.TempDir()
+				return t.TempDir() + "/*"
 			},
 		},
 		{
 			name: "dir with invalid ext file",
 			dir: func(t *testing.T) string {
 				t.Helper()
-				dir := t.TempDir()
-				err := os.WriteFile(dir+"/mod.txt", []byte{}, 0o600)
+				fileName := t.TempDir() + "/mod.txt"
+				err := os.WriteFile(fileName, []byte{}, 0o600)
 				require.NoError(t, err)
 
-				return dir
+				return fileName
 			},
 			expectedErr: unix.EINVAL,
 		},
@@ -122,11 +128,11 @@ func TestLoadModules(t *testing.T) {
 			name: "dir with valid ext empty file",
 			dir: func(t *testing.T) string {
 				t.Helper()
-				dir := t.TempDir()
-				err := os.WriteFile(dir+"/mod.ko", []byte{}, 0o600)
+				fileName := t.TempDir() + "/mod.ko"
+				err := os.WriteFile(fileName, []byte{}, 0o600)
 				require.NoError(t, err)
 
-				return dir
+				return fileName
 			},
 			expectedErr: unix.EINVAL,
 		},
@@ -134,7 +140,7 @@ func TestLoadModules(t *testing.T) {
 			name: "real dir",
 			dir: func(t *testing.T) string {
 				t.Helper()
-				return "/lib/modules"
+				return "/lib/modules/*"
 			},
 			expectedModules: passedModules(),
 		},

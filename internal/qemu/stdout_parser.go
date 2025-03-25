@@ -5,7 +5,6 @@
 package qemu
 
 import (
-	"fmt"
 	"regexp"
 )
 
@@ -13,6 +12,11 @@ var (
 	panicRE = regexp.MustCompile(`^\[[0-9. ]+\] Kernel panic - not syncing: `)
 	oomRE   = regexp.MustCompile(`^\[[0-9. ]+\] Out of memory: `)
 )
+
+// ExitCodeScanFunc parses the given string and returns the exit code found in
+// the input or an error if the input does not contain the expected string or
+// parsing fails otherwise.
+type ExitCodeScanFunc func(string) (int, error)
 
 // stdoutParser provides a parser that parses stdout from the guest.
 //
@@ -22,8 +26,8 @@ var (
 // [stdoutParser.Err]. It returns a [CommandError] with Guest flag set if either
 // an error is detected or the guest communicated a non zero exit code.
 type stdoutParser struct {
-	ExitCodeFmt string
-	Verbose     bool
+	ExitCodeScan ExitCodeScanFunc
+	Verbose      bool
 
 	exitCodeFound bool
 	exitCode      int
@@ -45,7 +49,8 @@ func (p *stdoutParser) Parse(data []byte) []byte {
 		p.err = ErrGuestPanic
 		return data
 	case !p.exitCodeFound:
-		_, err := fmt.Sscanf(line, p.ExitCodeFmt, &p.exitCode)
+		var err error
+		p.exitCode, err = p.ExitCodeScan(line)
 		p.exitCodeFound = err == nil
 	}
 

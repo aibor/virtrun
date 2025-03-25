@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//go:build integration
+//go:build integration_sysinit
 
-package main_test
+package main
 
 import (
 	"bufio"
@@ -20,6 +20,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	run(func() error {
+		m.Run()
+		return nil
+	})
+}
 
 func TestMountPoints(t *testing.T) {
 	mounts := map[string]string{
@@ -60,13 +67,16 @@ func TestNotPidOne(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	cmd := exec.CommandContext(ctx, "/init")
+	self, err := os.Executable()
+	require.NoError(t, err)
+
+	cmd := exec.CommandContext(ctx, self)
 	require.NoError(t, cmd.Start(), "command must start")
 	require.Error(t, cmd.Wait(), "command should have exited with error")
 
 	if assert.NotNil(t, cmd.ProcessState, "process state should be present") {
 		actual := cmd.ProcessState.ExitCode()
-		assert.Equal(t, 254, actual, "exit code should be as expected")
+		assert.Equal(t, 2, actual, "exit code should reflect panicking test binary")
 	}
 }
 

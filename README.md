@@ -184,10 +184,11 @@ the system.
 The sub-package [sysinit](https://pkg.go.dev/github.com/aibor/virtrun/sysinit)
 provides helper functions for the necessary tasks.
 
-A simple init can be built using `sysinit.Main` which is a wrapper for those
-essential tasks. For an example, see the
-[simple init program](internal/virtrun/init/cmd/main.go) that is used in the
-default wrapped mode.
+A simple init can be built using `sysinit.Run` which is the main entry point 
+for an init system. It runs user provided functions and shuts down the system 
+on termination. For an example, see the
+[simple init program](internal/virtrun/init/cmd/main.go) that is embedded in 
+the virtrun binary and is the init used in the default wrapped mode.
 
 ## Internals
 

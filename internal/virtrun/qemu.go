@@ -75,19 +75,19 @@ func (s *Qemu) addDefaultsFor(arch sys.Arch) error {
 
 func NewQemuCommand(cfg Qemu, initramfsPath string) (*qemu.Command, error) {
 	cmdSpec := qemu.CommandSpec{
-		Executable:    cfg.Executable,
-		Kernel:        cfg.Kernel,
-		Initramfs:     initramfsPath,
-		Machine:       cfg.Machine,
-		CPU:           cfg.CPU,
-		Memory:        cfg.Memory,
-		SMP:           cfg.SMP,
-		TransportType: cfg.TransportType,
-		InitArgs:      cfg.InitArgs,
-		ExtraArgs:     cfg.ExtraArgs,
-		NoKVM:         cfg.NoKVM,
-		Verbose:       cfg.Verbose,
-		ExitCodeFmt:   sysinit.ExitCodeFmt,
+		Executable:       cfg.Executable,
+		Kernel:           cfg.Kernel,
+		Initramfs:        initramfsPath,
+		Machine:          cfg.Machine,
+		CPU:              cfg.CPU,
+		Memory:           cfg.Memory,
+		SMP:              cfg.SMP,
+		TransportType:    cfg.TransportType,
+		InitArgs:         cfg.InitArgs,
+		ExtraArgs:        cfg.ExtraArgs,
+		NoKVM:            cfg.NoKVM,
+		Verbose:          cfg.Verbose,
+		ExitCodeScanFunc: sysinit.ExitCodeID.Sscan,
 	}
 
 	// In order to be useful with "go test -exec", rewrite the file based flags

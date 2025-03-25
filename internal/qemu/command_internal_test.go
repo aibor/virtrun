@@ -5,6 +5,9 @@
 package qemu
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -173,6 +176,8 @@ func TestCommandSpec_Arguments(t *testing.T) {
 }
 
 func TestNewCommand(t *testing.T) {
+	exitCodeScan := func(_ string) (int, error) { return 0, nil }
+
 	tests := []struct {
 		name        string
 		spec        CommandSpec
@@ -193,7 +198,7 @@ func TestNewCommand(t *testing.T) {
 				AdditionalConsoles: []string{"one"},
 				NoKVM:              true,
 				Verbose:            true,
-				ExitCodeFmt:        "rrr",
+				ExitCodeScanFunc:   exitCodeScan,
 			},
 			expectedCmd: &Command{
 				name: "test",
@@ -216,8 +221,8 @@ func TestNewCommand(t *testing.T) {
 					"initcall_blacklist=ahci_pci_driver_init",
 				},
 				stdoutParser: stdoutParser{
-					ExitCodeFmt: "rrr",
-					Verbose:     true,
+					ExitCodeScan: exitCodeScan,
+					Verbose:      true,
 				},
 				consoleOutput: []string{"one"},
 			},
@@ -232,8 +237,13 @@ func TestNewCommand(t *testing.T) {
 
 			if tt.expectedCmd != nil {
 				assert.Equal(t, tt.expectedCmd.String(), actual.String())
-				assert.Equal(t, tt.expectedCmd.stdoutParser, actual.stdoutParser)
 				assert.Equal(t, tt.expectedCmd.consoleOutput, actual.consoleOutput)
+
+				// Hack: Compare string representations because functions can
+				// not compared. The string representation has the address of
+				// the function which is sufficient for our test case.
+				assert.Equal(t, fmt.Sprintf("%v", tt.expectedCmd.stdoutParser),
+					fmt.Sprintf("%v", actual.stdoutParser))
 			}
 		})
 	}
@@ -241,6 +251,15 @@ func TestNewCommand(t *testing.T) {
 
 func TestCommand_Run(t *testing.T) {
 	tempDir := t.TempDir()
+
+	exitCodeScanner := func(s string) (int, error) {
+		d, found := strings.CutPrefix(s, "exit code: ")
+		if !found {
+			return 0, assert.AnError
+		}
+
+		return strconv.Atoi(d)
+	}
 
 	tests := []struct {
 		name      string
@@ -253,7 +272,13 @@ func TestCommand_Run(t *testing.T) {
 				name: "echo",
 				args: []string{"rc: 0"},
 				stdoutParser: stdoutParser{
-					ExitCodeFmt: "rc: %d",
+					ExitCodeScan: func(s string) (int, error) {
+						if s != "rc: 0" {
+							return 0, assert.AnError
+						}
+
+						return 0, nil
+					},
 				},
 			},
 			assertErr: require.NoError,
@@ -262,9 +287,9 @@ func TestCommand_Run(t *testing.T) {
 			name: "success with consoles",
 			cmd: Command{
 				name: "echo",
-				args: []string{"rc: 0"},
+				args: []string{"exit code: 0"},
 				stdoutParser: stdoutParser{
-					ExitCodeFmt: "rc: %d",
+					ExitCodeScan: exitCodeScanner,
 				},
 				consoleOutput: []string{
 					tempDir + "/out1",
@@ -279,9 +304,9 @@ func TestCommand_Run(t *testing.T) {
 			name: "fail with consoles",
 			cmd: Command{
 				name: "echo",
-				args: []string{"rc: 42"},
+				args: []string{"exit code: 42"},
 				stdoutParser: stdoutParser{
-					ExitCodeFmt: "rc: %d",
+					ExitCodeScan: exitCodeScanner,
 				},
 				consoleOutput: []string{
 					tempDir + "/out1",

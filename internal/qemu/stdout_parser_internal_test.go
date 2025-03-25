@@ -6,6 +6,8 @@ package qemu
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -129,8 +131,15 @@ func TestStdoutParser_Process(t *testing.T) {
 			var actual []string
 
 			stdoutParser := stdoutParser{
-				Verbose:     tt.verbose,
-				ExitCodeFmt: exitCodeFmt,
+				Verbose: tt.verbose,
+				ExitCodeScan: func(s string) (int, error) {
+					d, found := strings.CutPrefix(s, "exit code: ")
+					if !found {
+						return 0, assert.AnError
+					}
+
+					return strconv.Atoi(d)
+				},
 			}
 
 			for _, line := range tt.input {

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 )
@@ -42,20 +43,35 @@ func parseModuleType(fileName string) moduleType {
 	return moduleTypeUnknown
 }
 
-// LoadModules loads all files found in the given directory as kernel modules.
-func LoadModules(dir string) error {
-	files, err := ListRegularFiles(dir)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+// LoadModules loads all files found for the given glob pattern as kernel
+// modules.
+//
+// See [filepath.Glob] for the pattern format.
+func LoadModules(pattern string) error {
+	files, err := filepath.Glob(pattern)
+	if err != nil {
 		return fmt.Errorf("list module files: %w", err)
 	}
 
 	for _, file := range files {
+		if info, err := os.Stat(file); err == nil && info.IsDir() {
+			continue
+		}
+
 		if err := LoadModule(file, ""); err != nil {
 			return fmt.Errorf("load module %s: %w", file, err)
 		}
 	}
 
 	return nil
+}
+
+// WithModules returns a setup [Func] that wraps [LoadModules] and can
+// be used with [Run].
+func WithModules(pattern string) Func {
+	return func() error {
+		return LoadModules(pattern)
+	}
 }
 
 // LoadModule loads the kernel module located at the given path with the given

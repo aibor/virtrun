@@ -4,14 +4,15 @@
 
 package sysinit
 
-// ConfigureLoopbackInterface brings the loopback interface up.
-//
-// Kernel configures addresses automatically.
-func ConfigureLoopbackInterface() error {
-	return SetInterfaceUp("lo")
-}
-
 // SetInterfaceUp brings the interface with the given name up.
 func SetInterfaceUp(name string) error {
 	return setInterfaceUp(name)
+}
+
+// WithInterfaceUp returns a [Func] that wraps [SetInterfaceUp] and can be
+// used with [Run].
+func WithInterfaceUp(name string) Func {
+	return func() error {
+		return SetInterfaceUp(name)
+	}
 }

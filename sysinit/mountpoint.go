@@ -5,14 +5,8 @@
 package sysinit
 
 import (
-	"cmp"
 	"fmt"
-	"io/fs"
-	"iter"
-	"maps"
 	"os"
-	"path/filepath"
-	"slices"
 )
 
 // FSType is a file system type.
@@ -39,6 +33,31 @@ const (
 	defaultDirMode = 0o755
 )
 
+// SystemMountPoints returns a map of all special pseudo and virtual file
+// systems required for usual system operations, like accessing kernel
+// variables, modifying kernel knobs or accessing devices.
+func SystemMountPoints() MountPoints {
+	return MountPoints{
+		"/dev":                     {FSType: FSTypeDevTmp},
+		"/dev/hugepages":           {FSType: FSTypeHugeTlb, MayFail: true},
+		"/dev/mqueue":              {FSType: FSTypeMqueue, MayFail: true},
+		"/dev/pts":                 {FSType: FSTypeDevPts, MayFail: true},
+		"/dev/shm":                 {FSType: FSTypeTmp, MayFail: true},
+		"/proc":                    {FSType: FSTypeProc},
+		"/run":                     {FSType: FSTypeTmp},
+		"/sys/fs/bpf":              {FSType: FSTypeBpf, MayFail: true},
+		"/sys/fs/cgroup":           {FSType: FSTypeCgroup2, MayFail: true},
+		"/sys/fs/fuse/connections": {FSType: FSTypeFuseCtl, MayFail: true},
+		"/sys/fs/pstore":           {FSType: FSTypePstore, MayFail: true},
+		"/sys":                     {FSType: FSTypeSys},
+		"/sys/kernel/config":       {FSType: FSTypeConfig, MayFail: true},
+		"/sys/kernel/debug":        {FSType: FSTypeDebug, MayFail: true},
+		"/sys/kernel/security":     {FSType: FSTypeSecurity, MayFail: true},
+		"/sys/kernel/tracing":      {FSType: FSTypeTracing, MayFail: true},
+		"/tmp":                     {FSType: FSTypeTmp},
+	}
+}
+
 // MountOptions contains parameters for a mount point.
 type MountOptions struct {
 	// FSType is the files system type. It must be set to an available [FSType].
@@ -61,6 +80,9 @@ type MountOptions struct {
 	MayFail bool
 }
 
+// MountPoints is a collection of MountPoints.
+type MountPoints map[string]MountOptions
+
 // Mount mounts the system file system of [FSType] at the given path.
 //
 // If path does not exist, it is created. An error is returned if this or the
@@ -74,76 +96,29 @@ func Mount(path string, opts MountOptions) error {
 	return mount(path, opts.Source, string(opts.FSType), opts.Flags, opts.Data)
 }
 
-// MountPoints is a collection of MountPoints.
-type MountPoints map[string]MountOptions
-
 // MountAll mounts the given set of system file systems.
 //
 // The mounts are executed in lexicographic order of the paths.
-func MountAll(mountPoints MountPoints) error {
-	for path, opts := range sortedByKeys(mountPoints) {
+func MountAll(mountPoints MountPoints, errHandler func(error)) error {
+	for path, opts := range sortedMap(mountPoints) {
 		if err := Mount(path, opts); err != nil {
 			if !opts.MayFail {
 				return err
 			}
 
-			PrintWarning(err)
-		}
-	}
-
-	return nil
-}
-
-// Symlinks is a collection of symbolic links. Keys are symbolic links to
-// create with the value being the target to link to.
-type Symlinks map[string]string
-
-// CreateSymlinks creates common symbolic links in the file system.
-//
-// This must be run after all file systems have been mounted.
-func CreateSymlinks(symlinks Symlinks) error {
-	for link, target := range sortedByKeys(symlinks) {
-		if err := os.Symlink(target, link); err != nil {
-			return fmt.Errorf("create common symlink %s: %w", link, err)
-		}
-	}
-
-	return nil
-}
-
-// ListRegularFiles lists all regular files in the given directory and all
-// sub directories.
-func ListRegularFiles(dir string) ([]string, error) {
-	var files []string
-
-	walkFunc := func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if d.Type().IsRegular() {
-			files = append(files, path)
-		}
-
-		return nil
-	}
-
-	err := filepath.WalkDir(dir, walkFunc)
-	if err != nil {
-		return nil, fmt.Errorf("walk dir: %w", err)
-	}
-
-	return files, nil
-}
-
-// sortedByKeys returns an iterator that iterates the given map in
-// lexicographic order of the keys.
-func sortedByKeys[K cmp.Ordered, V any](m map[K]V) iter.Seq2[K, V] {
-	return func(yield func(K, V) bool) {
-		for _, key := range slices.Sorted(maps.Keys(m)) {
-			if !yield(key, m[key]) {
-				return
+			if errHandler != nil {
+				errHandler(err)
 			}
 		}
+	}
+
+	return nil
+}
+
+// WithMountPoints returns a setup [Func] that wraps [MountAll] and can be used
+// with [Run].
+func WithMountPoints(mountPoints MountPoints) Func {
+	return func() error {
+		return MountAll(mountPoints, PrintWarning)
 	}
 }

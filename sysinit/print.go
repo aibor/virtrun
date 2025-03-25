@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+// SPDX-FileCopyrightText: 2025 Tobias Böhm <code@aibor.de>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -6,30 +6,28 @@ package sysinit
 
 import (
 	"fmt"
+	"io"
 	"os"
 )
 
-// ExitCodeFmt is the format string for communicating the test results
-//
-// The same format string must be configured for the [qemu.Command] so it is
-// matched correctly.
-const ExitCodeFmt = "SYSINIT_EXIT_CODE: %d"
-
-// PrintExitCode prints the magic string communicating the exit code of the
-// init to stdout.
-func PrintExitCode(exitCode int) {
-	// Ensure newlines before and after to avoid other writes messing up the
-	// exit code communication as much as possible.
-	msgFmt := "\n" + ExitCodeFmt + "\n"
-	_, _ = fmt.Fprintf(os.Stdout, msgFmt, exitCode)
-}
-
-// PrintError prints the given error to stderr.
+// PrintError prints the error to [os.Stderr].
 func PrintError(err error) {
-	_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	_, _ = FprintError(os.Stderr, err)
 }
 
-// PrintWarning prints the given error as warning to os.Stderr).
+// FprintError prints the error to the given [io.Writer].
+func FprintError(w io.Writer, e error) (int, error) {
+	//nolint:wrapcheck
+	return fmt.Fprintf(w, "Error: %v\n", e)
+}
+
+// PrintWarning prints the error as warning to [os.Stderr].
 func PrintWarning(err error) {
-	_, _ = fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+	_, _ = FprintWarning(os.Stderr, err)
+}
+
+// FprintWarning prints the error as warning to the given [io.Writer].
+func FprintWarning(w io.Writer, e error) (int, error) {
+	//nolint:wrapcheck
+	return fmt.Fprintf(w, "Warning: %v\n", e)
 }

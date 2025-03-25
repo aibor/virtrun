@@ -81,13 +81,13 @@ jobs:
           go-version-file: go.mod
 
       - name: Run vet with all constraints
-        run: go vet -tags integration ./...
+        run: go vet -tags integration,integration_sysinit ./...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: "v1.64"
-          args: "--build-tags integration ./..."
+          args: "--build-tags integration,integration_sysinit ./..."
 
   go-test:
     name: Go test
@@ -274,23 +274,14 @@ jobs:
           GOARCH: "${{ matrix.arch.go }}"
         run: |
           go test -v \
-            -tags integration \
+            -tags integration_sysinit \
             -exec "/virtrun -standalone" \
             -covermode atomic \
             -coverprofile coverage.txt \
-            ./sysinit/ \
+            ./sysinit \
+            ./internal/virtrun/init/cmd \
             -testModules tun,veth \
             | go-junit-report -set-exit-code -iocopy -out junit-report-sysinit.xml
-
-      - name: Run init test
-        env:
-          GOARCH: "${{ matrix.arch.go }}"
-        run: |
-          go test -v \
-            -tags integration \
-            -exec "/virtrun" \
-            -testModules tun,veth \
-            | go-junit-report -set-exit-code -iocopy -out junit-report-init.xml
 
       - name: Install go-cobertura
         working-directory: .github/workflows

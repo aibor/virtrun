@@ -70,10 +70,9 @@ type CommandSpec struct {
 	// Increase guest kernel logging.
 	Verbose bool
 
-	// ExitCodeFmt defines the format of the line communicating the exit code
-	// from the guest. It must contain exactly one integer verb
-	// (probably "%d").
-	ExitCodeFmt string
+	// ExitCodeScanFunc is used to parse the guest system's exit code from
+	// stdout.
+	ExitCodeScanFunc ExitCodeScanFunc
 }
 
 // AddConsole adds an additional file to the QEMU command. This will be
@@ -273,8 +272,8 @@ func NewCommand(spec CommandSpec) (*Command, error) {
 		return nil, err
 	}
 
-	if spec.ExitCodeFmt == "" {
-		return nil, &ArgumentError{"ExitCodeFmt must not be empty"}
+	if spec.ExitCodeScanFunc == nil {
+		return nil, &ArgumentError{"ExitCodeScanFunc must not be empty"}
 	}
 
 	cmd := &Command{
@@ -282,8 +281,8 @@ func NewCommand(spec CommandSpec) (*Command, error) {
 		args:          cmdArgs,
 		consoleOutput: spec.AdditionalConsoles,
 		stdoutParser: stdoutParser{
-			ExitCodeFmt: spec.ExitCodeFmt,
-			Verbose:     spec.Verbose,
+			ExitCodeScan: spec.ExitCodeScanFunc,
+			Verbose:      spec.Verbose,
 		},
 	}
 

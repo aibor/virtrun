@@ -23,14 +23,23 @@ import (
 	"github.com/aibor/virtrun/sysinit"
 )
 
-func main() {
-	cfg := sysinit.DefaultConfig()
-	cfg.ModulesDir = "/lib/modules"
-	// Set PATH environment variable to the directory all additional files
-	// are written to by virtrun.
-	cfg.Env["PATH"] = "/data"
+func run(mainFunc sysinit.Func) {
+	// Set PATH environment variable to the directory all additional files are
+	// written to by virtrun.
+	env := sysinit.EnvVars{"PATH": "/data"}
 
-	sysinit.Main(cfg, func() (int, error) {
+	sysinit.Run(sysinit.ExitCodeID.PrintFrom,
+		sysinit.WithMountPoints(sysinit.SystemMountPoints()),
+		sysinit.WithModules("/lib/modules/*"),
+		sysinit.WithInterfaceUp("lo"),
+		sysinit.WithSymlinks(sysinit.DevSymlinks()),
+		sysinit.WithEnv(env),
+		mainFunc,
+	)
+}
+
+func main() {
+	run(func() error {
 		// "/main" is the file virtrun copies the given binary to.
 		cmd := exec.Command("/main", os.Args[1:]...)
 		cmd.Stdin = os.Stdin
@@ -40,12 +49,12 @@ func main() {
 		if err := cmd.Run(); err != nil {
 			var exitErr *exec.ExitError
 			if errors.As(err, &exitErr) {
-				return exitErr.ExitCode(), nil
+				err = sysinit.ExitError(exitErr.ExitCode())
 			}
 
-			return -1, fmt.Errorf("main: %w", err)
+			return fmt.Errorf("main program: %w", err)
 		}
 
-		return 0, nil
+		return nil
 	})
 }

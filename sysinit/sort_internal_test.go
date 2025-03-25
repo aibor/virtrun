@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSortedByKeys(t *testing.T) {
+func TestSortedMap(t *testing.T) {
 	tests := []struct {
 		name     string
 		inputMap map[string]struct{}
@@ -61,7 +61,7 @@ func TestSortedByKeys(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual := []string{}
-			for path := range sortedByKeys(tt.inputMap) {
+			for path := range sortedMap(tt.inputMap) {
 				actual = append(actual, path)
 			}
 

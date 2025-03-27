@@ -36,22 +36,21 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: go-coverage*
-          path: /tmp/artifacts
           github-token: "${{ github.token }}"
           run-id: "${{ github.event.workflow_run.id }}"
 
       - name: Report coverage for virtrun
         uses: 5monkeys/cobertura-action@master
         with:
+          path: go-coverage/coverage.xml
           report_name: Coverage Report virtrun
           minimum_coverage: 75
           skip_covered: false
-        working-directory: /tmp/artifacts/go-coverage
 
       - name: Report coverage for sysinit
         uses: 5monkeys/cobertura-action@master
         with:
+          path: go-coverage-sysinit/coverage.xml
           report_name: Coverage Report sysinit
           minimum_coverage: 75
           skip_covered: false
-        working-directory: /tmp/artifacts/go-coverage-sysinit

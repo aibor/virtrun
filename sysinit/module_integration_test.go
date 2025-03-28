@@ -32,9 +32,6 @@ func passedModules() []string {
 }
 
 func TestLoadModule(t *testing.T) {
-	WithMountPoint(t, "/proc", sysinit.FSTypeProc)
-	WithMountPoint(t, "/tmp", sysinit.FSTypeTmp)
-
 	tempDir := t.TempDir()
 	fileTxtPath := filepath.Join(tempDir, "mod.txt")
 
@@ -89,9 +86,6 @@ func TestLoadModule(t *testing.T) {
 }
 
 func TestLoadModules(t *testing.T) {
-	WithMountPoint(t, "/proc", sysinit.FSTypeProc)
-	WithMountPoint(t, "/tmp", sysinit.FSTypeTmp)
-
 	tests := []struct {
 		name            string
 		dir             func(t *testing.T) string

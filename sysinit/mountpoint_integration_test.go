@@ -20,8 +20,6 @@ import (
 )
 
 func TestMount(t *testing.T) {
-	WithMountPoint(t, "/proc", sysinit.FSTypeProc)
-
 	tests := []struct {
 		name        string
 		path        string
@@ -118,7 +116,7 @@ func TestMountAll(t *testing.T) {
 		{
 			name: "valid mounts",
 			mounts: sysinit.MountPoints{
-				"/dev": {FSType: sysinit.FSTypeDevTmp},
+				"/sys": {FSType: sysinit.FSTypeSys},
 				"/run": {FSType: sysinit.FSTypeTmp},
 			},
 		},

@@ -29,3 +29,20 @@ func (ExitError) Is(other error) bool {
 func (e ExitError) Code() int {
 	return int(e)
 }
+
+// OptionalMountError is a collection of errors that occurred for mount points
+// that may fail.
+type OptionalMountError []error
+
+func (e OptionalMountError) Error() string {
+	return fmt.Sprintf("optional mount errors: %q", []error(e))
+}
+
+func (OptionalMountError) Is(other error) bool {
+	_, ok := other.(OptionalMountError)
+	return ok
+}
+
+func (e OptionalMountError) Unwrap() []error {
+	return e
+}

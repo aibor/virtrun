@@ -6,6 +6,7 @@ package sysinit
 
 import (
 	"fmt"
+	"log"
 )
 
 // ExitHandler is passed to [Run] and called with the first error a [Func]
@@ -51,8 +52,7 @@ func Run(exitHandler ExitHandler, funcs ...Func) {
 
 	defer func() {
 		if err := Poweroff(); err != nil {
-			PrintError(err)
-			panic(err)
+			log.Print("ERROR poweroff: ", err.Error())
 		}
 	}()
 

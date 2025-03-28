@@ -5,7 +5,9 @@
 package sysinit
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -98,18 +100,24 @@ func Mount(path string, opts MountOptions) error {
 
 // MountAll mounts the given set of system file systems.
 //
-// The mounts are executed in lexicographic order of the paths.
-func MountAll(mountPoints MountPoints, errHandler func(error)) error {
+// The mounts are executed in lexicographic order of the paths. If only
+// optional mount points failed, it returns an [OptionalMountError] with all
+// errors.
+func MountAll(mountPoints MountPoints) error {
+	var optionalErrs OptionalMountError
+
 	for path, opts := range sortedMap(mountPoints) {
 		if err := Mount(path, opts); err != nil {
 			if !opts.MayFail {
 				return err
 			}
 
-			if errHandler != nil {
-				errHandler(err)
-			}
+			optionalErrs = append(optionalErrs, err)
 		}
+	}
+
+	if optionalErrs != nil {
+		return optionalErrs
 	}
 
 	return nil
@@ -117,8 +125,21 @@ func MountAll(mountPoints MountPoints, errHandler func(error)) error {
 
 // WithMountPoints returns a setup [Func] that wraps [MountAll] and can be used
 // with [Run].
+//
+// It logs optional mounts that failed.
 func WithMountPoints(mountPoints MountPoints) Func {
 	return func() error {
-		return MountAll(mountPoints, PrintWarning)
+		err := MountAll(mountPoints)
+
+		var optionalErrs OptionalMountError
+		if errors.As(err, &optionalErrs) {
+			for _, err := range optionalErrs {
+				log.Println("INFO optional mount failed: ", err.Error())
+			}
+
+			return nil
+		}
+
+		return err
 	}
 }

@@ -8,7 +8,6 @@ package sysinit_test
 
 import (
 	"bufio"
-	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -110,8 +109,11 @@ func TestMountAll(t *testing.T) {
 				"/test/somewhereelse": {
 					MayFail: true,
 				},
+				"/test/somewhereelse2": {
+					MayFail: true,
+				},
 			},
-			expectedErr: unix.ENODEV,
+			expectedErr: sysinit.OptionalMountError{},
 		},
 		{
 			name: "valid mounts",
@@ -133,13 +135,8 @@ func TestMountAll(t *testing.T) {
 				}
 			})
 
-			var errs []error
-
-			err := sysinit.MountAll(tt.mounts, func(err error) {
-				errs = append(errs, err)
-			})
-			errs = append(errs, err)
-			require.ErrorIs(t, errors.Join(errs...), tt.expectedErr)
+			err := sysinit.MountAll(tt.mounts)
+			require.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
 }

@@ -49,10 +49,6 @@ func (e ExitCodeIdentifier) format() string {
 // See [ExitCodeFrom] for the resulting exit codes. Errors that are not
 // [ExitError] are printed to [os.Stderr].
 func (e ExitCodeIdentifier) PrintFrom(err error) {
-	if err != nil && !errors.Is(err, ExitError(0)) {
-		PrintError(err)
-	}
-
 	_, _ = e.FprintFrom(os.Stdout, err)
 }
 

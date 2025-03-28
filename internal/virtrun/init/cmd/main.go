@@ -17,6 +17,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 
@@ -24,11 +25,21 @@ import (
 )
 
 func run(mainFunc sysinit.Func) {
+	log.SetFlags(log.Lmicroseconds)
+	log.SetPrefix("VIRTRUN INIT: ")
+
 	// Set PATH environment variable to the directory all additional files are
 	// written to by virtrun.
 	env := sysinit.EnvVars{"PATH": "/data"}
 
-	sysinit.Run(sysinit.ExitCodeID.PrintFrom,
+	sysinit.Run(
+		func(err error) {
+			if err != nil && !errors.Is(err, sysinit.ExitError(0)) {
+				log.Print("ERROR ", err.Error())
+			}
+
+			sysinit.ExitCodeID.PrintFrom(err)
+		},
 		sysinit.WithMountPoints(sysinit.SystemMountPoints()),
 		sysinit.WithModules("/lib/modules/*"),
 		sysinit.WithInterfaceUp("lo"),

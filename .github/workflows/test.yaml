@@ -66,6 +66,24 @@ jobs:
       - name: Run govulncheck
         run: govulncheck -test ./...
 
+  go-gen-check:
+    name: Go generate check
+    runs-on: ubuntu-latest
+    needs:
+      - go-setup
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
+
+      - name: Go generate
+        run: go generate ./... && git diff --exit-code
+
   go-lint:
     name: Go lint
     runs-on: ubuntu-24.04
@@ -399,6 +417,7 @@ jobs:
     name: Test Results
     needs:
       - go-deps-check
+      - go-gen-check
       - go-lint
       - go-test
       - integration-tests

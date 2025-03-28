@@ -195,7 +195,7 @@ jobs:
             -tags integration \
             -skip "${{ matrix.arch.skip }}" \
             -covermode atomic \
-            -coverpkg "$(go list ./internal/... | paste -s -d ',' -)" \
+            -coverpkg ./internal/... \
             ./internal/cmd/run_integration_test.go \
             -test.gocoverdir="${{ env.GOCOVERDIR }}" \
             -virtrun.kernel "/boot/vmlinuz-virt" \
@@ -278,6 +278,7 @@ jobs:
             -exec "/virtrun -standalone" \
             -covermode atomic \
             -coverprofile coverage.txt \
+            -coverpkg ./sysinit \
             ./sysinit \
             ./internal/virtrun/init/cmd \
             -testModules tun,veth \

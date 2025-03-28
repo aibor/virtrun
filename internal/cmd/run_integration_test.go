@@ -11,6 +11,8 @@ package cmd_test
 import (
 	"bytes"
 	"flag"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -18,34 +20,8 @@ import (
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-var (
-	KernelPath            = "/kernels/vmlinuz"
-	ForceTransportTypePCI bool
-	Verbose               bool
-)
-
-func init() {
-	flag.StringVar(
-		&KernelPath,
-		"virtrun.kernel",
-		KernelPath,
-		"path of the test kernel",
-	)
-	flag.BoolVar(
-		&ForceTransportTypePCI,
-		"virtrun.forcepci",
-		ForceTransportTypePCI,
-		"force transport type virtio-pci instead of arch default",
-	)
-	flag.BoolVar(
-		&Verbose,
-		"virtrun.verbose",
-		Verbose,
-		"show complete guest output",
-	)
-}
 
 func TestIntegration(t *testing.T) {
 	tests := []struct {
@@ -100,23 +76,25 @@ func TestIntegration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			self, err := os.Executable()
+			require.NoError(t, err)
+
 			args := []string{
-				"test",
-				"-kernel", sys.MustAbsolutePath(KernelPath),
-				"-cpu", "max",
-				"-memory", "128",
-			}
-			if Verbose {
-				args = append(args, "-verbose")
+				filepath.Base(self),
 			}
 
-			if ForceTransportTypePCI {
-				args = append(args, "-transport", string(qemu.TransportTypePCI))
-			}
-
+			// Pass flags from the test invocation. Must start with "--" to
+			// terminate flag parsing of the test binary itself. At least the
+			// kernel path must be passed, e.g.  "-- -kernel /boot/vmlinuz".
+			// Alternatively, VIRTRUN_ARGS environment variable can be used to
+			// pass args.
+			// Some flags may be overridden by the test cases, though.
+			args = append(args, flag.Args()...)
 			args = append(args, tt.args...)
 			args = append(args, sys.MustAbsolutePath(tt.bin))
 			args = append(args, tt.initArgs...)
+
+			t.Logf("virtrun args: % s", args)
 
 			var stdOut, stdErr bytes.Buffer
 

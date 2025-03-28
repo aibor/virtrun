@@ -146,6 +146,11 @@ jobs:
       - go-setup
     container:
       image: alpine:3.21
+    env:
+      VIRTRUN_ARGS: "-kernel /boot/vmlinuz-virt \
+                     -transport pci \
+                     -verbose \
+                     -debug"
     strategy:
       matrix:
         arch:
@@ -198,9 +203,6 @@ jobs:
             -coverpkg ./internal/... \
             ./internal/cmd/run_integration_test.go \
             -test.gocoverdir="${{ env.GOCOVERDIR }}" \
-            -virtrun.kernel "/boot/vmlinuz-virt" \
-            -virtrun.forcepci \
-            -virtrun.verbose \
             | go-junit-report -set-exit-code -iocopy -out junit-report.xml
 
       - name: Upload test output

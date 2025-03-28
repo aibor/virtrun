@@ -86,7 +86,7 @@ jobs:
 
   go-lint:
     name: Go lint
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs:
       - go-setup
     steps:
@@ -109,7 +109,7 @@ jobs:
 
   go-test:
     name: Go test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs:
       - go-setup
     steps:
@@ -159,7 +159,7 @@ jobs:
 
   integration-tests:
     name: Run integration tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs:
       - go-setup
     container:
@@ -240,7 +240,7 @@ jobs:
 
   integration-tests-sysinit:
     name: Run integration tests of sysinit package and binaries
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs:
       - go-setup
     container:
@@ -328,7 +328,7 @@ jobs:
 
   go-coverage:
     name: Go coverage
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs:
       - go-test
       - integration-tests
@@ -379,7 +379,7 @@ jobs:
 
   reuse-lint:
     name: FSFE REUSE Compliance Check
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -394,7 +394,7 @@ jobs:
 
   goreleaser-lint:
     name: Goreleaser check
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -413,7 +413,7 @@ jobs:
 
   results:
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     name: Test Results
     needs:
       - go-deps-check

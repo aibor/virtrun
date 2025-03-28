@@ -45,6 +45,11 @@ type Func func() error
 //			// Your actual main code.
 //		},
 //	)
+//
+// Pay attention to the proper order: symlinks should be created after the
+// dependent mounts. For proper communication with the virtrun at least /dev
+// should be mounted, as additional files are sent via serial consoles accessed
+// via files in /dev/. For go coverage a /tmp directory is required.
 func Run(exitHandler ExitHandler, funcs ...Func) {
 	if !IsPidOne() {
 		panic(ErrNotPidOne)

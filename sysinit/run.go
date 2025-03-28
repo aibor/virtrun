@@ -61,6 +61,10 @@ func Run(exitHandler ExitHandler, funcs ...Func) {
 		}
 	}()
 
+	run(exitHandler, funcs)
+}
+
+func run(exitHandler ExitHandler, funcs []Func) {
 	err := runFuncs(funcs)
 
 	if exitHandler != nil {
@@ -70,8 +74,15 @@ func Run(exitHandler ExitHandler, funcs ...Func) {
 
 func runFuncs(funcs []Func) (err error) {
 	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("panic during run: %v", r) //nolint:err113
+		r := recover()
+		if r == nil {
+			return
+		}
+
+		if recoveredErr, ok := r.(error); ok {
+			err = fmt.Errorf("%w: %w", ErrPanic, recoveredErr)
+		} else {
+			err = fmt.Errorf("%w: %v", ErrPanic, r)
 		}
 	}()
 

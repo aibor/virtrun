@@ -9,9 +9,13 @@ import (
 	"fmt"
 )
 
-// ErrNotPidOne may be returned if the process is expected to be run as PID 1
-// but is not.
-var ErrNotPidOne = errors.New("process does not have ID 1")
+var (
+	// ErrNotPidOne is returned if the process is expected to be run as PID 1
+	// but is not.
+	ErrNotPidOne = errors.New("process does not have ID 1")
+	// ErrPanic is returned if a [Func] panicked.
+	ErrPanic = errors.New("function panicked")
+)
 
 // ExitError is an exit code that is considered an error.
 type ExitError int

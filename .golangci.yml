@@ -71,3 +71,4 @@ issues:
       linters:
         - gochecknoglobals
         - gochecknoinits
+        - err113

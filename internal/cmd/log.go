@@ -6,19 +6,19 @@ package cmd
 
 import (
 	"io"
+	"log"
 	"log/slog"
 )
 
-func setupLogging(writer io.Writer, debug bool) {
+func setupLogging(w io.Writer, debug bool) {
+	log.SetOutput(w)
+	log.SetFlags(log.Lmicroseconds)
+	log.SetPrefix("VIRTRUN: ")
+
 	level := slog.LevelWarn
 	if debug {
 		level = slog.LevelDebug
 	}
 
-	slog.SetDefault(slog.New(slog.NewTextHandler(
-		writer,
-		&slog.HandlerOptions{
-			Level: level,
-		},
-	)))
+	slog.SetLogLoggerLevel(level)
 }

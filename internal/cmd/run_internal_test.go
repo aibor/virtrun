@@ -7,6 +7,7 @@ package cmd
 import (
 	"bytes"
 	"flag"
+	"log"
 	"testing"
 
 	"github.com/aibor/virtrun/internal/qemu"
@@ -39,7 +40,7 @@ func TestHandleRunError(t *testing.T) {
 				ExitCode: 42,
 			},
 			expectedExitCode: 42,
-			expectedOutput: "Error [virtrun]: host: " +
+			expectedOutput: "ERROR host: " +
 				"assert.AnError general error for testing\n",
 		},
 		{
@@ -58,8 +59,7 @@ func TestHandleRunError(t *testing.T) {
 				Guest: true,
 			},
 			expectedExitCode: -1,
-			expectedOutput: "Error [virtrun]: guest: " +
-				"init did not print exit code\n",
+			expectedOutput:   "ERROR guest: init did not print exit code\n",
 		},
 		{
 			name: "qemu command guest oom error",
@@ -68,8 +68,7 @@ func TestHandleRunError(t *testing.T) {
 				Guest: true,
 			},
 			expectedExitCode: -1,
-			expectedOutput: "Error [virtrun]: guest: " +
-				"system ran out of memory\n",
+			expectedOutput:   "ERROR guest: system ran out of memory\n",
 		},
 		{
 			name: "qemu command guest panic error",
@@ -78,22 +77,24 @@ func TestHandleRunError(t *testing.T) {
 				Guest: true,
 			},
 			expectedExitCode: -1,
-			expectedOutput: "Error [virtrun]: guest: " +
-				"system panicked\n",
+			expectedOutput:   "ERROR guest: system panicked\n",
 		},
 		{
 			name:             "any error",
 			err:              assert.AnError,
 			expectedExitCode: -1,
-			expectedOutput: "Error [virtrun]: " +
-				"assert.AnError general error for testing\n",
+			expectedOutput:   "ERROR assert.AnError general error for testing\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var stdErr bytes.Buffer
-			actualExitCode := handleRunError(tt.err, &stdErr)
+
+			log.SetOutput(&stdErr)
+			log.SetFlags(0)
+
+			actualExitCode := handleRunError(tt.err)
 
 			assert.Equal(t, tt.expectedExitCode, actualExitCode,
 				"exit code should be as expected")

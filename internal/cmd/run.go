@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os/signal"
 	"syscall"
 
@@ -49,7 +50,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	return nil
 }
 
-func handleRunError(err error, errWriter io.Writer) int {
+func handleRunError(err error) int {
 	if err == nil {
 		return 0
 	}
@@ -81,12 +82,12 @@ func handleRunError(err error, errWriter io.Writer) int {
 		return exitCode
 	}
 
-	fmt.Fprintf(errWriter, "Error [virtrun]: %v\n", err)
+	slog.Error(err.Error())
 
 	return exitCode
 }
 
 func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	err := run(args, stdin, stdout, stderr)
-	return handleRunError(err, stderr)
+	return handleRunError(err)
 }

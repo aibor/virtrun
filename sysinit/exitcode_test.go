@@ -11,7 +11,6 @@ import (
 
 	"github.com/aibor/virtrun/sysinit"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestExitCodeIdentifier_Sprint(t *testing.T) {
@@ -20,7 +19,7 @@ func TestExitCodeIdentifier_Sprint(t *testing.T) {
 	assert.Equal(t, "rc: 42", e.Sprint(42))
 }
 
-func TestExitCodeIdentifier_Sscan(t *testing.T) {
+func TestExitCodeIdentifier_ParseExitCode(t *testing.T) {
 	tests := []struct {
 		name        string
 		exitCodeID  sysinit.ExitCodeIdentifier
@@ -71,7 +70,7 @@ func TestExitCodeIdentifier_Sscan(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, found := tt.exitCodeID.Sscan(tt.input)
+			actual, found := tt.exitCodeID.ParseExitCode(tt.input)
 			tt.assertFound(t, found)
 
 			assert.Equal(t, tt.expected, actual)
@@ -79,14 +78,11 @@ func TestExitCodeIdentifier_Sscan(t *testing.T) {
 	}
 }
 
-func TestExitCodeIdentifier_FprintFrom(t *testing.T) {
-	exitCodeID := sysinit.ExitCodeIdentifier("rc")
-
+func TestExitCodeIdentifier_Printer(t *testing.T) {
 	tests := []struct {
 		name        string
 		err         error
 		expectedOut string
-		expectedErr string
 	}{
 		{
 			name:        "no error",
@@ -96,7 +92,6 @@ func TestExitCodeIdentifier_FprintFrom(t *testing.T) {
 			name:        "an error",
 			err:         assert.AnError,
 			expectedOut: "rc: -1\n",
-			expectedErr: "Error: " + assert.AnError.Error() + "\n",
 		},
 		{
 			name:        "exit error",
@@ -109,8 +104,8 @@ func TestExitCodeIdentifier_FprintFrom(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var buffer bytes.Buffer
 
-			_, err := exitCodeID.FprintFrom(&buffer, tt.err)
-			require.NoError(t, err)
+			e := sysinit.ExitCodeIdentifier("rc")
+			e.Printer(&buffer)(tt.err)
 
 			assert.Equal(t, tt.expectedOut, buffer.String())
 		})

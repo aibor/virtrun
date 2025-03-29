@@ -70,9 +70,8 @@ type CommandSpec struct {
 	// Increase guest kernel logging.
 	Verbose bool
 
-	// ExitCodeScanFunc is used to parse the guest system's exit code from
-	// stdout.
-	ExitCodeScanFunc ExitCodeScanFunc
+	// ExitCodeParser parses the guest system's exit code from stdout.
+	ExitCodeParser ExitCodeParser
 }
 
 // AddConsole adds an additional file to the QEMU command. This will be
@@ -272,7 +271,7 @@ func NewCommand(spec CommandSpec) (*Command, error) {
 		return nil, err
 	}
 
-	if spec.ExitCodeScanFunc == nil {
+	if spec.ExitCodeParser == nil {
 		return nil, &ArgumentError{"ExitCodeScanFunc must not be empty"}
 	}
 
@@ -281,8 +280,8 @@ func NewCommand(spec CommandSpec) (*Command, error) {
 		args:          cmdArgs,
 		consoleOutput: spec.AdditionalConsoles,
 		stdoutParser: stdoutParser{
-			ExitCodeScan: spec.ExitCodeScanFunc,
-			Verbose:      spec.Verbose,
+			ExitCodeParser: spec.ExitCodeParser,
+			Verbose:        spec.Verbose,
 		},
 	}
 

@@ -198,7 +198,7 @@ func TestNewCommand(t *testing.T) {
 				AdditionalConsoles: []string{"one"},
 				NoKVM:              true,
 				Verbose:            true,
-				ExitCodeScanFunc:   exitCodeScan,
+				ExitCodeParser:     exitCodeScan,
 			},
 			expectedCmd: &Command{
 				name: "test",
@@ -221,8 +221,8 @@ func TestNewCommand(t *testing.T) {
 					"initcall_blacklist=ahci_pci_driver_init",
 				},
 				stdoutParser: stdoutParser{
-					ExitCodeScan: exitCodeScan,
-					Verbose:      true,
+					ExitCodeParser: exitCodeScan,
+					Verbose:        true,
 				},
 				consoleOutput: []string{"one"},
 			},
@@ -270,15 +270,9 @@ func TestCommand_Run(t *testing.T) {
 			name: "success no consoles",
 			cmd: Command{
 				name: "echo",
-				args: []string{"rc: 0"},
+				args: []string{"exit code: 0"},
 				stdoutParser: stdoutParser{
-					ExitCodeScan: func(s string) (int, bool) {
-						if s != "rc: 0" {
-							return 0, false
-						}
-
-						return 0, true
-					},
+					ExitCodeParser: exitCodeScanner,
 				},
 			},
 			assertErr: require.NoError,
@@ -289,7 +283,7 @@ func TestCommand_Run(t *testing.T) {
 				name: "echo",
 				args: []string{"exit code: 0"},
 				stdoutParser: stdoutParser{
-					ExitCodeScan: exitCodeScanner,
+					ExitCodeParser: exitCodeScanner,
 				},
 				consoleOutput: []string{
 					tempDir + "/out1",
@@ -306,7 +300,7 @@ func TestCommand_Run(t *testing.T) {
 				name: "echo",
 				args: []string{"exit code: 42"},
 				stdoutParser: stdoutParser{
-					ExitCodeScan: exitCodeScanner,
+					ExitCodeParser: exitCodeScanner,
 				},
 				consoleOutput: []string{
 					tempDir + "/out1",

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -33,19 +32,22 @@ func (e ExitCodeIdentifier) Sprint(exitCode int) string {
 	return fmt.Sprintf(e.format(), exitCode)
 }
 
-// Sscan scans the given string for the identifier string.
+// ParseExitCode parses the given string for the exit code.
 //
 // The identifier can be anywhere in the string. It does not need to be at the
 // beginning. Returns the exit code and whether it was found in the given
 // string.
-func (e ExitCodeIdentifier) Sscan(s string) (int, bool) {
+func (e ExitCodeIdentifier) ParseExitCode(s string) (int, bool) {
 	start := strings.Index(s, string(e))
 	if start < 0 {
 		return 0, false
 	}
 
+	format := e.format()
+
 	var exitCode int
-	if _, err := fmt.Sscanf(s[start:], e.format(), &exitCode); err != nil {
+
+	if _, err := fmt.Sscanf(s[start:], format, &exitCode); err != nil {
 		return 0, false
 	}
 
@@ -56,22 +58,14 @@ func (e ExitCodeIdentifier) format() string {
 	return string(e) + ": %d"
 }
 
-// PrintFrom prints the exit code for the given error to [os.Stdout].
-//
-// See [ExitCodeFrom] for the resulting exit codes. Errors that are not
-// [ExitError] are printed to [os.Stderr].
-func (e ExitCodeIdentifier) PrintFrom(err error) {
-	_, _ = e.FprintFrom(os.Stdout, err)
-}
-
-// FprintFrom prints the exit code for the given error to the given [io.Writer].
+// Printer returns an [ExitHandler] that prints an exit code for a given error.
 //
 // See [ExitCodeFrom] for the resulting exit codes.
-func (e ExitCodeIdentifier) FprintFrom(w io.Writer, err error) (int, error) {
-	exitCode := ExitCodeFrom(err)
-
-	//nolint:wrapcheck
-	return fmt.Fprintln(w, e.Sprint(exitCode))
+func (e ExitCodeIdentifier) Printer(w io.Writer) ExitHandler {
+	return func(err error) {
+		exitCode := ExitCodeFrom(err)
+		_, _ = fmt.Fprintln(w, e.Sprint(exitCode))
+	}
 }
 
 // ExitCodeFrom returns an exit code based on the given error.

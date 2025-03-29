@@ -7,6 +7,7 @@
 package sysinit_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/aibor/virtrun/sysinit"
@@ -14,7 +15,7 @@ import (
 
 func TestMain(m *testing.M) {
 	sysinit.Run(
-		sysinit.ExitCodeID.PrintFrom,
+		sysinit.ExitCodeID.Printer(os.Stdout),
 		// Mount /tmp so gocoverdir works.
 		sysinit.WithMountPoints(sysinit.MountPoints{
 			"/dev":  {FSType: sysinit.FSTypeDevTmp},

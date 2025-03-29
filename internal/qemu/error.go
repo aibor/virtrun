@@ -4,7 +4,10 @@
 
 package qemu
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	// ErrGuestNoExitCodeFound is returned if no exit code matching the
@@ -28,6 +31,11 @@ var (
 
 	// ErrArgumentCollision is returned if two [Argument]s are considered equal.
 	ErrArgumentCollision = errors.New("colliding args")
+
+	// ErrConsoleNoOutput is returned if a console did not output anything. It
+	// might be caused by wrong [TransportType], missing mount of /dev in the
+	// guest system or wrong path the guest process writes to.
+	ErrConsoleNoOutput = errors.New("console did not output anything")
 )
 
 // ArgumentError indicates an issue with an input argument.
@@ -71,5 +79,27 @@ func (*CommandError) Is(other error) bool {
 
 // Unwrap implements the [errors.Unwrap] interface.
 func (e *CommandError) Unwrap() error {
+	return e.Err
+}
+
+// ConsoleError wraps any error occurring during console output processing.
+type ConsoleError struct {
+	Name string
+	Err  error
+}
+
+// Error implements the [error] interface.
+func (e *ConsoleError) Error() string {
+	return fmt.Sprintf("console %s: %v", e.Name, e.Err.Error())
+}
+
+// Is implements the [errors.Is] interface.
+func (*ConsoleError) Is(other error) bool {
+	_, ok := other.(*ConsoleError)
+	return ok
+}
+
+// Unwrap implements the [errors.Unwrap] interface.
+func (e *ConsoleError) Unwrap() error {
 	return e.Err
 }

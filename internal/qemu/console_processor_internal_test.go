@@ -20,7 +20,8 @@ func TestConsoleProcessor_Run(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			name: "empty",
+			name:        "empty",
+			expectedErr: ErrConsoleNoOutput,
 		},
 		{
 			name:     "crlf only",

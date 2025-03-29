@@ -36,35 +36,46 @@ func (p consoleProcessor) run() error {
 		return bufio.ScanLines(data, atEOF)
 	})
 
+	var called bool
 	for scanner.Scan() {
-		data := scanner.Bytes()
+		called = true
 
-		if p.fn != nil {
-			data = p.fn(data)
-		}
-
-		if p.dst == nil || data == nil {
-			continue
-		}
-
-		_, err := p.dst.Write(data)
-		if err != nil {
-			return fmt.Errorf("write data: %w", err)
-		}
-
-		if eofReached {
-			break
-		}
-
-		_, err = p.dst.Write([]byte("\n"))
-		if err != nil {
-			return fmt.Errorf("write newline: %w", err)
+		if err := p.processLine(scanner.Bytes(), eofReached); err != nil {
+			return err
 		}
 	}
 
 	if scanner.Err() != nil && !errors.Is(scanner.Err(), os.ErrClosed) {
 		//nolint:wrapcheck
 		return scanner.Err()
+	}
+
+	if !called {
+		return ErrConsoleNoOutput
+	}
+
+	return nil
+}
+
+func (p consoleProcessor) processLine(data []byte, eofReached bool) error {
+	if p.fn != nil {
+		data = p.fn(data)
+	}
+
+	if p.dst == nil || data == nil {
+		return nil
+	}
+
+	if _, err := p.dst.Write(data); err != nil {
+		return fmt.Errorf("write data: %w", err)
+	}
+
+	if eofReached {
+		return nil
+	}
+
+	if _, err := p.dst.Write([]byte("\n")); err != nil {
+		return fmt.Errorf("write newline: %w", err)
 	}
 
 	return nil

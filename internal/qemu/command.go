@@ -315,16 +315,11 @@ func (c *Command) Run(
 		}
 	}()
 
-	var processors errgroup.Group
+	var consoleProcessors errgroup.Group
 
 	cmd := exec.CommandContext(ctx, c.name, c.args...)
-
-	// The default cancel function set by [exec.CommandContext] sends SIGKILL
-	// to the process. This makes it impossible for QEMU to shutdown gracefully
-	// which messes up terminal stdio and leaves the terminal in a broken state.
-	cmd.Cancel = func() error {
-		return cmd.Process.Signal(os.Interrupt)
-	}
+	cmd.Stdin = stdin
+	cmd.Stderr = stderr
 
 	for _, path := range c.consoleOutput {
 		dst, err := os.Create(path)
@@ -346,16 +341,50 @@ func (c *Command) Run(
 		// target file on the host.
 		cmd.ExtraFiles = append(cmd.ExtraFiles, writePipe)
 
-		processor := consoleProcessor{
+		consoleProcessor := consoleProcessor{
 			dst: dst,
 			src: readPipe,
 		}
 
-		processors.Go(processor.run)
+		consoleProcessors.Go(func() error {
+			if err := consoleProcessor.run(); err != nil {
+				return &ConsoleError{
+					Name: path,
+					Err:  err,
+				}
+			}
+
+			return nil
+		})
 	}
 
-	cmd.Stdin = stdin
-	cmd.Stderr = stderr
+	runErr := run(cmd, stdout, c.stdoutParser)
+	consoleProcessorErr := consoleProcessors.Wait()
+
+	if runErr != nil {
+		return runErr
+	}
+
+	if consoleProcessorErr != nil {
+		return fmt.Errorf("processors: %w", consoleProcessorErr)
+	}
+
+	return nil
+}
+
+func run(cmd *exec.Cmd, stdout io.Writer, stdoutParser stdoutParser) error {
+	defer func() {
+		for _, f := range cmd.ExtraFiles {
+			closeLog(f)
+		}
+	}()
+
+	// The default cancel function set by [exec.CommandContext] sends SIGKILL
+	// to the process. This makes it impossible for QEMU to shutdown gracefully
+	// which messes up terminal stdio and leaves the terminal in a broken state.
+	cmd.Cancel = func() error {
+		return cmd.Process.Signal(os.Interrupt)
+	}
 
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -365,43 +394,27 @@ func (c *Command) Run(
 	stdoutProcessor := consoleProcessor{
 		dst: stdout,
 		src: outPipe,
-		fn:  c.stdoutParser.Parse,
+		fn:  stdoutParser.Parse,
 	}
-
-	runErr := run(cmd, stdoutProcessor)
-
-	err = processors.Wait()
-	if err != nil {
-		return fmt.Errorf("processors: %w", err)
-	}
-
-	if runErr != nil {
-		return runErr
-	}
-
-	return c.stdoutParser.GuestSuccessful()
-}
-
-func run(cmd *exec.Cmd, stdoutProcessor consoleProcessor) error {
-	defer func() {
-		for _, f := range cmd.ExtraFiles {
-			closeLog(f)
-		}
-	}()
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start: %w", err)
 	}
 
-	if err := stdoutProcessor.run(); err != nil {
-		return fmt.Errorf("stdout parser: %w", err)
-	}
+	processorErr := stdoutProcessor.run()
 
 	if err := cmd.Wait(); err != nil {
-		return wrapExitError(err)
+		return fmt.Errorf("command: %w", wrapExitError(err))
 	}
 
-	return nil
+	if processorErr != nil {
+		return &ConsoleError{
+			Name: "stdout",
+			Err:  processorErr,
+		}
+	}
+
+	return stdoutParser.GuestSuccessful()
 }
 
 func closeLog(closer io.Closer) {
@@ -415,13 +428,12 @@ func closeLog(closer io.Closer) {
 
 func wrapExitError(err error) error {
 	var exitErr *exec.ExitError
-
-	if !errors.As(err, &exitErr) {
-		return fmt.Errorf("command: %w", err)
+	if errors.As(err, &exitErr) {
+		return &CommandError{
+			Err:      err,
+			ExitCode: exitErr.ExitCode(),
+		}
 	}
 
-	return &CommandError{
-		Err:      err,
-		ExitCode: exitErr.ExitCode(),
-	}
+	return err
 }

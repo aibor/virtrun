@@ -69,10 +69,19 @@ func handleRunError(err error) int {
 	}
 
 	var qemuCmdErr *qemu.CommandError
-
 	if errors.As(err, &qemuCmdErr) {
 		if qemuCmdErr.ExitCode != 0 {
 			exitCode = qemuCmdErr.ExitCode
+		}
+	}
+
+	var consoleErr *qemu.ConsoleError
+	if errors.As(err, &consoleErr) {
+		if errors.Is(err, qemu.ErrConsoleNoOutput) {
+			slog.Warn(
+				"maybe wrong transport type or /dev not mounted in guest",
+				slog.String("console", consoleErr.Name),
+			)
 		}
 	}
 

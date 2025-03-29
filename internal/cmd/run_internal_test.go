@@ -80,6 +80,17 @@ func TestHandleRunError(t *testing.T) {
 			expectedOutput:   "ERROR guest: system panicked\n",
 		},
 		{
+			name: "console no output",
+			err: &qemu.ConsoleError{
+				Err:  qemu.ErrConsoleNoOutput,
+				Name: "stdfoo",
+			},
+			expectedExitCode: -1,
+			expectedOutput: "WARN maybe wrong transport type " +
+				"or /dev not mounted in guest console=stdfoo\n" +
+				"ERROR console stdfoo: console did not output anything\n",
+		},
+		{
 			name:             "any error",
 			err:              assert.AnError,
 			expectedExitCode: -1,

@@ -5,6 +5,7 @@
 package qemu
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -262,12 +263,14 @@ func TestCommand_Run(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		cmd       Command
-		assertErr require.ErrorAssertionFunc
+		name           string
+		cmd            Command
+		expectedStdout string
+		expectedStderr string
+		assertErr      require.ErrorAssertionFunc
 	}{
 		{
-			name: "success no consoles",
+			name: "just success",
 			cmd: Command{
 				name: "echo",
 				args: []string{"exit code: 0"},
@@ -276,60 +279,126 @@ func TestCommand_Run(t *testing.T) {
 				},
 			},
 			assertErr: require.NoError,
+		},
+		{
+			name: "success with stdout",
+			cmd: Command{
+				name: "echo",
+				args: []string{"some\nexit code: 0"},
+				stdoutParser: stdoutParser{
+					ExitCodeParser: exitCodeScanner,
+				},
+			},
+			expectedStdout: "some\n",
+			assertErr:      require.NoError,
+		},
+		{
+			name: "success with stdout and stderr",
+			cmd: Command{
+				name: "sh",
+				args: []string{
+					"-c",
+					"echo fail >&2; echo 'some\nexit code: 0'",
+				},
+				stdoutParser: stdoutParser{
+					ExitCodeParser: exitCodeScanner,
+				},
+			},
+			expectedStdout: "some\n",
+			expectedStderr: "fail\n",
+			assertErr:      require.NoError,
 		},
 		{
 			name: "success with consoles",
 			cmd: Command{
-				name: "echo",
-				args: []string{"exit code: 0"},
+				name: "sh",
+				args: []string{
+					"-c",
+					"echo foo >&3; echo fail >&2; echo 'some\nexit code: 0'",
+				},
+				stdoutParser: stdoutParser{
+					ExitCodeParser: exitCodeScanner,
+				},
+				consoleOutput: []string{
+					tempDir + "/out1",
+				},
+			},
+			expectedStdout: "some\n",
+			expectedStderr: "fail\n",
+			assertErr:      require.NoError,
+		},
+		{
+			name: "success but consoles no output",
+			cmd: Command{
+				name: "sh",
+				args: []string{
+					"-c",
+					"echo foo >&3; echo fail >&2; echo 'some\nexit code: 0'",
+				},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
 				},
 				consoleOutput: []string{
 					tempDir + "/out1",
 					tempDir + "/out2",
-					tempDir + "/out3",
-					tempDir + "/out4",
 				},
 			},
-			assertErr: require.NoError,
+			expectedStdout: "some\n",
+			expectedStderr: "fail\n",
+			assertErr: func(t require.TestingT, err error, args ...any) {
+				require.ErrorIs(t, err, ErrConsoleNoOutput, args...)
+			},
+		},
+		{
+			name: "missing exit code",
+			cmd: Command{
+				name: "sh",
+				args: []string{"-c", "echo foo >&3; echo exit"},
+				stdoutParser: stdoutParser{
+					ExitCodeParser: exitCodeScanner,
+				},
+				consoleOutput: []string{
+					tempDir + "/out1",
+				},
+			},
+			expectedStdout: "exit\n",
+			assertErr: func(t require.TestingT, err error, args ...any) {
+				require.ErrorIs(t, err, ErrGuestNoExitCodeFound, args...)
+			},
 		},
 		{
 			name: "fail with consoles",
 			cmd: Command{
-				name: "echo",
-				args: []string{"exit code: 42"},
+				name: "sh",
+				args: []string{"-c", "echo foo >&3; echo exit code: 42"},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
 				},
 				consoleOutput: []string{
 					tempDir + "/out1",
-					tempDir + "/out2",
-					tempDir + "/out3",
-					tempDir + "/out4",
 				},
 			},
-			assertErr: func(t require.TestingT, err error, _ ...any) {
+			assertErr: func(t require.TestingT, err error, args ...any) {
 				var cmdErr *CommandError
-				require.ErrorAs(t, err, &cmdErr)
-				assert.Equal(t, 42, cmdErr.ExitCode)
-				assert.Equal(t, ErrGuestNonZeroExitCode, cmdErr.Err)
+				require.ErrorAs(t, err, &cmdErr, args...)
+				assert.Equal(t, 42, cmdErr.ExitCode, args...)
+				assert.Equal(t, ErrGuestNonZeroExitCode, cmdErr.Err, args...)
 			},
 		},
 		{
 			name: "start error with consoles",
 			cmd: Command{
 				name: "nonexistingprogramthatdoesnotexistanywhere",
+				stdoutParser: stdoutParser{
+					ExitCodeParser: exitCodeScanner,
+				},
 				consoleOutput: []string{
 					tempDir + "/out1",
-					tempDir + "/out2",
-					tempDir + "/out3",
-					tempDir + "/out4",
 				},
 			},
-			assertErr: func(t require.TestingT, err error, _ ...any) {
-				require.NotErrorIs(t, err, &CommandError{})
-				require.Error(t, err)
+			assertErr: func(t require.TestingT, err error, args ...any) {
+				require.NotErrorIs(t, err, &CommandError{}, args...)
+				require.Error(t, err, args...)
 			},
 		},
 	}
@@ -338,8 +407,13 @@ func TestCommand_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer goleak.VerifyNone(t)
 
-			err := tt.cmd.Run(t.Context(), nil, nil, nil)
+			var outBuf, errBuf bytes.Buffer
+
+			err := tt.cmd.Run(t.Context(), nil, &outBuf, &errBuf)
 			tt.assertErr(t, err)
+
+			assert.Equal(t, tt.expectedStdout, outBuf.String(), "stdout")
+			assert.Equal(t, tt.expectedStderr, errBuf.String(), "stderr")
 		})
 	}
 }

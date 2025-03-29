@@ -132,13 +132,13 @@ func TestStdoutParser_Process(t *testing.T) {
 
 			stdoutParser := stdoutParser{
 				Verbose: tt.verbose,
-				ExitCodeScan: func(s string) (int, error) {
-					d, found := strings.CutPrefix(s, "exit code: ")
-					if !found {
-						return 0, assert.AnError
+				ExitCodeScan: func(s string) (int, bool) {
+					if d, found := strings.CutPrefix(s, "exit code: "); found {
+						i, err := strconv.Atoi(d)
+						return i, err == nil
 					}
 
-					return strconv.Atoi(d)
+					return 0, false
 				},
 			}
 

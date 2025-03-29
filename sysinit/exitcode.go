@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
 // ExitCodeID is the identifier string for communicating an exit code via
@@ -33,11 +34,22 @@ func (e ExitCodeIdentifier) Sprint(exitCode int) string {
 }
 
 // Sscan scans the given string for the identifier string.
-func (e ExitCodeIdentifier) Sscan(s string) (int, error) {
-	var exitCode int
-	_, err := fmt.Sscanf(s, e.format(), &exitCode)
+//
+// The identifier can be anywhere in the string. It does not need to be at the
+// beginning. Returns the exit code and whether it was found in the given
+// string.
+func (e ExitCodeIdentifier) Sscan(s string) (int, bool) {
+	start := strings.Index(s, string(e))
+	if start < 0 {
+		return 0, false
+	}
 
-	return exitCode, err //nolint:wrapcheck
+	var exitCode int
+	if _, err := fmt.Sscanf(s[start:], e.format(), &exitCode); err != nil {
+		return 0, false
+	}
+
+	return exitCode, true
 }
 
 func (e ExitCodeIdentifier) format() string {
@@ -58,10 +70,8 @@ func (e ExitCodeIdentifier) PrintFrom(err error) {
 func (e ExitCodeIdentifier) FprintFrom(w io.Writer, err error) (int, error) {
 	exitCode := ExitCodeFrom(err)
 
-	// Ensure newlines before and after to avoid other writes
-	// messing up the exit code communication as much as possible.
 	//nolint:wrapcheck
-	return fmt.Fprintln(w, "\n"+e.Sprint(exitCode))
+	return fmt.Fprintln(w, e.Sprint(exitCode))
 }
 
 // ExitCodeFrom returns an exit code based on the given error.

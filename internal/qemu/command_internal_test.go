@@ -176,7 +176,7 @@ func TestCommandSpec_Arguments(t *testing.T) {
 }
 
 func TestNewCommand(t *testing.T) {
-	exitCodeScan := func(_ string) (int, error) { return 0, nil }
+	exitCodeScan := func(_ string) (int, bool) { return 0, true }
 
 	tests := []struct {
 		name        string
@@ -252,13 +252,13 @@ func TestNewCommand(t *testing.T) {
 func TestCommand_Run(t *testing.T) {
 	tempDir := t.TempDir()
 
-	exitCodeScanner := func(s string) (int, error) {
-		d, found := strings.CutPrefix(s, "exit code: ")
-		if !found {
-			return 0, assert.AnError
+	exitCodeScanner := func(s string) (int, bool) {
+		if d, found := strings.CutPrefix(s, "exit code: "); found {
+			i, err := strconv.Atoi(d)
+			return i, err == nil
 		}
 
-		return strconv.Atoi(d)
+		return 0, false
 	}
 
 	tests := []struct {
@@ -272,12 +272,12 @@ func TestCommand_Run(t *testing.T) {
 				name: "echo",
 				args: []string{"rc: 0"},
 				stdoutParser: stdoutParser{
-					ExitCodeScan: func(s string) (int, error) {
+					ExitCodeScan: func(s string) (int, bool) {
 						if s != "rc: 0" {
-							return 0, assert.AnError
+							return 0, false
 						}
 
-						return 0, nil
+						return 0, true
 					},
 				},
 			},

@@ -16,7 +16,7 @@ var (
 // ExitCodeScanFunc parses the given string and returns the exit code found in
 // the input or an error if the input does not contain the expected string or
 // parsing fails otherwise.
-type ExitCodeScanFunc func(string) (int, error)
+type ExitCodeScanFunc func(string) (int, bool)
 
 // stdoutParser provides a parser that parses stdout from the guest.
 //
@@ -49,9 +49,7 @@ func (p *stdoutParser) Parse(data []byte) []byte {
 		p.err = ErrGuestPanic
 		return data
 	case !p.exitCodeFound:
-		var err error
-		p.exitCode, err = p.ExitCodeScan(line)
-		p.exitCodeFound = err == nil
+		p.exitCode, p.exitCodeFound = p.ExitCodeScan(line)
 	}
 
 	// Skip line printing once the guest exit code has been found unless the

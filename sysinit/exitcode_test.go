@@ -22,56 +22,57 @@ func TestExitCodeIdentifier_Sprint(t *testing.T) {
 
 func TestExitCodeIdentifier_Sscan(t *testing.T) {
 	tests := []struct {
-		name       string
-		exitCodeID sysinit.ExitCodeIdentifier
-		input      string
-		expected   int
-		assertErr  require.ErrorAssertionFunc
+		name        string
+		exitCodeID  sysinit.ExitCodeIdentifier
+		input       string
+		expected    int
+		assertFound assert.BoolAssertionFunc
 	}{
 		{
-			name:       "empty input",
-			exitCodeID: "rc",
-			assertErr:  require.Error,
+			name:        "empty input",
+			exitCodeID:  "rc",
+			assertFound: assert.False,
 		},
 		{
-			name:       "matching input zero",
-			exitCodeID: "rc",
-			input:      "rc: 0",
-			assertErr:  require.NoError,
+			name:        "matching input zero",
+			exitCodeID:  "rc",
+			input:       "rc: 0",
+			assertFound: assert.True,
 		},
 		{
-			name:       "matching input",
-			exitCodeID: "rc",
-			input:      "rc: 42",
-			expected:   42,
-			assertErr:  require.NoError,
+			name:        "matching input",
+			exitCodeID:  "rc",
+			input:       "rc: 42",
+			expected:    42,
+			assertFound: assert.True,
 		},
 		{
-			name:       "matching input with trailing",
-			exitCodeID: "rc",
-			input:      "rc: 42 whatever",
-			expected:   42,
-			assertErr:  require.NoError,
+			name:        "matching input with trailing",
+			exitCodeID:  "rc",
+			input:       "rc: 42 whatever",
+			expected:    42,
+			assertFound: assert.True,
 		},
 		{
-			name:       "matching input with leading",
-			exitCodeID: "rc",
-			input:      "whatever rc: 42",
-			assertErr:  require.Error,
+			name:        "matching input with leading",
+			exitCodeID:  "rc",
+			input:       "whatever rc: 42",
+			expected:    42,
+			assertFound: assert.True,
 		},
 		{
-			name:       "with spaces",
-			exitCodeID: "exit code",
-			input:      "exit code: 42",
-			expected:   42,
-			assertErr:  require.NoError,
+			name:        "with spaces",
+			exitCodeID:  "exit code",
+			input:       "exit code: 42",
+			expected:    42,
+			assertFound: assert.True,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, err := tt.exitCodeID.Sscan(tt.input)
-			tt.assertErr(t, err)
+			actual, found := tt.exitCodeID.Sscan(tt.input)
+			tt.assertFound(t, found)
 
 			assert.Equal(t, tt.expected, actual)
 		})
@@ -89,18 +90,18 @@ func TestExitCodeIdentifier_FprintFrom(t *testing.T) {
 	}{
 		{
 			name:        "no error",
-			expectedOut: "\nrc: 0\n",
+			expectedOut: "rc: 0\n",
 		},
 		{
 			name:        "an error",
 			err:         assert.AnError,
-			expectedOut: "\nrc: -1\n",
+			expectedOut: "rc: -1\n",
 			expectedErr: "Error: " + assert.AnError.Error() + "\n",
 		},
 		{
 			name:        "exit error",
 			err:         sysinit.ExitError(42),
-			expectedOut: "\nrc: 42\n",
+			expectedOut: "rc: 42\n",
 		},
 	}
 

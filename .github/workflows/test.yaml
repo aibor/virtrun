@@ -17,10 +17,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  GOPATH: "${{ github.workspace }}/.go"
-  GOCOVERDIR: "/tmp/gocoverdir"
-
 jobs:
   go-setup:
     name: Go setup
@@ -33,29 +29,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
-
-      - name: Go mod download
-        run: go mod download
-
-      - name: Go mod download tools
-        working-directory: .github/workflows
-        run: go mod download
-
-  go-deps-check:
-    name: Go dependency check
-    runs-on: ubuntu-latest
-    needs:
-      - go-setup
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
 
       - name: Go mod tidy
         run: go mod tidy && git diff --exit-code
@@ -63,12 +36,17 @@ jobs:
       - name: Go mod verify
         run: go mod verify
 
-      - name: Install govulncheck
-        working-directory: .github/workflows
-        run: go install golang.org/x/vuln/cmd/govulncheck
-
-      - name: Run govulncheck
-        run: govulncheck -test ./...
+  go-vuln-check:
+    name: Go vulnerability check
+    runs-on: ubuntu-latest
+    needs:
+      - go-setup
+    steps:
+      - name: Go vulnerability check
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-file: go.mod
+          go-package: -test ./...
 
   go-gen-check:
     name: Go generate check
@@ -83,7 +61,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
 
       - name: Go generate
         run: go generate ./... && git diff --exit-code
@@ -111,276 +88,6 @@ jobs:
           version: "v2.1"
           args: "--build-tags integration,integration_sysinit ./..."
 
-  go-test:
-    name: Go test
-    runs-on: ubuntu-latest
-    needs:
-      - go-setup
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
-
-      - name: Create gocoverdir
-        run: mkdir -pv "${{ env.GOCOVERDIR }}"
-
-      - name: Run go generate
-        run: go generate -tags testdata ./...
-
-      - name: Install go-junit-report
-        working-directory: .github/workflows
-        run: go install github.com/jstemmer/go-junit-report/v2
-
-      - name: Run go tests
-        run: |
-          go test -v \
-            -race \
-            -cover \
-            -covermode=atomic \
-            ./... \
-            -test.gocoverdir="${{ env.GOCOVERDIR }}" \
-            | go-junit-report -set-exit-code -iocopy -out junit-report.xml
-
-      - name: Upload test output
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-unit
-          path: junit-report.xml
-          retention-days: 2
-
-      - name: Upload gocoverdir
-        uses: actions/upload-artifact@v4
-        with:
-          name: go-coverdir-unit
-          path: "${{ env.GOCOVERDIR }}/*"
-          retention-days: 2
-
-  integration-tests:
-    name: Run integration tests
-    runs-on: ubuntu-latest
-    needs:
-      - go-setup
-    container:
-      image: alpine:3.21
-    env:
-      VIRTRUN_ARGS: "-kernel /boot/vmlinuz-virt \
-                     -transport pci \
-                     -verbose \
-                     -debug"
-    strategy:
-      matrix:
-        arch:
-          - go: amd64
-            apk: x86_64
-            skip:
-          - go: arm64
-            apk: aarch64
-            skip: "TestIntegration/linked"
-    steps:
-      - name: Install packages
-        run: apk add tar "qemu-system-${{ matrix.arch.apk }}" gcc musl-dev
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
-
-      - name: Create gocoverdir
-        run: mkdir -pv "${{ env.GOCOVERDIR }}"
-
-      - name: Run go generate testdata
-        run: go generate -tags testdata ./...
-
-      - name: Run go generate integration tests
-        env:
-          GOARCH: ${{ matrix.arch.go }}
-        run: go generate -tags integration ./...
-
-      - name: Install go-junit-report
-        working-directory: .github/workflows
-        run: go install github.com/jstemmer/go-junit-report/v2
-
-      - name: Fetch kernel files
-        run: |
-          sed -i "s/x86_64/${{ matrix.arch.apk }}/" /etc/apk/arch
-          apk fetch --no-cache --allow-untrusted linux-virt
-          tar xf linux-virt-* --wildcards -C / boot/vmlinuz-virt
-
-      - name: Run tests
-        run: |
-          go test -v \
-            -tags integration \
-            -skip "${{ matrix.arch.skip }}" \
-            -covermode atomic \
-            -coverpkg ./internal/... \
-            ./internal/cmd/run_integration_test.go \
-            -test.gocoverdir="${{ env.GOCOVERDIR }}" \
-            | go-junit-report -set-exit-code -iocopy -out junit-report.xml
-
-      - name: Upload test output
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-integration-${{ matrix.arch.go }}
-          path: junit-report.xml
-          retention-days: 2
-
-      - name: Upload gocoverdir
-        uses: actions/upload-artifact@v4
-        with:
-          name: go-coverdir-integration-${{ matrix.arch.go }}
-          path: "${{ env.GOCOVERDIR }}/*"
-          retention-days: 2
-
-  integration-tests-sysinit:
-    name: Run integration tests of sysinit package and binaries
-    runs-on: ubuntu-latest
-    needs:
-      - go-setup
-    container:
-      image: alpine:3.21
-    env:
-      VIRTRUN_ARGS: "-kernel /boot/vmlinuz-virt \
-                     -addModule /lib/modules/kernel/drivers/net/tun.ko.gz \
-                     -addModule /lib/modules/kernel/drivers/net/veth.ko.gz \
-                     -transport pci \
-                     -verbose \
-                     -debug"
-    strategy:
-      matrix:
-        arch:
-          - go: amd64
-            apk: x86_64
-          - go: arm64
-            apk: aarch64
-    steps:
-      - name: Install packages
-        run: apk add tar "qemu-system-${{ matrix.arch.apk }}"
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
-
-      - name: Install go-junit-report
-        working-directory: .github/workflows
-        run: go install github.com/jstemmer/go-junit-report/v2
-
-      - name: Build virtrun
-        run: go build -o /virtrun .
-
-      - name: Fetch kernel files
-        run: |
-          sed -i "s/x86_64/${{ matrix.arch.apk }}/" /etc/apk/arch
-          apk fetch --no-cache --allow-untrusted linux-virt
-          tar xf linux-virt-* --wildcards -C / \
-            boot/vmlinuz-virt \
-            lib/modules/*/kernel/drivers/net/veth.ko.gz \
-            lib/modules/*/kernel/drivers/net/tun.ko.gz
-          ln -s /lib/modules/*/kernel /lib/modules/
-
-      - name: Run sysinit test
-        env:
-          GOARCH: "${{ matrix.arch.go }}"
-        run: |
-          go test -v \
-            -tags integration_sysinit \
-            -exec "/virtrun -standalone" \
-            -covermode atomic \
-            -coverprofile coverage.txt \
-            -coverpkg ./sysinit \
-            ./sysinit \
-            ./internal/virtrun/init/cmd \
-            -testModules tun,veth \
-            | go-junit-report -set-exit-code -iocopy -out junit-report-sysinit.xml
-
-      - name: Install go-cobertura
-        working-directory: .github/workflows
-        run: go install github.com/boumenot/gocover-cobertura
-
-      - name: Run go-cobertura
-        run: gocover-cobertura -by-files < coverage.txt > coverage.xml
-
-      - name: Upload test output
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-integration-sysinit-${{ matrix.arch.go }}
-          path: junit-report*.xml
-          retention-days: 2
-
-      - name: Upload coverage data
-        uses: actions/upload-artifact@v4
-        if: ${{ matrix.arch.go == 'amd64' }}
-        with:
-          name: go-coverage-sysinit
-          path: coverage*
-
-  go-coverage:
-    name: Go coverage
-    runs-on: ubuntu-latest
-    needs:
-      - go-test
-      - integration-tests
-      - integration-tests-sysinit
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
-
-      - name: Create gocoverdir
-        run: mkdir -pv "${{ env.GOCOVERDIR }}"
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: go-coverdir-*
-          path: /tmp/artifacts
-
-      - name: Merge covdata
-        run: |
-          go tool covdata merge \
-            -i "$(find /tmp/artifacts -type d -name 'go-coverdir-*' | paste -s -d ',' -)" \
-            -o "${{ env.GOCOVERDIR }}"
-
-      - name: Output coverage percentage
-        run: go tool covdata percent -i "${{ env.GOCOVERDIR }}"
-
-      - name: Convert to text file
-        run: go tool covdata textfmt -i "${{ env.GOCOVERDIR }}" -o coverage.txt
-
-      - name: Install go-cobertura
-        working-directory: .github/workflows
-        run: go install github.com/boumenot/gocover-cobertura
-
-      - name: Run go-cobertura
-        run: gocover-cobertura -by-files < coverage.txt > coverage.xml
-
-      - name: Upload coverage data
-        uses: actions/upload-artifact@v4
-        with:
-          name: go-coverage
-          path: coverage*
-
   reuse-lint:
     name: FSFE REUSE Compliance Check
     runs-on: ubuntu-latest
@@ -399,6 +106,8 @@ jobs:
   goreleaser-lint:
     name: Goreleaser check
     runs-on: ubuntu-latest
+    needs:
+      - go-setup
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -407,7 +116,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache: false
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
@@ -415,15 +123,144 @@ jobs:
           version: latest
           args: check
 
+  integration-tests:
+    name: Run integration tests
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/aibor/virtrun-test:latest
+    strategy:
+      matrix:
+        arch:
+          - amd64
+          - arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache go
+        uses: actions/cache@v4
+        with:
+          path: |
+            /go/cache
+            /go/pkg/mod
+          key: go-${{ matrix.arch }}-${{ hashFiles('go.sum') }}
+
+      - name: Run go generate testdata
+        run: go generate -tags testdata ./internal/sys/gen_test.go
+
+      - name: Run go generate integration tests
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: go generate -tags integration ./internal/cmd/run_integration_test.go
+
+      - name: Run tests
+        env:
+          SKIP: ${{ matrix.arch != 'amd64' && 'TestIntegration/linked' }}
+          VIRTRUN_ARGS: "-kernel /kernel/${{ matrix.arch }}/vmlinuz-virt \
+                         -transport pci \
+                         -memory 128 \
+                         -verbose \
+                         -debug"
+        run: |
+          go test -v \
+            -tags integration \
+            -skip "${{ env.SKIP }}" \
+            -covermode atomic \
+            -coverprofile coverage.txt \
+            ./internal/... \
+            | go-junit-report -set-exit-code -iocopy -out junit-report.xml
+
+      - name: Run go-cobertura
+        run: gocover-cobertura -by-files < coverage.txt > coverage.xml
+
+      - name: Upload test output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-integration-${{ matrix.arch }}
+          path: junit-report.xml
+          retention-days: 2
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        if: ${{ matrix.arch == 'amd64' }}
+        with:
+          name: go-coverage
+          path: coverage*
+
+  integration-tests-sysinit:
+    name: Run integration tests of sysinit package and binaries
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/aibor/virtrun-test:latest
+    strategy:
+      matrix:
+        arch:
+          - amd64
+          - arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache go
+        uses: actions/cache@v4
+        with:
+          path: |
+            /go/cache
+            /go/pkg/mod
+          key: go-${{ matrix.arch }}-${{ hashFiles('go.sum') }}
+
+      - name: Build virtrun
+        run: go build -buildvcs=false -o /virtrun .
+
+      - name: Run sysinit test
+        env:
+          GOARCH: "${{ matrix.arch }}"
+          VIRTRUN_ARGS: "-kernel /kernel/${{ matrix.arch }}/vmlinuz-virt \
+                         -addModule /kernel/${{ matrix.arch }}/tun.ko.gz \
+                         -addModule /kernel/${{ matrix.arch }}/veth.ko.gz \
+                         -transport pci \
+                         -standalone \
+                         -verbose \
+                         -debug"
+        run: |
+          go test -v \
+            -tags integration_sysinit \
+            -exec /virtrun \
+            -covermode atomic \
+            -coverprofile coverage.txt \
+            -coverpkg ./sysinit \
+            ./sysinit \
+            ./internal/virtrun/init/cmd \
+            -testModules tun,veth \
+            | go-junit-report -set-exit-code -iocopy -out junit-report-sysinit.xml
+
+      - name: Run go-cobertura
+        run: gocover-cobertura -by-files < coverage.txt > coverage.xml
+
+      - name: Upload test output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-integration-sysinit-${{ matrix.arch }}
+          path: junit-report*.xml
+          retention-days: 2
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        if: ${{ matrix.arch == 'amd64' }}
+        with:
+          name: go-coverage-sysinit
+          path: coverage*
+
   results:
     if: always()
     runs-on: ubuntu-latest
     name: Test Results
     needs:
-      - go-deps-check
+      - go-vuln-check
       - go-gen-check
       - go-lint
-      - go-test
       - integration-tests
       - integration-tests-sysinit
       - reuse-lint

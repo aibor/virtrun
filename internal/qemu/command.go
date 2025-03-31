@@ -334,11 +334,11 @@ func (c *Command) Run(
 			return fmt.Errorf("pipe: %w", err)
 		}
 
-		// Append the write end of the console processor pipe as extra file, so it
-		// is present as additional file descriptor which can be used with the
-		// "file" backend for QEMU console devices. The processor reads from the
-		// read end of the pipe, cleans the output and writes it into the actual
-		// target file on the host.
+		// Append the write end of the console processor pipe as extra file, so
+		// it is present as additional file descriptor which can be used with
+		// the "file" backend for QEMU console devices. The processor reads from
+		// the read end of the pipe, cleans the output and writes it into the
+		// actual target file on the host.
 		cmd.ExtraFiles = append(cmd.ExtraFiles, writePipe)
 
 		consoleProcessor := consoleProcessor{

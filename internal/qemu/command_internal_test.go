@@ -180,10 +180,10 @@ func TestNewCommand(t *testing.T) {
 	exitCodeScan := func(_ string) (int, bool) { return 0, true }
 
 	tests := []struct {
-		name        string
-		spec        CommandSpec
-		expectedCmd *Command
-		assertErr   require.ErrorAssertionFunc
+		name      string
+		spec      CommandSpec
+		expected  *Command
+		assertErr require.ErrorAssertionFunc
 	}{
 		{
 			name: "invalid",
@@ -201,7 +201,7 @@ func TestNewCommand(t *testing.T) {
 				Verbose:            true,
 				ExitCodeParser:     exitCodeScan,
 			},
-			expectedCmd: &Command{
+			expected: &Command{
 				name: "test",
 				args: []string{
 					"-kernel",
@@ -236,14 +236,14 @@ func TestNewCommand(t *testing.T) {
 			actual, err := NewCommand(tt.spec)
 			tt.assertErr(t, err)
 
-			if tt.expectedCmd != nil {
-				assert.Equal(t, tt.expectedCmd.String(), actual.String())
-				assert.Equal(t, tt.expectedCmd.consoleOutput, actual.consoleOutput)
+			if tt.expected != nil {
+				assert.Equal(t, tt.expected.String(), actual.String())
+				assert.Equal(t, tt.expected.consoleOutput, actual.consoleOutput)
 
 				// Hack: Compare string representations because functions can
 				// not compared. The string representation has the address of
 				// the function which is sufficient for our test case.
-				assert.Equal(t, fmt.Sprintf("%v", tt.expectedCmd.stdoutParser),
+				assert.Equal(t, fmt.Sprintf("%v", tt.expected.stdoutParser),
 					fmt.Sprintf("%v", actual.stdoutParser))
 			}
 		})

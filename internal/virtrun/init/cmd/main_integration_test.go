@@ -76,7 +76,7 @@ func TestNotPidOne(t *testing.T) {
 
 	if assert.NotNil(t, cmd.ProcessState, "process state should be present") {
 		actual := cmd.ProcessState.ExitCode()
-		assert.Equal(t, 2, actual, "exit code should reflect panicking test binary")
+		assert.Equal(t, 2, actual, "exit code should reflect panic")
 	}
 }
 

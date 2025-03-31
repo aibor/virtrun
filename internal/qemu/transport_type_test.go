@@ -14,29 +14,29 @@ import (
 
 func TestCommmandConsoleDeviceName(t *testing.T) {
 	tests := []struct {
-		id            uint
-		transportType qemu.TransportType
-		expect        string
+		id        uint
+		transport qemu.TransportType
+		expect    string
 	}{
 		{
-			id:            5,
-			transportType: qemu.TransportTypeISA,
-			expect:        "ttyS5",
+			id:        5,
+			transport: qemu.TransportTypeISA,
+			expect:    "ttyS5",
 		},
 		{
-			id:            3,
-			transportType: qemu.TransportTypePCI,
-			expect:        "hvc3",
+			id:        3,
+			transport: qemu.TransportTypePCI,
+			expect:    "hvc3",
 		},
 		{
-			id:            1,
-			transportType: qemu.TransportTypeMMIO,
-			expect:        "hvc1",
+			id:        1,
+			transport: qemu.TransportTypeMMIO,
+			expect:    "hvc1",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.expect, func(t *testing.T) {
-			assert.Equal(t, tt.expect, tt.transportType.ConsoleDeviceName(tt.id))
+			assert.Equal(t, tt.expect, tt.transport.ConsoleDeviceName(tt.id))
 		})
 	}
 }

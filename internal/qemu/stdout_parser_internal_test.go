@@ -17,12 +17,12 @@ func TestStdoutParser_Process(t *testing.T) {
 	exitCodeFmt := "exit code: %d"
 
 	tests := []struct {
-		name                string
-		verbose             bool
-		input               []string
-		expected            []string
-		expectedExitCode    int
-		assertExitCodeFound assert.BoolAssertionFunc
+		name            string
+		verbose         bool
+		input           []string
+		expectedOut     []string
+		expectedCode    int
+		assertCodeFound assert.BoolAssertionFunc
 	}{
 		{
 			name: "oom",
@@ -32,11 +32,11 @@ func TestStdoutParser_Process(t *testing.T) {
 				"[    0.378083] Out of memory: Killed process 116 (main) total-vm:48156kB, anon-rss:43884kB, file-rss:4kB, shmem-rss:2924kB, UID:0 pgtables:140kB oom_score_adj:0",
 			},
 			//nolint:lll
-			expected: []string{
+			expectedOut: []string{
 				"[    0.378012] oom-kill:constraint=CONSTRAINT_NONE,nodemask=(null),cpuset=/,mems_allowed=0,global_oom,task_memcg=/,task=main,pid=116,uid=0",
 				"[    0.378083] Out of memory: Killed process 116 (main) total-vm:48156kB, anon-rss:43884kB, file-rss:4kB, shmem-rss:2924kB, UID:0 pgtables:140kB oom_score_adj:0",
 			},
-			assertExitCodeFound: assert.False,
+			assertCodeFound: assert.False,
 		},
 		{
 			name: "panic",
@@ -47,12 +47,12 @@ func TestStdoutParser_Process(t *testing.T) {
 				"[    0.579512] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS Arch Linux 1.16.2-1-1 04/01/2014",
 			},
 			//nolint:lll
-			expected: []string{
+			expectedOut: []string{
 				"[    0.578502] Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000100",
 				"[    0.579013] CPU: 0 PID: 76 Comm: init Not tainted 6.4.3-arch1-1 #1 13c144d261447e0acbf2632534d4009bddc4c3ab",
 				"[    0.579512] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS Arch Linux 1.16.2-1-1 04/01/2014",
 			},
-			assertExitCodeFound: assert.False,
+			assertCodeFound: assert.False,
 		},
 		{
 			name: "zero exit code",
@@ -61,11 +61,11 @@ func TestStdoutParser_Process(t *testing.T) {
 				fmt.Sprintf(exitCodeFmt, 0),
 				"more after",
 			},
-			expected: []string{
+			expectedOut: []string{
 				"something out",
 			},
-			expectedExitCode:    0,
-			assertExitCodeFound: assert.True,
+			expectedCode:    0,
+			assertCodeFound: assert.True,
 		},
 		{
 			name:    "zero exit code verbose",
@@ -75,13 +75,13 @@ func TestStdoutParser_Process(t *testing.T) {
 				fmt.Sprintf(exitCodeFmt, 0),
 				"more after",
 			},
-			expected: []string{
+			expectedOut: []string{
 				"something out",
 				fmt.Sprintf(exitCodeFmt, 0),
 				"more after",
 			},
-			expectedExitCode:    0,
-			assertExitCodeFound: assert.True,
+			expectedCode:    0,
+			assertCodeFound: assert.True,
 		},
 		{
 			name: "non zero exit code",
@@ -90,11 +90,11 @@ func TestStdoutParser_Process(t *testing.T) {
 				fmt.Sprintf(exitCodeFmt, 4),
 				"more after",
 			},
-			expected: []string{
+			expectedOut: []string{
 				"something out",
 			},
-			expectedExitCode:    4,
-			assertExitCodeFound: assert.True,
+			expectedCode:    4,
+			assertCodeFound: assert.True,
 		},
 		{
 			name:    "non zero exit code verbose",
@@ -104,13 +104,13 @@ func TestStdoutParser_Process(t *testing.T) {
 				fmt.Sprintf(exitCodeFmt, 4),
 				"more after",
 			},
-			expected: []string{
+			expectedOut: []string{
 				"something out",
 				fmt.Sprintf(exitCodeFmt, 4),
 				"more after",
 			},
-			expectedExitCode:    4,
-			assertExitCodeFound: assert.True,
+			expectedCode:    4,
+			assertCodeFound: assert.True,
 		},
 		{
 			name: "no exit code",
@@ -118,11 +118,11 @@ func TestStdoutParser_Process(t *testing.T) {
 				"something out",
 				"more out",
 			},
-			expected: []string{
+			expectedOut: []string{
 				"something out",
 				"more out",
 			},
-			assertExitCodeFound: assert.False,
+			assertCodeFound: assert.False,
 		},
 	}
 
@@ -149,9 +149,9 @@ func TestStdoutParser_Process(t *testing.T) {
 				}
 			}
 
-			tt.assertExitCodeFound(t, stdoutParser.exitCodeFound, "exit code found")
-			assert.Equal(t, tt.expectedExitCode, stdoutParser.exitCode, "exit code")
-			assert.Equal(t, tt.expected, actual, "output")
+			tt.assertCodeFound(t, stdoutParser.exitCodeFound, "exit code found")
+			assert.Equal(t, tt.expectedCode, stdoutParser.exitCode, "exit code")
+			assert.Equal(t, tt.expectedOut, actual, "output")
 		})
 	}
 }

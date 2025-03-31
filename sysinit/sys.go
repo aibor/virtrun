@@ -19,7 +19,8 @@ func mount(path, source, fsType string, flags MountFlags, data string) error {
 		source = fsType
 	}
 
-	if err := unix.Mount(source, path, fsType, uintptr(flags), data); err != nil {
+	err := unix.Mount(source, path, fsType, uintptr(flags), data)
+	if err != nil {
 		return fmt.Errorf("mount %s: %w", path, err)
 	}
 

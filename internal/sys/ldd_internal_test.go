@@ -123,7 +123,7 @@ func TestLdInfoParseFrom(t *testing.T) {
 		},
 		{
 			name: "regular lib",
-			line: "	libfunc2.so => testdata/lib/libfunc2.so (0x00007fb8ab53b000)",
+			line: "	libfunc2.so => testdata/lib/libfunc2.so (0x00007fb8)",
 			path: "testdata/lib/libfunc2.so",
 		},
 	}

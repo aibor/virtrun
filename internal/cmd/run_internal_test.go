@@ -16,10 +16,10 @@ import (
 
 func TestHandleRunError(t *testing.T) {
 	tests := []struct {
-		name             string
-		err              error
-		expectedExitCode int
-		expectedOutput   string
+		name         string
+		err          error
+		expectedCode int
+		expectedOut  string
 	}{
 		{
 			name: "no error",
@@ -29,9 +29,9 @@ func TestHandleRunError(t *testing.T) {
 			err:  flag.ErrHelp,
 		},
 		{
-			name:             "parse args error",
-			err:              &ParseArgsError{},
-			expectedExitCode: -1,
+			name:         "parse args error",
+			err:          &ParseArgsError{},
+			expectedCode: -1,
 		},
 		{
 			name: "qemu command host error",
@@ -39,8 +39,8 @@ func TestHandleRunError(t *testing.T) {
 				Err:      assert.AnError,
 				ExitCode: 42,
 			},
-			expectedExitCode: 42,
-			expectedOutput: "ERROR host: " +
+			expectedCode: 42,
+			expectedOut: "ERROR host: " +
 				"assert.AnError general error for testing\n",
 		},
 		{
@@ -50,7 +50,7 @@ func TestHandleRunError(t *testing.T) {
 				Guest:    true,
 				ExitCode: 43,
 			},
-			expectedExitCode: 43,
+			expectedCode: 43,
 		},
 		{
 			name: "qemu command guest no exit code found error",
@@ -58,8 +58,8 @@ func TestHandleRunError(t *testing.T) {
 				Err:   qemu.ErrGuestNoExitCodeFound,
 				Guest: true,
 			},
-			expectedExitCode: -1,
-			expectedOutput:   "ERROR guest: init did not print exit code\n",
+			expectedCode: -1,
+			expectedOut:  "ERROR guest: init did not print exit code\n",
 		},
 		{
 			name: "qemu command guest oom error",
@@ -67,8 +67,8 @@ func TestHandleRunError(t *testing.T) {
 				Err:   qemu.ErrGuestOom,
 				Guest: true,
 			},
-			expectedExitCode: -1,
-			expectedOutput:   "ERROR guest: system ran out of memory\n",
+			expectedCode: -1,
+			expectedOut:  "ERROR guest: system ran out of memory\n",
 		},
 		{
 			name: "qemu command guest panic error",
@@ -76,8 +76,8 @@ func TestHandleRunError(t *testing.T) {
 				Err:   qemu.ErrGuestPanic,
 				Guest: true,
 			},
-			expectedExitCode: -1,
-			expectedOutput:   "ERROR guest: system panicked\n",
+			expectedCode: -1,
+			expectedOut:  "ERROR guest: system panicked\n",
 		},
 		{
 			name: "console no output",
@@ -85,16 +85,16 @@ func TestHandleRunError(t *testing.T) {
 				Err:  qemu.ErrConsoleNoOutput,
 				Name: "stdfoo",
 			},
-			expectedExitCode: -1,
-			expectedOutput: "WARN maybe wrong transport type " +
+			expectedCode: -1,
+			expectedOut: "WARN maybe wrong transport type " +
 				"or /dev not mounted in guest console=stdfoo\n" +
 				"ERROR console stdfoo: console did not output anything\n",
 		},
 		{
-			name:             "any error",
-			err:              assert.AnError,
-			expectedExitCode: -1,
-			expectedOutput:   "ERROR assert.AnError general error for testing\n",
+			name:         "any error",
+			err:          assert.AnError,
+			expectedCode: -1,
+			expectedOut:  "ERROR assert.AnError general error for testing\n",
 		},
 	}
 
@@ -107,9 +107,9 @@ func TestHandleRunError(t *testing.T) {
 
 			actualExitCode := handleRunError(tt.err)
 
-			assert.Equal(t, tt.expectedExitCode, actualExitCode,
+			assert.Equal(t, tt.expectedCode, actualExitCode,
 				"exit code should be as expected")
-			assert.Equal(t, tt.expectedOutput, stdErr.String(),
+			assert.Equal(t, tt.expectedOut, stdErr.String(),
 				"stderr output should be as expected")
 		})
 	}

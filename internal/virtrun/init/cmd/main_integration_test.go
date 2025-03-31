@@ -84,7 +84,7 @@ func TestLoopbackInterface(t *testing.T) {
 	iface, err := net.InterfaceByName("lo")
 	require.NoError(t, err, "must get interface")
 
-	assert.Positive(t, iface.Flags&net.FlagUp)
+	assert.NotZero(t, iface.Flags&net.FlagUp)
 
 	addrs, err := iface.Addrs()
 	require.NoError(t, err, "must get addresses")

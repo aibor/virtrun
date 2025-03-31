@@ -102,9 +102,9 @@ jobs:
         run: go vet -tags integration,integration_sysinit ./...
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: "v1.64"
+          version: "v2.0"
           args: "--build-tags integration,integration_sysinit ./..."
 
   go-test:

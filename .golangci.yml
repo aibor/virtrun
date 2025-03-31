@@ -1,74 +1,82 @@
-# SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+# SPDX-FileCopyrightText: 2025 Tobias Böhm <code@aibor.de>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+version: "2"
+
 linters:
-  enable-all: true
+  default: all
   disable:
     - depguard
     - exhaustruct
     - funlen
     - paralleltest
     - varnamelen
-
-linters-settings:
-  exhaustive:
-    default-signifies-exhaustive: true
-
-  gosec:
-    excludes:
-      - G204
-      - G301
-      - G304
-
-  nlreturn:
-    block-size: 2
-
-  lll:
-    line-length: 80
-
-  revive:
-    enable-all-rules: true
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    gosec:
+      excludes:
+        - G204
+        - G301
+        - G304
+    lll:
+      line-length: 80
+      tab-width: 4
+    nlreturn:
+      block-size: 2
+    revive:
+      enable-all-rules: true
+      rules:
+        - name: add-constant
+          disabled: true
+        - name: cognitive-complexity
+          disabled: true
+        - name: confusing-naming
+          disabled: true
+        - name: cyclomatic
+          disabled: true
+        - name: deep-exit
+          disabled: true
+        - name: exported
+          arguments:
+            - disableChecksOnConstants
+            - disableChecksOnFunctions
+            - disableChecksOnMethods
+            - disableChecksOnTypes
+            - disableChecksOnVariables
+        - name: flag-parameter
+          disabled: true
+        - name: function-length
+          disabled: true
+        - name: line-length-limit
+          disabled: true
+        - name: package-comments
+          disabled: true
+        - name: unhandled-error
+          disabled: true
+  exclusions:
+    generated: strict
+    warn-unused: true
+    presets:
+      - std-error-handling
     rules:
-      - name: add-constant
-        disabled: true
-      - name: cognitive-complexity
-        disabled: true
-      - name: confusing-naming
-        disabled: true
-      - name: cyclomatic
-        disabled: true
-      - name: deep-exit
-        disabled: true
-      - name: flag-parameter
-        disabled: true
-      - name: function-length
-        disabled: true
-      - name: line-length-limit
-        disabled: true
-      - name: unhandled-error
-        disabled: true
+      - linters:
+          - errcheck
+        source: ^\s+defer \S+\.Close()
+      - linters:
+          - err113
+          - gochecknoglobals
+          - gochecknoinits
+        path: (.+)_test\.go
 
-issues:
-  include:
-    - EXC0002
-    - EXC0003
-    - EXC0004
-    - EXC0005
-    - EXC0006
-    - EXC0007
-    - EXC0008
-    - EXC0009
-    - EXC0010
-    - EXC0013
-    - EXC0014
-
-  exclude-rules:
-    - source: "^\\s+defer \\S+\\.Close()"
-      linters:
-        - errcheck
-    - path: '(.+)_test\.go'
-      linters:
-        - gochecknoglobals
-        - gochecknoinits
-        - err113
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+    - golines
+  settings:
+    golines:
+      max-len: 80

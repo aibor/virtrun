@@ -152,6 +152,21 @@ $ export VIRTRUN_ARGS="-kernel /boot/vmlinuz-linux"
 $ go test -exec virtrun .
 ```
 
+
+Flags are also read from the local file `.virtrun-args` which is expected to
+have an argument per line. Environment variables may be used and are expanded.
+Flags from local file have precedence over flags from the environment. Note that
+with `go test` virtrun's working directory is the directory of the tested
+package. This allows to set individual virtrun flags for a go package.
+
+```
+$ cat .virtrun-args
+-kernel=$TEST_KERNELS/vmlinuz
+-addModule=$TEST_KERNELS/veth.ko.zst
+-addFile=testfile
+-smp=4
+```
+
 Run cross compiled test:
 
 ```console

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"os/signal"
 	"syscall"
 
@@ -18,10 +19,25 @@ import (
 	"github.com/aibor/virtrun/internal/virtrun"
 )
 
+const localConfigFile = ".virtrun-args"
+
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	flags := newFlags(args[0], stderr)
 
-	err := flags.ParseArgs(PrependEnvArgs(args[1:]))
+	confArgs, err := LocalConfigArgs(os.DirFS("."), localConfigFile)
+	if err != nil {
+		return fmt.Errorf("local config: %w", err)
+	}
+
+	// Merge arguments from all sources. Order of precedence (from higher to
+	// lower) is:
+	// - CLI flags
+	// - local config file
+	// - environment variable
+	args = append(confArgs, args[1:]...)
+	args = append(EnvArgs(), args...)
+
+	err = flags.ParseArgs(args)
 	if err != nil {
 		return fmt.Errorf("parse args: %w", err)
 	}

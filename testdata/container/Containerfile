@@ -29,6 +29,7 @@ LABEL org.opencontainers.image.source="https://github.com/aibor/virtrun"
 LABEL org.opencontainers.image.description="Virtrun test container image"
 LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
 
+ENV GOCACHE /go/cache
 ENV VIRTRUN_ARGS="-kernel /kernel/amd64/vmlinuz-virt -transport pci"
 
 RUN apk add --no-cache \
@@ -44,12 +45,11 @@ COPY --from=kernel /kernel/arm64/ /kernel/arm64/
 WORKDIR /tools
 
 RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-	--mount=type=bind,source=.github/workflows,target=/tools \
-	go install github.com/jstemmer/go-junit-report/v2 \
-	&& go install github.com/boumenot/gocover-cobertura
+    --mount=type=cache,target=/go/cache \
+	--mount=type=bind,source=.,target=/tools \
+	go telemetry off \
+	&& GOBIN=/usr/local/bin go install \
+		github.com/jstemmer/go-junit-report/v2 \
+		github.com/boumenot/gocover-cobertura
 
 WORKDIR /app
-
-RUN --mount=type=bind,source=.,target=/app \
-	go mod download -x

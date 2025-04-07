@@ -25,29 +25,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
-
-      - name: Go mod download
-        run: go mod download
-
-      - name: Go mod download tools
-        working-directory: .github/workflows
-        run: go mod download
-
-  go-deps-check:
-    name: Go dependency check
-    runs-on: ubuntu-latest
-    needs:
-      - go-setup
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
 
       - name: Go mod tidy
         run: go mod tidy && git diff --exit-code
@@ -55,12 +32,17 @@ jobs:
       - name: Go mod verify
         run: go mod verify
 
-      - name: Install govulncheck
-        working-directory: .github/workflows
-        run: go install golang.org/x/vuln/cmd/govulncheck
-
-      - name: Run govulncheck
-        run: govulncheck -test ./...
+  go-vuln-check:
+    name: Go vulnerability check
+    runs-on: ubuntu-latest
+    needs:
+      - go-setup
+    steps:
+      - name: Go vulnerability check
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-file: go.mod
+          go-package: -test ./...
 
   go-gen-check:
     name: Go generate check
@@ -75,7 +57,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
 
       - name: Go generate
         run: go generate ./... && git diff --exit-code
@@ -93,7 +74,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
 
       - name: Run vet with all constraints
         run: go vet -tags integration,integration_sysinit ./...
@@ -132,7 +112,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
@@ -257,7 +236,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Test Results
     needs:
-      - go-deps-check
+      - go-vuln-check
       - go-gen-check
       - go-lint
       - integration-tests

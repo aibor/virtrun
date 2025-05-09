@@ -6,8 +6,12 @@ name: Test
 
 on:
   push:
-    branches: [ "**" ]
+    branches:
+      - "main"
+      - "dev/*"
   pull_request:
+    branches:
+      - "main"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

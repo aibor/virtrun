@@ -54,10 +54,6 @@ func (e ExitCodeIdentifier) ParseExitCode(s string) (int, bool) {
 	return exitCode, true
 }
 
-func (e ExitCodeIdentifier) format() string {
-	return string(e) + ": %d"
-}
-
 // Printer returns an [ExitHandler] that prints an exit code for a given error.
 //
 // See [ExitCodeFrom] for the resulting exit codes.
@@ -66,6 +62,10 @@ func (e ExitCodeIdentifier) Printer(w io.Writer) ExitHandler {
 		exitCode := ExitCodeFrom(err)
 		_, _ = fmt.Fprintln(w, e.Sprint(exitCode))
 	}
+}
+
+func (e ExitCodeIdentifier) format() string {
+	return string(e) + ": %d"
 }
 
 // ExitCodeFrom returns an exit code based on the given error.

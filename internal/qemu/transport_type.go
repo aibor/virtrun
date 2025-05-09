@@ -25,16 +25,6 @@ const (
 // TransportType represents QEMU IO transport types.
 type TransportType string
 
-func (t *TransportType) isKnown() bool {
-	knownTransportTypes := []TransportType{
-		TransportTypeISA,
-		TransportTypePCI,
-		TransportTypeMMIO,
-	}
-
-	return slices.Contains(knownTransportTypes, *t)
-}
-
 // String returns the [TransportType]'s underlying string value.
 //
 // It returns the empty string for unknown [TransportType]s.
@@ -70,4 +60,14 @@ func (t *TransportType) ConsoleDeviceName(num uint) string {
 	}
 
 	return fmt.Sprintf(f, num)
+}
+
+func (t *TransportType) isKnown() bool {
+	knownTransportTypes := []TransportType{
+		TransportTypeISA,
+		TransportTypePCI,
+		TransportTypeMMIO,
+	}
+
+	return slices.Contains(knownTransportTypes, *t)
 }

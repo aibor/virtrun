@@ -52,6 +52,49 @@ func newFlags(name string, output io.Writer) *flags {
 	return flags
 }
 
+func (f *flags) ParseArgs(args []string) error {
+	// Parses arguments up to the first one that is not prefixed with a "-" or
+	// is "--".
+	if err := f.flagSet.Parse(args); err != nil {
+		return &ParseArgsError{msg: "flag parse: %w", err: err}
+	}
+
+	// With version flag, just print the version and exit. Using [ErrHelp]
+	// the main binary is supposed to return with a non error exit code.
+	if f.versionFlag {
+		err := f.printVersionInformation()
+		return &ParseArgsError{msg: "version requested", err: err}
+	}
+
+	if f.spec.Qemu.Kernel == "" {
+		return f.fail("no kernel given (use -kernel)", nil)
+	}
+
+	positionalArgs := f.flagSet.Args()
+
+	// First positional argument is supposed to be a binary file.
+	if len(positionalArgs) < 1 {
+		return f.fail("no binary given", nil)
+	}
+
+	binary, err := sys.AbsolutePath(positionalArgs[0])
+	if err != nil {
+		return f.fail("binary path", err)
+	}
+
+	f.spec.Initramfs.Binary = binary
+
+	// All further positional arguments after the binary file will be passed to
+	// the guest system's init program.
+	f.spec.Qemu.InitArgs = positionalArgs[1:]
+
+	return nil
+}
+
+func (f *flags) Debug() bool {
+	return f.debugFlag
+}
+
 func (f *flags) initFlagset(output io.Writer) {
 	fsName := f.name + " [flags...] binary [initargs...]"
 	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
@@ -186,10 +229,6 @@ func (f *flags) fail(msg string, err error) error {
 	return err
 }
 
-func (f *flags) Debug() bool {
-	return f.debugFlag
-}
-
 func (f *flags) printVersionInformation() error {
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
@@ -199,43 +238,4 @@ func (f *flags) printVersionInformation() error {
 	fmt.Fprintf(f.flagSet.Output(), "Version: %s\n", buildInfo.Main.Version)
 
 	return ErrHelp
-}
-
-func (f *flags) ParseArgs(args []string) error {
-	// Parses arguments up to the first one that is not prefixed with a "-" or
-	// is "--".
-	if err := f.flagSet.Parse(args); err != nil {
-		return &ParseArgsError{msg: "flag parse: %w", err: err}
-	}
-
-	// With version flag, just print the version and exit. Using [ErrHelp]
-	// the main binary is supposed to return with a non error exit code.
-	if f.versionFlag {
-		err := f.printVersionInformation()
-		return &ParseArgsError{msg: "version requested", err: err}
-	}
-
-	if f.spec.Qemu.Kernel == "" {
-		return f.fail("no kernel given (use -kernel)", nil)
-	}
-
-	positionalArgs := f.flagSet.Args()
-
-	// First positional argument is supposed to be a binary file.
-	if len(positionalArgs) < 1 {
-		return f.fail("no binary given", nil)
-	}
-
-	binary, err := sys.AbsolutePath(positionalArgs[0])
-	if err != nil {
-		return f.fail("binary path", err)
-	}
-
-	f.spec.Initramfs.Binary = binary
-
-	// All further positional arguments after the binary file will be passed to
-	// the guest system's init program.
-	f.spec.Qemu.InitArgs = positionalArgs[1:]
-
-	return nil
 }

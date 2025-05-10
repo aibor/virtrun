@@ -13,6 +13,9 @@ on:
     branches:
       - "main"
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -127,7 +130,7 @@ jobs:
     name: Run integration tests
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/aibor/virtrun-test:latest
+      image: ghcr.io/aibor/virtrun-test:${{ matrix.arch }}
     strategy:
       matrix:
         arch:
@@ -137,13 +140,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache go
-        uses: actions/cache@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          path: |
-            /go/cache
-            /go/pkg/mod
-          key: go-${{ matrix.arch }}-${{ hashFiles('go.sum') }}
+          go-version-file: go.mod
 
       - name: Run go generate testdata
         run: go generate -tags testdata ./internal/sys/gen_test.go
@@ -156,7 +156,7 @@ jobs:
       - name: Run tests
         env:
           SKIP: ${{ matrix.arch != 'amd64' && 'TestIntegration/linked' }}
-          VIRTRUN_ARGS: "-kernel /kernel/${{ matrix.arch }}/vmlinuz-virt \
+          VIRTRUN_ARGS: "-kernel /kernel/vmlinuz-virt \
                          -transport pci \
                          -memory 128 \
                          -verbose \
@@ -192,7 +192,7 @@ jobs:
     name: Run integration tests of sysinit package and binaries
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/aibor/virtrun-test:latest
+      image: ghcr.io/aibor/virtrun-test:${{ matrix.arch }}
     strategy:
       matrix:
         arch:
@@ -202,13 +202,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache go
-        uses: actions/cache@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          path: |
-            /go/cache
-            /go/pkg/mod
-          key: go-${{ matrix.arch }}-${{ hashFiles('go.sum') }}
+          go-version-file: go.mod
 
       - name: Build virtrun
         run: go build -buildvcs=false -o /virtrun .
@@ -216,9 +213,9 @@ jobs:
       - name: Run sysinit test
         env:
           GOARCH: "${{ matrix.arch }}"
-          VIRTRUN_ARGS: "-kernel /kernel/${{ matrix.arch }}/vmlinuz-virt \
-                         -addModule /kernel/${{ matrix.arch }}/tun.ko.gz \
-                         -addModule /kernel/${{ matrix.arch }}/veth.ko.gz \
+          VIRTRUN_ARGS: "-kernel /kernel/vmlinuz-virt \
+                         -addModule /kernel/tun.ko.gz \
+                         -addModule /kernel/veth.ko.gz \
                          -transport pci \
                          -standalone \
                          -verbose \

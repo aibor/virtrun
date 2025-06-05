@@ -97,57 +97,57 @@ func (f *flags) Debug() bool {
 
 func (f *flags) initFlagset(output io.Writer) {
 	fsName := f.name + " [flags...] binary [initargs...]"
-	fs := flag.NewFlagSet(fsName, flag.ContinueOnError)
-	fs.SetOutput(output)
+	flagSet := flag.NewFlagSet(fsName, flag.ContinueOnError)
+	flagSet.SetOutput(output)
 
-	fs.StringVar(
+	flagSet.StringVar(
 		&f.spec.Qemu.Executable,
 		"qemuBin",
 		f.spec.Qemu.Executable,
 		"QEMU binary to use (default depends on binary arch)",
 	)
 
-	fs.Var(
+	flagSet.Var(
 		(*FilePath)(&f.spec.Qemu.Kernel),
 		"kernel",
 		"path to kernel to use",
 	)
 
-	fs.StringVar(
+	flagSet.StringVar(
 		&f.spec.Qemu.Machine,
 		"machine",
 		f.spec.Qemu.Machine,
 		"QEMU machine type to use (default depends on binary arch)",
 	)
 
-	fs.StringVar(
+	flagSet.StringVar(
 		&f.spec.Qemu.CPU,
 		"cpu",
 		f.spec.Qemu.CPU,
 		"QEMU CPU type to use",
 	)
 
-	fs.BoolVar(
+	flagSet.BoolVar(
 		&f.spec.Qemu.NoKVM,
 		"nokvm",
 		f.spec.Qemu.NoKVM,
 		"disable hardware support (default depends on binary arch)",
 	)
 
-	fs.Var(
+	flagSet.Var(
 		&f.spec.Qemu.TransportType,
 		"transport",
 		"io transport type: isa, pci, mmio (default depends on binary arch)",
 	)
 
-	fs.BoolVar(
+	flagSet.BoolVar(
 		&f.spec.Qemu.Verbose,
 		"verbose",
 		f.spec.Qemu.Verbose,
 		"enable verbose guest system output",
 	)
 
-	fs.Var(
+	flagSet.Var(
 		&limitedUintValue{
 			Value: &f.spec.Qemu.Memory,
 			min:   memMin,
@@ -157,7 +157,7 @@ func (f *flags) initFlagset(output io.Writer) {
 		"memory (in MB) for the QEMU VM",
 	)
 
-	fs.Var(
+	flagSet.Var(
 		&limitedUintValue{
 			Value: &f.spec.Qemu.SMP,
 			min:   smpMin,
@@ -167,7 +167,7 @@ func (f *flags) initFlagset(output io.Writer) {
 		"number of CPUs for the QEMU VM",
 	)
 
-	fs.BoolVar(
+	flagSet.BoolVar(
 		&f.spec.Initramfs.StandaloneInit,
 		"standalone",
 		f.spec.Initramfs.StandaloneInit,
@@ -175,14 +175,14 @@ func (f *flags) initFlagset(output io.Writer) {
 			" support built in.",
 	)
 
-	fs.BoolVar(
+	flagSet.BoolVar(
 		&f.spec.Qemu.NoGoTestFlagRewrite,
 		"noGoTestFlagRewrite",
 		f.spec.Qemu.NoGoTestFlagRewrite,
 		"disable automatic go test flag rewrite for file based output.",
 	)
 
-	fs.BoolVar(
+	flagSet.BoolVar(
 		&f.spec.Initramfs.Keep,
 		"keepInitramfs",
 		f.spec.Initramfs.Keep,
@@ -190,33 +190,33 @@ func (f *flags) initFlagset(output io.Writer) {
 			"The path to the file is printed on stderr",
 	)
 
-	fs.Var(
+	flagSet.Var(
 		(*FilePathList)(&f.spec.Initramfs.Files),
 		"addFile",
 		"file to add to guest's /data dir. Flag may be used more than once.",
 	)
 
-	fs.Var(
+	flagSet.Var(
 		(*FilePathList)(&f.spec.Initramfs.Modules),
 		"addModule",
 		"kernel module to add to guest. Flag may be used more than once.",
 	)
 
-	fs.BoolVar(
+	flagSet.BoolVar(
 		&f.debugFlag,
 		"debug",
 		f.debugFlag,
 		"enable debug output",
 	)
 
-	fs.BoolVar(
+	flagSet.BoolVar(
 		&f.versionFlag,
 		"version",
 		f.versionFlag,
 		"show version and exit",
 	)
 
-	f.flagSet = fs
+	f.flagSet = flagSet
 }
 
 // fail fails like flag does. It prints the error first and then usage.

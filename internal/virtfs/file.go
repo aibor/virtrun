@@ -138,7 +138,7 @@ func (f regularFile) open(info dirEntry) (fs.File, error) {
 		return nil, ErrFileNotRegular
 	}
 
-	o := &openFile{
+	openFile := &openFile{
 		info: fileInfo{
 			dirEntry: info,
 			size:     sourceInfo.Size(),
@@ -146,7 +146,7 @@ func (f regularFile) open(info dirEntry) (fs.File, error) {
 		reader: file,
 	}
 
-	return o, nil
+	return openFile, nil
 }
 
 var _ file = (*symbolicLink)(nil)
@@ -160,7 +160,7 @@ func (symbolicLink) mode() fs.FileMode {
 func (l symbolicLink) open(info dirEntry) (fs.File, error) {
 	reader := strings.NewReader(string(l))
 
-	o := &openFile{
+	openFile := &openFile{
 		info: fileInfo{
 			dirEntry: info,
 			size:     reader.Size(),
@@ -168,7 +168,7 @@ func (l symbolicLink) open(info dirEntry) (fs.File, error) {
 		reader: reader,
 	}
 
-	return o, nil
+	return openFile, nil
 }
 
 var _ file = (*directory)(nil)
@@ -180,14 +180,14 @@ func (*directory) mode() fs.FileMode {
 }
 
 func (d *directory) open(info dirEntry) (fs.File, error) {
-	o := &openFile{
+	openFile := &openFile{
 		info: fileInfo{
 			dirEntry: info,
 		},
 		entries: d.entries(),
 	}
 
-	return o, nil
+	return openFile, nil
 }
 
 func (d *directory) entries() []fs.DirEntry {

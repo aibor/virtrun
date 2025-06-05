@@ -46,14 +46,18 @@ func (b *fsBuilder) addFilePathAs(name, source string) error {
 	})
 }
 
-func (b *fsBuilder) addFilesTo(dir string, files []string, fn nameFunc) error {
+func (b *fsBuilder) addFilesTo(
+	dir string,
+	files []string,
+	nameFn nameFunc,
+) error {
 	err := b.mkdirAll(dir)
 	if err != nil {
 		return err
 	}
 
 	for idx, path := range files {
-		name := filepath.Join(dir, fn(idx, path))
+		name := filepath.Join(dir, nameFn(idx, path))
 
 		err := b.addFilePathAs(name, path)
 		if err != nil {

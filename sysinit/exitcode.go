@@ -37,8 +37,8 @@ func (e ExitCodeIdentifier) Sprint(exitCode int) string {
 // The identifier can be anywhere in the string. It does not need to be at the
 // beginning. Returns the exit code and whether it was found in the given
 // string.
-func (e ExitCodeIdentifier) ParseExitCode(s string) (int, bool) {
-	start := strings.Index(s, string(e))
+func (e ExitCodeIdentifier) ParseExitCode(str string) (int, bool) {
+	start := strings.Index(str, string(e))
 	if start < 0 {
 		return 0, false
 	}
@@ -47,7 +47,7 @@ func (e ExitCodeIdentifier) ParseExitCode(s string) (int, bool) {
 
 	var exitCode int
 
-	if _, err := fmt.Sscanf(s[start:], format, &exitCode); err != nil {
+	if _, err := fmt.Sscanf(str[start:], format, &exitCode); err != nil {
 		return 0, false
 	}
 

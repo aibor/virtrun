@@ -117,12 +117,12 @@ func NewQemuCommand(cfg Qemu, initramfsPath string) (*qemu.Command, error) {
 // It is required that the flags are prefixed with "test" and value is
 // separated form the flag by "=". This is the format the "go test" tool
 // invokes the test binary with.
-func rewriteGoTestFlagsPath(c *qemu.CommandSpec) {
+func rewriteGoTestFlagsPath(spec *qemu.CommandSpec) {
 	const splitNum = 2
 
 	outputDir := ""
 
-	for idx, posArg := range c.InitArgs {
+	for idx, posArg := range spec.InitArgs {
 		splits := strings.SplitN(posArg, "=", splitNum)
 		switch splits[0] {
 		case "-test.outputdir":
@@ -132,14 +132,14 @@ func rewriteGoTestFlagsPath(c *qemu.CommandSpec) {
 			splits[1] = "/tmp"
 		}
 
-		c.InitArgs[idx] = strings.Join(splits, "=")
+		spec.InitArgs[idx] = strings.Join(splits, "=")
 	}
 
 	// Only coverprofile has a relative path to the test pwd and can be
 	// replaced immediately. All other profile files are relative to the actual
 	// test running and need to be prefixed with -test.outputdir. So, collect
 	// them and process them afterwards when "outputdir" is found.
-	for idx, posArg := range c.InitArgs {
+	for idx, posArg := range spec.InitArgs {
 		splits := strings.SplitN(posArg, "=", splitNum)
 		switch splits[0] {
 		case "-test.blockprofile",
@@ -153,9 +153,9 @@ func rewriteGoTestFlagsPath(c *qemu.CommandSpec) {
 
 			fallthrough
 		case "-test.coverprofile":
-			splits[1] = "/dev/" + c.AddConsole(splits[1])
+			splits[1] = "/dev/" + spec.AddConsole(splits[1])
 		}
 
-		c.InitArgs[idx] = strings.Join(splits, "=")
+		spec.InitArgs[idx] = strings.Join(splits, "=")
 	}
 }

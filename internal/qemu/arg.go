@@ -49,13 +49,13 @@ func (a Argument) UniqueName() bool {
 //
 // If the name is marked unique, only names are
 // compared. Otherwise name and value are compared.
-func (a Argument) Equal(b Argument) bool {
-	if a.name != b.name {
+func (a Argument) Equal(other Argument) bool {
+	if a.name != other.name {
 		return false
 	}
 
 	if a.nonUniqueName {
-		return a.value == b.value
+		return a.value == other.value
 	}
 
 	return true
@@ -86,7 +86,7 @@ func RepeatableArg(name string, value ...string) Argument {
 // It returns an error if any name uniqueness constraints of any [Argument] is
 // violated.
 func BuildArgumentStrings(args []Argument) ([]string, error) {
-	s := make([]string, 0, len(args))
+	argString := make([]string, 0, len(args))
 
 	for idx, arg := range args {
 		if i := slices.IndexFunc(args[:idx], arg.Equal); i != -1 {
@@ -98,12 +98,12 @@ func BuildArgumentStrings(args []Argument) ([]string, error) {
 			)
 		}
 
-		s = append(s, "-"+arg.name)
+		argString = append(argString, "-"+arg.name)
 
 		if arg.value != "" {
-			s = append(s, arg.value)
+			argString = append(argString, arg.value)
 		}
 	}
 
-	return s, nil
+	return argString, nil
 }

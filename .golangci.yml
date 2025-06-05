@@ -11,7 +11,6 @@ linters:
     - exhaustruct
     - funlen
     - paralleltest
-    - varnamelen
   settings:
     exhaustive:
       default-signifies-exhaustive: true
@@ -68,6 +67,7 @@ linters:
           - err113
           - gochecknoglobals
           - gochecknoinits
+          - varnamelen
         path: (.+)_test\.go
 
 formatters:

@@ -41,13 +41,13 @@ func (t *TransportType) String() string {
 // It returns ErrTransportTypeInvalid if the string does not represent a valid
 // [TransportType].
 func (t *TransportType) Set(s string) error {
-	tt := TransportType(s)
+	ttype := TransportType(s)
 
-	if !tt.isKnown() {
+	if !ttype.isKnown() {
 		return ErrTransportTypeInvalid
 	}
 
-	*t = tt
+	*t = ttype
 
 	return nil
 }

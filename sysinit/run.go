@@ -74,15 +74,15 @@ func run(exitHandler ExitHandler, funcs []Func) {
 
 func runFuncs(funcs []Func) (err error) {
 	defer func() {
-		r := recover()
-		if r == nil {
+		rec := recover()
+		if rec == nil {
 			return
 		}
 
-		if recoveredErr, ok := r.(error); ok {
+		if recoveredErr, ok := rec.(error); ok {
 			err = fmt.Errorf("%w: %w", ErrPanic, recoveredErr)
 		} else {
-			err = fmt.Errorf("%w: %v", ErrPanic, r)
+			err = fmt.Errorf("%w: %v", ErrPanic, rec)
 		}
 	}()
 

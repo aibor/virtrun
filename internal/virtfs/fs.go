@@ -55,7 +55,7 @@ func New() *FS {
 // It returns a [PathError] in case of errors. It does not follow symbolic
 // links and returns symbolic links directly.
 func (fsys *FS) Open(name string) (fs.File, error) {
-	file, err := fsys.open(name, true)
+	file, err := fsys.open(name, find)
 	if err != nil {
 		return nil, &PathError{
 			Op:   "open",
@@ -136,7 +136,7 @@ func (fsys *FS) Mkdir(name string) error {
 func (fsys *FS) MkdirAll(name string) error {
 	cleaned := clean(name)
 
-	dEntry, err := fsys.find(cleaned, symlinkDepth)
+	dEntry, err := find(fsys, cleaned, symlinkDepth)
 	if err == nil {
 		if dEntry.IsDir() {
 			return nil
@@ -204,7 +204,7 @@ func (fsys *FS) Symlink(oldname, newname string) error {
 }
 
 func (fsys *FS) subDir(name string) (*directory, error) {
-	dEntry, err := fsys.find(name, symlinkDepth)
+	dEntry, err := find(fsys, name, symlinkDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -233,13 +233,8 @@ func (fsys *FS) add(name string, file file) error {
 	return nil
 }
 
-func (fsys *FS) open(name string, follow bool) (fs.File, error) {
-	findFn := fsys.findNoFollow
-	if follow {
-		findFn = fsys.find
-	}
-
-	dEntry, err := findFn(name, symlinkDepth)
+func (fsys *FS) open(name string, findFn findFunc) (fs.File, error) {
+	dEntry, err := findFn(fsys, name, symlinkDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +243,7 @@ func (fsys *FS) open(name string, follow bool) (fs.File, error) {
 }
 
 func (fsys *FS) readlink(name string) (string, error) {
-	dEntry, err := fsys.findNoFollow(name, symlinkDepth)
+	dEntry, err := findNoFollow(fsys, name, symlinkDepth)
 	if err != nil {
 		return "", err
 	}
@@ -262,7 +257,7 @@ func (fsys *FS) readlink(name string) (string, error) {
 }
 
 func (fsys *FS) lstat(name string) (fs.FileInfo, error) {
-	file, err := fsys.open(name, false)
+	file, err := fsys.open(name, findNoFollow)
 	if err != nil {
 		return nil, err
 	}
@@ -276,16 +271,18 @@ func (fsys *FS) lstat(name string) (fs.FileInfo, error) {
 	return info, nil
 }
 
-func (fsys *FS) find(name string, depth uint) (dirEntry, error) {
-	dEntry, err := fsys.findNoFollow(name, depth)
+type findFunc func(fsys *FS, name string, depth uint) (dirEntry, error)
+
+func find(fsys *FS, name string, depth uint) (dirEntry, error) {
+	dEntry, err := findNoFollow(fsys, name, depth)
 	if err != nil {
 		return dirEntry{}, err
 	}
 
-	return fsys.follow(dEntry, depth)
+	return follow(fsys, dEntry, depth)
 }
 
-func (fsys *FS) findNoFollow(name string, depth uint) (dirEntry, error) {
+func findNoFollow(fsys *FS, name string, depth uint) (dirEntry, error) {
 	dEntry := dirEntry{name, &fsys.root}
 
 	if name == "" || name == "." {
@@ -299,7 +296,7 @@ func (fsys *FS) findNoFollow(name string, depth uint) (dirEntry, error) {
 	for name = range strings.SplitSeq(name, string(filepath.Separator)) {
 		var err error
 
-		dEntry, err = fsys.follow(dEntry, depth)
+		dEntry, err = follow(fsys, dEntry, depth)
 		if err != nil {
 			return dirEntry{}, err
 		}
@@ -319,7 +316,7 @@ func (fsys *FS) findNoFollow(name string, depth uint) (dirEntry, error) {
 	return dEntry, nil
 }
 
-func (fsys *FS) follow(dEntry dirEntry, depth uint) (dirEntry, error) {
+func follow(fsys *FS, dEntry dirEntry, depth uint) (dirEntry, error) {
 	symlink, isSymlink := dEntry.file.(symbolicLink)
 	if !isSymlink {
 		return dEntry, nil
@@ -331,7 +328,7 @@ func (fsys *FS) follow(dEntry dirEntry, depth uint) (dirEntry, error) {
 
 	depth--
 
-	return fsys.find(clean(string(symlink)), depth)
+	return find(fsys, clean(string(symlink)), depth)
 }
 
 func clean(path string) string {

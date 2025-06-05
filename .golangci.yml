@@ -35,8 +35,6 @@ linters:
           disabled: true
         - name: cyclomatic
           disabled: true
-        - name: deep-exit
-          disabled: true
         - name: exported
           arguments:
             - disableChecksOnConstants

@@ -21,18 +21,16 @@ type lineParseFunc func([]byte) []byte
 //
 // It can be used without a parse function set to just sanitize line endings.
 type consoleProcessor struct {
-	dst io.Writer
-	src io.Reader
-	fn  lineParseFunc
+	dst        io.Writer
+	src        io.Reader
+	fn         lineParseFunc
+	eofReached bool
 }
 
-func (p consoleProcessor) run() error {
-	// Collect information about reaching EOF.
-	var eofReached bool
-
+func (p *consoleProcessor) run() error {
 	scanner := bufio.NewScanner(p.src)
 	scanner.Split(func(data []byte, atEOF bool) (int, []byte, error) {
-		eofReached = atEOF
+		p.eofReached = atEOF
 		return bufio.ScanLines(data, atEOF)
 	})
 
@@ -40,7 +38,7 @@ func (p consoleProcessor) run() error {
 	for scanner.Scan() {
 		called = true
 
-		if err := p.processLine(scanner.Bytes(), eofReached); err != nil {
+		if err := p.processLine(scanner.Bytes()); err != nil {
 			return err
 		}
 	}
@@ -57,7 +55,7 @@ func (p consoleProcessor) run() error {
 	return nil
 }
 
-func (p consoleProcessor) processLine(data []byte, eofReached bool) error {
+func (p *consoleProcessor) processLine(data []byte) error {
 	if p.fn != nil {
 		data = p.fn(data)
 	}
@@ -70,7 +68,7 @@ func (p consoleProcessor) processLine(data []byte, eofReached bool) error {
 		return fmt.Errorf("write data: %w", err)
 	}
 
-	if eofReached {
+	if p.eofReached {
 		return nil
 	}
 

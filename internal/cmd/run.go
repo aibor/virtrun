@@ -30,7 +30,12 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		return fmt.Errorf("validate: %w", err)
 	}
 
-	setupLogging(stderr, flags.Debug())
+	logLevel := slog.LevelWarn
+	if flags.debug {
+		logLevel = slog.LevelDebug
+	}
+
+	setupLogging(stderr, logLevel)
 
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),

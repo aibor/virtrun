@@ -10,15 +10,12 @@ import (
 	"log/slog"
 )
 
-func setupLogging(w io.Writer, debug bool) {
+type logLevel = slog.Level
+
+func setupLogging(w io.Writer, level logLevel) {
 	log.SetOutput(w)
 	log.SetFlags(log.Lmicroseconds)
 	log.SetPrefix("VIRTRUN: ")
-
-	level := slog.LevelWarn
-	if debug {
-		level = slog.LevelDebug
-	}
 
 	slog.SetLogLoggerLevel(level)
 }

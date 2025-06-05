@@ -198,7 +198,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.expectedSpec, flags.spec, "spec")
-			assert.Equal(t, tt.expectedDebugFlag, flags.Debug(), "debug flag")
+			assert.Equal(t, tt.expectedDebugFlag, flags.debug, "debug flag")
 		})
 	}
 }

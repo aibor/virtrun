@@ -42,8 +42,6 @@ linters:
             - disableChecksOnMethods
             - disableChecksOnTypes
             - disableChecksOnVariables
-        - name: flag-parameter
-          disabled: true
         - name: function-length
           disabled: true
         - name: line-length-limit

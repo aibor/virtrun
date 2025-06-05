@@ -29,10 +29,10 @@ const (
 type flags struct {
 	name string
 
-	spec        *virtrun.Spec
-	flagSet     *flag.FlagSet
-	versionFlag bool
-	debugFlag   bool
+	spec    *virtrun.Spec
+	flagSet *flag.FlagSet
+	version bool
+	debug   bool
 }
 
 func newFlags(name string, output io.Writer) *flags {
@@ -61,7 +61,7 @@ func (f *flags) ParseArgs(args []string) error {
 
 	// With version flag, just print the version and exit. Using [ErrHelp]
 	// the main binary is supposed to return with a non error exit code.
-	if f.versionFlag {
+	if f.version {
 		err := f.printVersionInformation()
 		return &ParseArgsError{msg: "version requested", err: err}
 	}
@@ -89,10 +89,6 @@ func (f *flags) ParseArgs(args []string) error {
 	f.spec.Qemu.InitArgs = positionalArgs[1:]
 
 	return nil
-}
-
-func (f *flags) Debug() bool {
-	return f.debugFlag
 }
 
 func (f *flags) initFlagset(output io.Writer) {
@@ -203,16 +199,16 @@ func (f *flags) initFlagset(output io.Writer) {
 	)
 
 	flagSet.BoolVar(
-		&f.debugFlag,
+		&f.debug,
 		"debug",
-		f.debugFlag,
+		f.debug,
 		"enable debug output",
 	)
 
 	flagSet.BoolVar(
-		&f.versionFlag,
+		&f.version,
 		"version",
-		f.versionFlag,
+		f.version,
 		"show version and exit",
 	)
 

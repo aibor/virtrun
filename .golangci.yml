@@ -51,7 +51,8 @@ linters:
         - name: package-comments
           disabled: true
         - name: unhandled-error
-          disabled: true
+          arguments:
+            - "fmt\\.(Fp|P)rint(f|ln)?"
   exclusions:
     generated: strict
     warn-unused: true

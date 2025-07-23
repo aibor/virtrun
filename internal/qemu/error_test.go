@@ -19,12 +19,6 @@ func TestArgumentErrorIs(t *testing.T) {
 
 func TestCommandErrorIs(t *testing.T) {
 	//nolint:testifylint
-	assert.ErrorIs(t, error(&qemu.CommandError{}), &qemu.CommandError{})
-	assert.NotErrorIs(t, assert.AnError, &qemu.CommandError{})
-}
-
-func TestConsoleErrorIs(t *testing.T) {
-	//nolint:testifylint
-	assert.ErrorIs(t, error(&qemu.ConsoleError{}), &qemu.ConsoleError{})
-	assert.NotErrorIs(t, assert.AnError, &qemu.ConsoleError{})
+	assert.ErrorIs(t, error(&qemu.Error{}), &qemu.Error{})
+	assert.NotErrorIs(t, assert.AnError, &qemu.Error{})
 }

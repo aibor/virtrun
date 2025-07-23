@@ -23,6 +23,16 @@ const (
 	MS_NOEXEC = unix.MS_NOEXEC
 )
 
+// Errors.
+const (
+	ENODEV = unix.ENODEV
+)
+
+// Open flags.
+const (
+	O_CLOEXEC = unix.O_CLOEXEC
+)
+
 //revive:enable:var-naming
 
 // MountFlags is a set of flags passed to the [unix.Mount] syscall.
@@ -113,6 +123,16 @@ func getpid() int {
 func setenv(key, value string) error {
 	if err := unix.Setenv(key, value); err != nil {
 		return fmt.Errorf("setenv %s: %w", key, err)
+	}
+
+	return nil
+}
+
+func mkfifo(path string) error {
+	const mode = 0o600
+
+	if err := unix.Mkfifo(path, mode); err != nil {
+		return fmt.Errorf("mkfifo %s: %w", path, err)
 	}
 
 	return nil

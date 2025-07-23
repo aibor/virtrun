@@ -7,6 +7,7 @@ package virtrun
 import (
 	"testing"
 
+	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,7 +45,7 @@ func TestProcessGoTestFlags(t *testing.T) {
 			expectedArgs: []string{
 				"-test.paniconexit0",
 				"-test.gocoverdir=/tmp",
-				"-test.coverprofile=/dev/hvc1",
+				"-test.coverprofile=" + pipe.Path(1),
 			},
 			expectedFiles: []string{
 				"cover.out",
@@ -63,11 +64,11 @@ func TestProcessGoTestFlags(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"-test.paniconexit0",
-				"-test.blockprofile=/dev/hvc1",
-				"-test.cpuprofile=/dev/hvc2",
-				"-test.memprofile=/dev/hvc3",
-				"-test.mutexprofile=/dev/hvc4",
-				"-test.trace=/dev/hvc5",
+				"-test.blockprofile=" + pipe.Path(1),
+				"-test.cpuprofile=" + pipe.Path(2),
+				"-test.memprofile=" + pipe.Path(3),
+				"-test.mutexprofile=" + pipe.Path(4),
+				"-test.trace=" + pipe.Path(5),
 				"-test.outputdir=/tmp",
 			},
 			expectedFiles: []string{
@@ -91,11 +92,11 @@ func TestProcessGoTestFlags(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"-test.paniconexit0",
-				"-test.blockprofile=/dev/hvc1",
-				"-test.cpuprofile=/dev/hvc2",
-				"-test.memprofile=/dev/hvc3",
-				"-test.mutexprofile=/dev/hvc4",
-				"-test.trace=/dev/hvc5",
+				"-test.blockprofile=" + pipe.Path(1),
+				"-test.cpuprofile=" + pipe.Path(2),
+				"-test.memprofile=" + pipe.Path(3),
+				"-test.mutexprofile=" + pipe.Path(4),
+				"-test.trace=" + pipe.Path(5),
 				"-test.outputdir=/tmp",
 			},
 			expectedFiles: []string{
@@ -115,8 +116,12 @@ func TestProcessGoTestFlags(t *testing.T) {
 			}
 			rewriteGoTestFlagsPath(&cmdSpec)
 
+			var actualFiles []string
+
+			actualFiles = append(actualFiles, cmdSpec.AdditionalConsoles...)
+
 			assert.Equal(t, tt.expectedArgs, cmdSpec.InitArgs)
-			assert.Equal(t, tt.expectedFiles, cmdSpec.AdditionalConsoles)
+			assert.Equal(t, tt.expectedFiles, actualFiles)
 		})
 	}
 }

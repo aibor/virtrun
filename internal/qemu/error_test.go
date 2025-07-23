@@ -22,9 +22,3 @@ func TestCommandErrorIs(t *testing.T) {
 	assert.ErrorIs(t, error(&qemu.CommandError{}), &qemu.CommandError{})
 	assert.NotErrorIs(t, assert.AnError, &qemu.CommandError{})
 }
-
-func TestConsoleErrorIs(t *testing.T) {
-	//nolint:testifylint
-	assert.ErrorIs(t, error(&qemu.ConsoleError{}), &qemu.ConsoleError{})
-	assert.NotErrorIs(t, assert.AnError, &qemu.ConsoleError{})
-}

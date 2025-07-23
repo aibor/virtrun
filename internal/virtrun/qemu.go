@@ -156,7 +156,7 @@ func rewriteGoTestFlagsPath(spec *qemu.CommandSpec) {
 
 			fallthrough
 		case "-test.coverprofile":
-			splits[1] = "/dev/" + spec.AddConsole(splits[1])
+			splits[1] = spec.AddConsole(splits[1])
 		}
 
 		spec.InitArgs[idx] = strings.Join(splits, "=")

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+// SPDX-FileCopyrightText: 2025 Tobias Böhm <code@aibor.de>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -9,13 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/aibor/virtrun/internal/pipe"
 )
 
 const minAdditionalFileDescriptor = 3
@@ -61,7 +61,8 @@ type CommandSpec struct {
 
 	// Additional files attached to consoles besides the default one used for
 	// stdout. They will be present in the guest system as "/dev/ttySx" or
-	// "/dev/hvcx" where x is the index of the slice + 1.
+	// "/dev/hvcx" where x is the index of the slice + 1. The guest is expected
+	// to write all content base64 encoded.
 	AdditionalConsoles []string
 
 	// Arguments to pass to the init binary.
@@ -75,11 +76,11 @@ type CommandSpec struct {
 }
 
 // AddConsole adds an additional file to the QEMU command. This will be
-// writable from the guest via the device name returned by this command.
-// Console device number is starting at 1, as console 0 is the default stdout.
+// writable from the guest via the file descriptor number returned by this
+// command. The guest is expected to write base64 encoded into the console.
 func (c *CommandSpec) AddConsole(file string) string {
 	c.AdditionalConsoles = append(c.AdditionalConsoles, file)
-	return c.TransportType.ConsoleDeviceName(uint(len(c.AdditionalConsoles)))
+	return pipe.Path(len(c.AdditionalConsoles))
 }
 
 // Validate checks for known incompatibilities.
@@ -152,7 +153,7 @@ func (c *CommandSpec) arguments() []Argument {
 	}
 
 	// Add stdout console.
-	args = c.appendConsoleArgs(args, console{
+	args = c.appendConsoleArgs(args, consoleArg{
 		id:      "stdio",
 		backend: "stdio",
 	})
@@ -162,7 +163,7 @@ func (c *CommandSpec) arguments() []Argument {
 	for idx := range c.AdditionalConsoles {
 		// FDs 0, 1, 2 are standard in, out, err, so start at 3.
 		path := fdPath(minAdditionalFileDescriptor + idx)
-		args = c.appendConsoleArgs(args, console{
+		args = c.appendConsoleArgs(args, consoleArg{
 			id:      fmt.Sprintf("con%d", idx),
 			backend: "file",
 			opts:    []string{"path=" + path},
@@ -219,7 +220,7 @@ func (c *CommandSpec) kernelCmdlineArgs() []string {
 	return cmdline
 }
 
-type console struct {
+type consoleArg struct {
 	id      string
 	backend string
 	opts    []string
@@ -227,7 +228,7 @@ type console struct {
 
 func (c *CommandSpec) appendConsoleArgs(
 	args []Argument,
-	console console,
+	console consoleArg,
 ) []Argument {
 	var devArg Argument
 
@@ -254,11 +255,10 @@ func fdPath(fd int) string {
 
 // Command is single-use QEMU command.
 type Command struct {
-	name         string
-	args         []string
-	stdoutParser stdoutParser
-
-	consoleOutput []string
+	name               string
+	args               []string
+	stdoutParser       stdoutParser
+	additionalConsoles []string
 }
 
 // NewCommand builds the final [Command] with the given [CommandSpec].
@@ -274,14 +274,10 @@ func NewCommand(spec CommandSpec) (*Command, error) {
 		return nil, err
 	}
 
-	if spec.ExitCodeParser == nil {
-		return nil, &ArgumentError{"ExitCodeScanFunc must not be empty"}
-	}
-
 	cmd := &Command{
-		name:          spec.Executable,
-		args:          cmdArgs,
-		consoleOutput: spec.AdditionalConsoles,
+		name:               spec.Executable,
+		args:               cmdArgs,
+		additionalConsoles: spec.AdditionalConsoles,
 		stdoutParser: stdoutParser{
 			ExitCodeParser: spec.ExitCodeParser,
 			Verbose:        spec.Verbose,
@@ -310,77 +306,41 @@ func (c *Command) Run(
 	stdin io.Reader,
 	stdout, stderr io.Writer,
 ) error {
-	outputs := []io.Closer{}
+	outputs, err := openFiles(c.additionalConsoles)
+	if err != nil {
+		return err
+	}
+	defer cleanup(outputs)
 
-	defer func() {
-		for _, closer := range outputs {
-			closeLog(closer)
-		}
-	}()
+	consolePipes, writers, err := decodingPipes(outputs, 1)
+	if err != nil {
+		return err
+	}
+	defer consolePipes.Close()
 
-	var consoleProcessors errgroup.Group
+	stdoutR, stdoutW, err := os.Pipe()
+	if err != nil {
+		return fmt.Errorf("stdout pipe: %w", err)
+	}
+
+	consolePipes.Run(&pipe.Pipe{
+		Name:        "stdout",
+		InputReader: stdoutR,
+		InputCloser: stdoutW,
+		Output:      stdout,
+		CopyFunc:    c.stdoutParser.Copy,
+	})
 
 	cmd := exec.CommandContext(ctx, c.name, c.args...)
 	cmd.Stdin = stdin
+	cmd.Stdout = stdoutW
 	cmd.Stderr = stderr
-
-	for _, path := range c.consoleOutput {
-		dst, err := os.Create(path)
-		if err != nil {
-			return fmt.Errorf("output file: %w", err)
-		}
-
-		outputs = append(outputs, dst)
-
-		readPipe, writePipe, err := os.Pipe()
-		if err != nil {
-			return fmt.Errorf("pipe: %w", err)
-		}
-
-		// Append the write end of the console processor pipe as extra file, so
-		// it is present as additional file descriptor which can be used with
-		// the "file" backend for QEMU console devices. The processor reads from
-		// the read end of the pipe, cleans the output and writes it into the
-		// actual target file on the host.
-		cmd.ExtraFiles = append(cmd.ExtraFiles, writePipe)
-
-		consoleProcessor := consoleProcessor{
-			dst: dst,
-			src: readPipe,
-		}
-
-		consoleProcessors.Go(func() error {
-			if err := consoleProcessor.run(); err != nil {
-				return &ConsoleError{
-					Name: path,
-					Err:  err,
-				}
-			}
-
-			return nil
-		})
-	}
-
-	runErr := run(cmd, stdout, c.stdoutParser)
-	consoleProcessorErr := consoleProcessors.Wait()
-
-	if runErr != nil {
-		return runErr
-	}
-
-	if consoleProcessorErr != nil {
-		return fmt.Errorf("processors: %w", consoleProcessorErr)
-	}
-
-	return nil
-}
-
-func run(cmd *exec.Cmd, stdout io.Writer, stdoutParser stdoutParser) error {
-	defer func() {
-		for _, f := range cmd.ExtraFiles {
-			closeLog(f)
-		}
-	}()
+	// Append the write end of the console processor pipe as extra file, so
+	// it is present as additional file descriptor which can be used with
+	// the "file" backend for QEMU console devices. The processor reads from
+	// the read end of the pipe, decodes the output and writes it into the
+	// actual target file on the host.
+	cmd.ExtraFiles = writers
 
 	// The default cancel function set by [exec.CommandContext] sends SIGKILL
 	// to the process. This makes it impossible for QEMU to shutdown gracefully
@@ -389,54 +349,83 @@ func run(cmd *exec.Cmd, stdout io.Writer, stdoutParser stdoutParser) error {
 		return cmd.Process.Signal(os.Interrupt)
 	}
 
-	outPipe, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("stdout pipe: %w", err)
-	}
+	runErr := cmd.Run()
 
-	stdoutProcessor := consoleProcessor{
-		dst: stdout,
-		src: outPipe,
-		fn:  stdoutParser.Parse,
-	}
+	pipesErr := consolePipes.Wait(time.Second)
 
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start: %w", err)
-	}
-
-	processorErr := stdoutProcessor.run()
-
-	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("command: %w", wrapExitError(err))
-	}
-
-	if processorErr != nil {
-		return &ConsoleError{
-			Name: "stdout",
-			Err:  processorErr,
+	if runErr != nil {
+		var exitErr *exec.ExitError
+		if errors.As(runErr, &exitErr) {
+			return &CommandError{
+				Err:      runErr,
+				ExitCode: exitErr.ExitCode(),
+			}
 		}
+
+		return fmt.Errorf("command: %w", runErr)
 	}
 
-	return stdoutParser.GuestSuccessful()
-}
-
-func closeLog(closer io.Closer) {
-	if err := closer.Close(); err != nil {
-		slog.Error(
-			"Failed to close qemu output listener",
-			slog.Any("error", err),
-		)
-	}
-}
-
-func wrapExitError(err error) error {
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	guestExitCode, err := c.stdoutParser.Result()
+	if err != nil {
 		return &CommandError{
 			Err:      err,
-			ExitCode: exitErr.ExitCode(),
+			Guest:    true,
+			ExitCode: guestExitCode,
 		}
 	}
 
-	return err
+	return pipesErr //nolint:wrapcheck
+}
+
+func decodingPipes(
+	outputs []io.WriteCloser,
+	offset int,
+) (*pipe.Pipes, []*os.File, error) {
+	writers := []*os.File{}
+	guestPipes := &pipe.Pipes{}
+
+	for idx, output := range outputs {
+		pipeReader, pipeWriter, err := os.Pipe()
+		if err != nil {
+			_ = guestPipes.Close()
+			return nil, nil, fmt.Errorf("pipe: %w", err)
+		}
+
+		writers = append(writers, pipeWriter)
+
+		guestPipes.Run(&pipe.Pipe{
+			Name:        pipe.Path(idx + offset),
+			InputReader: pipeReader,
+			InputCloser: pipeWriter,
+			Output:      output,
+			CopyFunc:    pipe.Decode,
+		})
+	}
+
+	return guestPipes, writers, nil
+}
+
+func openFiles(paths []string) ([]io.WriteCloser, error) {
+	outputs := []io.WriteCloser{}
+
+	for _, path := range paths {
+		output, err := os.Create(path)
+		if err != nil {
+			for _, c := range outputs {
+				_ = c.Close()
+			}
+
+			return nil, err
+		}
+
+		outputs = append(outputs, output)
+	}
+
+	return outputs, nil
+}
+
+func cleanup[T io.Closer](closer []T) {
+	for _, c := range closer {
+		_ = c.Close()
+	}
 }

@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/virtrun"
 )
@@ -73,19 +74,19 @@ func handleRunError(err error) int {
 		return exitCode
 	}
 
-	var qemuCmdErr *qemu.CommandError
-	if errors.As(err, &qemuCmdErr) {
-		if qemuCmdErr.ExitCode != 0 {
-			exitCode = qemuCmdErr.ExitCode
+	var qemuErr *qemu.CommandError
+	if errors.As(err, &qemuErr) {
+		if qemuErr.ExitCode != 0 {
+			exitCode = qemuErr.ExitCode
 		}
 	}
 
-	var consoleErr *qemu.ConsoleError
-	if errors.As(err, &consoleErr) {
-		if errors.Is(err, qemu.ErrConsoleNoOutput) {
+	var pipeErr *pipe.Error
+	if errors.As(err, &pipeErr) {
+		if errors.Is(err, pipe.ErrNoOutput) {
 			slog.Warn(
 				"maybe wrong transport type or /dev not mounted in guest",
-				slog.String("console", consoleErr.Name),
+				slog.String("pipe", pipeErr.Name),
 			)
 		}
 	}

@@ -10,6 +10,7 @@ import (
 	"log"
 	"testing"
 
+	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
 )
@@ -59,7 +60,7 @@ func TestHandleRunError(t *testing.T) {
 				Guest: true,
 			},
 			expectedCode: -1,
-			expectedOut:  "ERROR guest: init did not print exit code\n",
+			expectedOut:  "ERROR guest: no exit code found\n",
 		},
 		{
 			name: "qemu command guest oom error",
@@ -81,14 +82,14 @@ func TestHandleRunError(t *testing.T) {
 		},
 		{
 			name: "console no output",
-			err: &qemu.ConsoleError{
-				Err:  qemu.ErrConsoleNoOutput,
+			err: &pipe.Error{
+				Err:  pipe.ErrNoOutput,
 				Name: "stdfoo",
 			},
 			expectedCode: -1,
 			expectedOut: "WARN maybe wrong transport type " +
-				"or /dev not mounted in guest console=stdfoo\n" +
-				"ERROR console stdfoo: console did not output anything\n",
+				"or /dev not mounted in guest pipe=stdfoo\n" +
+				"ERROR pipe stdfoo: pipe did not output anything\n",
 		},
 		{
 			name:         "any error",

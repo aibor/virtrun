@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
@@ -224,7 +225,7 @@ func TestNewCommand(t *testing.T) {
 					ExitCodeParser: exitCodeScan,
 					Verbose:        true,
 				},
-				consoleOutput: []string{"one"},
+				additionalConsoles: []string{"one"},
 			},
 			assertErr: require.NoError,
 		},
@@ -237,7 +238,11 @@ func TestNewCommand(t *testing.T) {
 
 			if tt.expected != nil {
 				assert.Equal(t, tt.expected.String(), actual.String())
-				assert.Equal(t, tt.expected.consoleOutput, actual.consoleOutput)
+				assert.Equal(
+					t,
+					tt.expected.additionalConsoles,
+					actual.additionalConsoles,
+				)
 
 				// Hack: Compare string representations because functions can
 				// not compared. The string representation has the address of
@@ -252,11 +257,17 @@ func TestNewCommand(t *testing.T) {
 func TestCommand_Run(t *testing.T) {
 	tempDir := t.TempDir()
 
-	exitCodeScanner := func(line []byte) (int, bool) {
-		var exitCode int
-		_, err := fmt.Sscanf(string(line), "exit code: %d", &exitCode)
+	exitCodeFmt := "exit code: %d"
 
-		return exitCode, err == nil
+	exitCode := func(e int) string {
+		return fmt.Sprintf(exitCodeFmt, e)
+	}
+
+	exitCodeScanner := func(line []byte) (int, bool) {
+		var d int
+		_, err := fmt.Sscanf(string(line), exitCodeFmt, &d)
+
+		return d, err == nil
 	}
 
 	tests := []struct {
@@ -270,7 +281,7 @@ func TestCommand_Run(t *testing.T) {
 			name: "just success",
 			cmd: Command{
 				name: "echo",
-				args: []string{"exit code: 0"},
+				args: []string{exitCode(0)},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
 				},
@@ -281,7 +292,7 @@ func TestCommand_Run(t *testing.T) {
 			name: "success with stdout",
 			cmd: Command{
 				name: "echo",
-				args: []string{"some\nexit code: 0"},
+				args: []string{"some\n" + exitCode(0)},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
 				},
@@ -295,7 +306,7 @@ func TestCommand_Run(t *testing.T) {
 				name: "sh",
 				args: []string{
 					"-c",
-					"echo fail >&2; echo 'some\nexit code: 0'",
+					"echo fail >&2; echo 'some\n" + exitCode(0) + "'",
 				},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
@@ -311,12 +322,14 @@ func TestCommand_Run(t *testing.T) {
 				name: "sh",
 				args: []string{
 					"-c",
-					"echo foo >&3; echo fail >&2; echo 'some\nexit code: 0'",
+					"echo foo | base64 >&3;" +
+						"echo fail >&2;" +
+						"echo 'some\n" + exitCode(0) + "'",
 				},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
 				},
-				consoleOutput: []string{
+				additionalConsoles: []string{
 					tempDir + "/out1",
 				},
 			},
@@ -330,12 +343,14 @@ func TestCommand_Run(t *testing.T) {
 				name: "sh",
 				args: []string{
 					"-c",
-					"echo foo >&3; echo fail >&2; echo 'some\nexit code: 0'",
+					"echo foo | base64 >&3;" +
+						"echo fail >&2;" +
+						"echo 'some\n" + exitCode(0) + "'",
 				},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
 				},
-				consoleOutput: []string{
+				additionalConsoles: []string{
 					tempDir + "/out1",
 					tempDir + "/out2",
 				},
@@ -343,7 +358,7 @@ func TestCommand_Run(t *testing.T) {
 			expectedStdout: "some\n",
 			expectedStderr: "fail\n",
 			assertErr: func(t require.TestingT, err error, args ...any) {
-				require.ErrorIs(t, err, ErrConsoleNoOutput, args...)
+				require.ErrorIs(t, err, pipe.ErrNoOutput, args...)
 			},
 		},
 		{
@@ -354,7 +369,7 @@ func TestCommand_Run(t *testing.T) {
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
 				},
-				consoleOutput: []string{
+				additionalConsoles: []string{
 					tempDir + "/out1",
 				},
 			},
@@ -367,16 +382,19 @@ func TestCommand_Run(t *testing.T) {
 			name: "fail with consoles",
 			cmd: Command{
 				name: "sh",
-				args: []string{"-c", "echo foo >&3; echo exit code: 42"},
+				args: []string{
+					"-c",
+					"echo foo >&3; echo " + exitCode(42),
+				},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
 				},
-				consoleOutput: []string{
+				additionalConsoles: []string{
 					tempDir + "/out1",
 				},
 			},
 			assertErr: func(t require.TestingT, err error, args ...any) {
-				var cmdErr *CommandError
+				var cmdErr *Error
 				require.ErrorAs(t, err, &cmdErr, args...)
 				assert.Equal(t, 42, cmdErr.ExitCode, args...)
 				assert.Equal(t, ErrGuestNonZeroExitCode, cmdErr.Err, args...)
@@ -389,12 +407,12 @@ func TestCommand_Run(t *testing.T) {
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
 				},
-				consoleOutput: []string{
+				additionalConsoles: []string{
 					tempDir + "/out1",
 				},
 			},
 			assertErr: func(t require.TestingT, err error, args ...any) {
-				require.NotErrorIs(t, err, &CommandError{}, args...)
+				require.NotErrorIs(t, err, &Error{}, args...)
 				require.Error(t, err, args...)
 			},
 		},

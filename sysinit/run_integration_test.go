@@ -15,6 +15,7 @@ import (
 
 func TestMain(m *testing.M) {
 	sysinit.Run(
+		sysinit.WithHostPipes(),
 		func(_ *sysinit.State) error {
 			sysinit.PrintExitCode(os.Stdout, m.Run())
 			return nil

@@ -10,6 +10,7 @@ import (
 	"log"
 	"testing"
 
+	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
 )
@@ -35,17 +36,17 @@ func TestHandleRunError(t *testing.T) {
 		},
 		{
 			name: "qemu command host error",
-			err: &qemu.CommandError{
+			err: &qemu.Error{
 				Err:      assert.AnError,
 				ExitCode: 42,
 			},
 			expectedCode: 42,
-			expectedOut: "ERROR host: " +
+			expectedOut: "ERROR qemu host: " +
 				"assert.AnError general error for testing\n",
 		},
 		{
 			name: "qemu command guest non-zero exit code error",
-			err: &qemu.CommandError{
+			err: &qemu.Error{
 				Err:      qemu.ErrGuestNonZeroExitCode,
 				Guest:    true,
 				ExitCode: 43,
@@ -54,41 +55,41 @@ func TestHandleRunError(t *testing.T) {
 		},
 		{
 			name: "qemu command guest no exit code found error",
-			err: &qemu.CommandError{
+			err: &qemu.Error{
 				Err:   qemu.ErrGuestNoExitCodeFound,
 				Guest: true,
 			},
 			expectedCode: -1,
-			expectedOut:  "ERROR guest: init did not print exit code\n",
+			expectedOut:  "ERROR qemu guest: no exit code found\n",
 		},
 		{
 			name: "qemu command guest oom error",
-			err: &qemu.CommandError{
+			err: &qemu.Error{
 				Err:   qemu.ErrGuestOom,
 				Guest: true,
 			},
 			expectedCode: -1,
-			expectedOut:  "ERROR guest: system ran out of memory\n",
+			expectedOut:  "ERROR qemu guest: system ran out of memory\n",
 		},
 		{
 			name: "qemu command guest panic error",
-			err: &qemu.CommandError{
+			err: &qemu.Error{
 				Err:   qemu.ErrGuestPanic,
 				Guest: true,
 			},
 			expectedCode: -1,
-			expectedOut:  "ERROR guest: system panicked\n",
+			expectedOut:  "ERROR qemu guest: system panicked\n",
 		},
 		{
 			name: "console no output",
-			err: &qemu.ConsoleError{
-				Err:  qemu.ErrConsoleNoOutput,
+			err: &pipe.Error{
+				Err:  pipe.ErrNoOutput,
 				Name: "stdfoo",
 			},
 			expectedCode: -1,
 			expectedOut: "WARN maybe wrong transport type " +
-				"or /dev not mounted in guest console=stdfoo\n" +
-				"ERROR console stdfoo: console did not output anything\n",
+				"or /dev not mounted in guest pipe=stdfoo\n" +
+				"ERROR pipe stdfoo: pipe did not output anything\n",
 		},
 		{
 			name:         "any error",

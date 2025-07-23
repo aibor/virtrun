@@ -7,8 +7,6 @@ package sysinit
 import (
 	"errors"
 	"fmt"
-
-	"github.com/aibor/virtrun/internal/exitcode"
 )
 
 var (
@@ -18,9 +16,6 @@ var (
 	// ErrPanic is returned if a [Func] panicked.
 	ErrPanic = errors.New("function panicked")
 )
-
-// ExitError is an exit code that is considered an error.
-type ExitError = exitcode.Error
 
 // OptionalMountError is a collection of errors that occurred for mount points
 // that may fail.

@@ -44,7 +44,7 @@ func TestProcessGoTestFlags(t *testing.T) {
 			expectedArgs: []string{
 				"-test.paniconexit0",
 				"-test.gocoverdir=/tmp",
-				"-test.coverprofile=/dev/hvc1",
+				"-test.coverprofile=/host_pipe1",
 			},
 			expectedFiles: []string{
 				"cover.out",
@@ -63,11 +63,11 @@ func TestProcessGoTestFlags(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"-test.paniconexit0",
-				"-test.blockprofile=/dev/hvc1",
-				"-test.cpuprofile=/dev/hvc2",
-				"-test.memprofile=/dev/hvc3",
-				"-test.mutexprofile=/dev/hvc4",
-				"-test.trace=/dev/hvc5",
+				"-test.blockprofile=/host_pipe1",
+				"-test.cpuprofile=/host_pipe2",
+				"-test.memprofile=/host_pipe3",
+				"-test.mutexprofile=/host_pipe4",
+				"-test.trace=/host_pipe5",
 				"-test.outputdir=/tmp",
 			},
 			expectedFiles: []string{
@@ -91,11 +91,11 @@ func TestProcessGoTestFlags(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"-test.paniconexit0",
-				"-test.blockprofile=/dev/hvc1",
-				"-test.cpuprofile=/dev/hvc2",
-				"-test.memprofile=/dev/hvc3",
-				"-test.mutexprofile=/dev/hvc4",
-				"-test.trace=/dev/hvc5",
+				"-test.blockprofile=/host_pipe1",
+				"-test.cpuprofile=/host_pipe2",
+				"-test.memprofile=/host_pipe3",
+				"-test.mutexprofile=/host_pipe4",
+				"-test.trace=/host_pipe5",
 				"-test.outputdir=/tmp",
 			},
 			expectedFiles: []string{
@@ -115,8 +115,11 @@ func TestProcessGoTestFlags(t *testing.T) {
 			}
 			rewriteGoTestFlagsPath(&cmdSpec)
 
+			var actualFiles []string
+			actualFiles = append(actualFiles, cmdSpec.AdditionalConsoles...)
+
 			assert.Equal(t, tt.expectedArgs, cmdSpec.InitArgs)
-			assert.Equal(t, tt.expectedFiles, cmdSpec.AdditionalConsoles)
+			assert.Equal(t, tt.expectedFiles, actualFiles)
 		})
 	}
 }

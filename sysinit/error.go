@@ -7,6 +7,8 @@ package sysinit
 import (
 	"errors"
 	"fmt"
+
+	"github.com/aibor/virtrun/internal/exitcode"
 )
 
 var (
@@ -18,21 +20,7 @@ var (
 )
 
 // ExitError is an exit code that is considered an error.
-type ExitError int
-
-func (e ExitError) Error() string {
-	return fmt.Sprintf("non-zero exit code: %d", e)
-}
-
-func (ExitError) Is(other error) bool {
-	_, ok := other.(ExitError)
-	return ok
-}
-
-// Code returns the exit code as basic int type.
-func (e ExitError) Code() int {
-	return int(e)
-}
+type ExitError = exitcode.Error
 
 // OptionalMountError is a collection of errors that occurred for mount points
 // that may fail.

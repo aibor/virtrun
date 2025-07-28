@@ -32,16 +32,8 @@ func run(mainFunc sysinit.Func) {
 	// written to by virtrun.
 	env := sysinit.EnvVars{"PATH": "/data"}
 
-	exitCodePrinter := sysinit.ExitCodeID.Printer(os.Stdout)
-
 	sysinit.Run(
-		func(err error) {
-			if err != nil && !errors.Is(err, sysinit.ExitError(0)) {
-				log.Print("ERROR ", err.Error())
-			}
-
-			exitCodePrinter(err)
-		},
+		sysinit.ExitCodePrinter(os.Stdout),
 		sysinit.WithMountPoints(sysinit.SystemMountPoints()),
 		sysinit.WithModules("/lib/modules/*"),
 		sysinit.WithInterfaceUp("lo"),

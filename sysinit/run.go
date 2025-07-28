@@ -9,10 +9,6 @@ import (
 	"log"
 )
 
-// ExitHandler is passed to [Run] and called with the first error a [Func]
-// returns or nil if all [Func]s ran without error.
-type ExitHandler func(err error)
-
 // Func is a function run by [Run].
 type Func func() error
 

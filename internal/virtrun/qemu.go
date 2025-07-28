@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aibor/virtrun/internal/exitcode"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
-	"github.com/aibor/virtrun/sysinit"
 )
 
 type Qemu struct {
@@ -87,7 +87,7 @@ func NewQemuCommand(cfg Qemu, initramfsPath string) (*qemu.Command, error) {
 		ExtraArgs:      cfg.ExtraArgs,
 		NoKVM:          cfg.NoKVM,
 		Verbose:        cfg.Verbose,
-		ExitCodeParser: sysinit.ExitCodeID.ParseExitCode,
+		ExitCodeParser: exitcode.Parse,
 	}
 
 	// In order to be useful with "go test -exec", rewrite the file based flags

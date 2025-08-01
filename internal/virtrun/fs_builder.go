@@ -84,7 +84,7 @@ func (b *fsBuilder) symlinkTo(dir string, paths []string) error {
 			return err
 		}
 
-		err = b.symlink(libsDir, path)
+		err = b.symlink(dir, path)
 		if err != nil {
 			return err
 		}

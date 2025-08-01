@@ -34,25 +34,41 @@ const (
 	defaultDirMode = 0o755
 )
 
-// SystemMountPoints returns a map of all special pseudo and virtual file
-// systems required for usual system operations, like accessing kernel
-// variables, modifying kernel knobs or accessing devices.
+// EssentialMountPoints returns a map of all essential special pseudo and
+// virtual file systems required for usual system operations, like accessing
+// kernel variables, modifying kernel knobs or accessing devices.
+func essentialMountPoints() MountPoints {
+	return MountPoints{
+		"/dev": {
+			FSType: FSTypeDevTmp,
+			Flags:  MS_NOSUID,
+		},
+		"/proc": {
+			FSType: FSTypeProc,
+			Flags:  MS_NOSUID | MS_NODEV | MS_NOEXEC,
+		},
+		"/sys": {
+			FSType: FSTypeSys,
+			Flags:  MS_NOSUID | MS_NODEV | MS_NOEXEC,
+		},
+	}
+}
+
+// SystemMountPoints returns a map of non-essential special pseudo and virtual
+// file systems.
 func SystemMountPoints() MountPoints {
 	return MountPoints{
-		"/dev":                     {FSType: FSTypeDevTmp},
-		"/dev/hugepages":           {FSType: FSTypeHugeTlb, MayFail: true},
-		"/dev/mqueue":              {FSType: FSTypeMqueue, MayFail: true},
-		"/dev/pts":                 {FSType: FSTypeDevPts, MayFail: true},
-		"/proc":                    {FSType: FSTypeProc},
-		"/sys/fs/bpf":              {FSType: FSTypeBpf, MayFail: true},
-		"/sys/fs/cgroup":           {FSType: FSTypeCgroup2, MayFail: true},
-		"/sys/fs/fuse/connections": {FSType: FSTypeFuseCtl, MayFail: true},
-		"/sys/fs/pstore":           {FSType: FSTypePstore, MayFail: true},
-		"/sys":                     {FSType: FSTypeSys},
-		"/sys/kernel/config":       {FSType: FSTypeConfig, MayFail: true},
-		"/sys/kernel/debug":        {FSType: FSTypeDebug, MayFail: true},
-		"/sys/kernel/security":     {FSType: FSTypeSecurity, MayFail: true},
-		"/sys/kernel/tracing":      {FSType: FSTypeTracing, MayFail: true},
+		"/dev/hugepages":           {FSType: FSTypeHugeTlb},
+		"/dev/mqueue":              {FSType: FSTypeMqueue},
+		"/dev/pts":                 {FSType: FSTypeDevPts},
+		"/sys/fs/bpf":              {FSType: FSTypeBpf},
+		"/sys/fs/cgroup":           {FSType: FSTypeCgroup2},
+		"/sys/fs/fuse/connections": {FSType: FSTypeFuseCtl},
+		"/sys/fs/pstore":           {FSType: FSTypePstore},
+		"/sys/kernel/config":       {FSType: FSTypeConfig},
+		"/sys/kernel/debug":        {FSType: FSTypeDebug},
+		"/sys/kernel/security":     {FSType: FSTypeSecurity},
+		"/sys/kernel/tracing":      {FSType: FSTypeTracing},
 	}
 }
 
@@ -71,11 +87,6 @@ type MountOptions struct {
 
 	// Data are optional additional parameters that depend of the [FSType] used.
 	Data string
-
-	// MayFail determines if the mount operation may fail. If set to true, a
-	// mount error does not fail a [MountAll] operation. Instead, a warning is
-	// printed to stdout and the next mount point is tried.
-	MayFail bool
 }
 
 // MountPoints is a collection of MountPoints.
@@ -104,10 +115,6 @@ func MountAll(mountPoints MountPoints) error {
 
 	for path, opts := range sortedMap(mountPoints) {
 		if err := Mount(path, opts); err != nil {
-			if !opts.MayFail {
-				return err
-			}
-
 			optionalErrs = append(optionalErrs, err)
 		}
 	}

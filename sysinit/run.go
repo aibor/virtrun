@@ -17,6 +17,9 @@ type Func func() error
 // It runs the given functions and ensures proper shutdown of the system. It
 // never returns. It must be run as PID 1, otherwise it panics immediately.
 //
+// For proper communication with the virtrun host component /dev, /sys and /proc
+// are mounted.
+//
 // The given [Func]s are run in the order given. They must not terminate the
 // program (e.g. by [os.Exit]). Panics are recovered from before the
 // [ExitHandler] runs.
@@ -43,13 +46,16 @@ type Func func() error
 //	)
 //
 // Pay attention to the proper order: symlinks should be created after the
-// dependent mounts. For proper communication with the virtrun at least /dev
-// should be mounted, as additional files are sent via serial consoles accessed
-// via files in /dev/. For go coverage a /tmp directory is required.
+// dependent mounts.
 func Run(exitHandler ExitHandler, funcs ...Func) {
 	if !IsPidOne() {
 		panic(ErrNotPidOne)
 	}
+
+	allFns := []Func{
+		WithMountPoints(essentialMountPoints()),
+	}
+	allFns = append(allFns, funcs...)
 
 	defer func() {
 		if err := Poweroff(); err != nil {
@@ -57,7 +63,7 @@ func Run(exitHandler ExitHandler, funcs ...Func) {
 		}
 	}()
 
-	run(exitHandler, funcs)
+	run(exitHandler, allFns)
 }
 
 func run(exitHandler ExitHandler, funcs []Func) {

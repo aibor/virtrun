@@ -12,6 +12,17 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+//revive:disable:var-naming
+
+// Mount flags.
+const (
+	MS_NOSUID = unix.MS_NOSUID
+	MS_NODEV  = unix.MS_NODEV
+	MS_NOEXEC = unix.MS_NOEXEC
+)
+
+//revive:enable:var-naming
+
 type MountFlags int
 
 func mount(path, source, fsType string, flags MountFlags, data string) error {

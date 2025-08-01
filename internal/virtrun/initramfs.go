@@ -171,6 +171,12 @@ func buildVirtFS(
 		return nil, err
 	}
 
+	for _, dir := range []string{"/run", "/tmp"} {
+		if err := builder.mkdirAll(dir); err != nil {
+			return nil, err
+		}
+	}
+
 	return fsys, nil
 }
 

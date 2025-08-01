@@ -17,13 +17,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aibor/virtrun/sysinit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
 	run(func() error {
-		m.Run()
+		if exitCode := m.Run(); exitCode != 0 {
+			return sysinit.ExitError(exitCode)
+		}
+
 		return nil
 	})
 }

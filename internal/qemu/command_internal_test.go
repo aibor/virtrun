@@ -220,6 +220,7 @@ func TestNewCommand(t *testing.T) {
 					"panic=-1",
 					"mitigations=off",
 					"initcall_blacklist=ahci_pci_driver_init",
+					"debug",
 				},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScan,

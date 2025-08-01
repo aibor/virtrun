@@ -205,7 +205,9 @@ func (c *CommandSpec) kernelCmdlineArgs() []string {
 		cmdline = append(cmdline, "acpi=off")
 	}
 
-	if !c.Verbose {
+	if c.Verbose {
+		cmdline = append(cmdline, "debug")
+	} else {
 		cmdline = append(cmdline, "quiet")
 	}
 

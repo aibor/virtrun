@@ -21,7 +21,7 @@ func SetEnv(envVars EnvVars) error {
 // WithEnv returns a setup [Func] that wraps [SetEnv] and can be used with
 // [Run].
 func WithEnv(envVars EnvVars) Func {
-	return func() error {
+	return func(_ *State) error {
 		return SetEnv(envVars)
 	}
 }

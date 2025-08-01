@@ -31,8 +31,10 @@ func TestRun(t *testing.T) {
 				expectedErr: nil,
 			},
 			{
-				name:        "with error",
-				funcs:       []Func{func() error { return assert.AnError }},
+				name: "with error",
+				funcs: []Func{
+					func(_ *State) error { return assert.AnError },
+				},
 				expectedErr: assert.AnError,
 			},
 		}
@@ -67,35 +69,35 @@ func TestRunFuncs(t *testing.T) {
 		{
 			name: "success",
 			funcs: []Func{
-				func() error { return nil },
-				func() error { return nil },
+				func(_ *State) error { return nil },
+				func(_ *State) error { return nil },
 			},
 		},
 		{
 			name: "first fails",
 			funcs: []Func{
-				func() error { return assert.AnError },
-				func() error { return errors.New("second") },
+				func(_ *State) error { return assert.AnError },
+				func(_ *State) error { return errors.New("second") },
 			},
 			expectedErr: assert.AnError,
 		},
 		{
 			name: "second fails",
 			funcs: []Func{
-				func() error { return nil },
-				func() error { return assert.AnError },
-				func() error { return errors.New("third") },
+				func(_ *State) error { return nil },
+				func(_ *State) error { return assert.AnError },
+				func(_ *State) error { return errors.New("third") },
 			},
 			expectedErr: assert.AnError,
 		},
 		{
 			name:        "panic without error",
-			funcs:       []Func{func() error { panic(true) }},
+			funcs:       []Func{func(_ *State) error { panic(true) }},
 			expectedErr: ErrPanic,
 		},
 		{
 			name:        "panic with error",
-			funcs:       []Func{func() error { panic(assert.AnError) }},
+			funcs:       []Func{func(_ *State) error { panic(assert.AnError) }},
 			expectedErr: assert.AnError,
 		},
 	}

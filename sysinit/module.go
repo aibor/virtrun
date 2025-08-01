@@ -69,7 +69,7 @@ func LoadModules(pattern string) error {
 // WithModules returns a setup [Func] that wraps [LoadModules] and can
 // be used with [Run].
 func WithModules(pattern string) Func {
-	return func() error {
+	return func(_ *State) error {
 		return LoadModules(pattern)
 	}
 }

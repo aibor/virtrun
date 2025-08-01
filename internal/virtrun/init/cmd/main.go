@@ -44,7 +44,7 @@ func run(mainFunc sysinit.Func) {
 }
 
 func main() {
-	run(func() error {
+	run(func(_ *sysinit.State) error {
 		// "/main" is the file virtrun copies the given binary to.
 		cmd := exec.Command("/main", os.Args[1:]...)
 		cmd.Stdin = os.Stdin

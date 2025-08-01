@@ -10,7 +10,7 @@ import (
 )
 
 // Func is a function run by [Run].
-type Func func() error
+type Func func(*State) error
 
 // Run is the entry point for an actual init system.
 //
@@ -88,11 +88,15 @@ func runFuncs(funcs []Func) (err error) {
 		}
 	}()
 
+	state := new(State)
+
 	for _, fn := range funcs {
-		if err = fn(); err != nil {
+		if err = fn(state); err != nil {
 			return err
 		}
 	}
+
+	state.doCleanup()
 
 	return nil
 }

@@ -23,7 +23,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	run(func() error {
+	run(func(_ *sysinit.State) error {
 		if exitCode := m.Run(); exitCode != 0 {
 			return sysinit.ExitError(exitCode)
 		}

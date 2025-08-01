@@ -12,7 +12,7 @@ func SetInterfaceUp(name string) error {
 // WithInterfaceUp returns a [Func] that wraps [SetInterfaceUp] and can be
 // used with [Run].
 func WithInterfaceUp(name string) Func {
-	return func() error {
+	return func(_ *State) error {
 		return SetInterfaceUp(name)
 	}
 }

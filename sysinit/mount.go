@@ -163,7 +163,7 @@ func MountAll(mountPoints MountPoints) error {
 //
 // It logs optional mounts that failed.
 func WithMountPoints(mountPoints MountPoints) Func {
-	return func() error {
+	return func(_ *State) error {
 		err := MountAll(mountPoints)
 
 		var optionalErrs OptionalMountError

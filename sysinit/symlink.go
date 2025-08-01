@@ -41,7 +41,7 @@ func CreateSymlinks(symlinks Symlinks) error {
 // WithSymlinks returns a setup [Func] that wraps [CreateSymlinks] and can be
 // used with [Run].
 func WithSymlinks(symlinks Symlinks) Func {
-	return func() error {
+	return func(_ *State) error {
 		return CreateSymlinks(symlinks)
 	}
 }

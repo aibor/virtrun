@@ -1,6 +1,8 @@
-// SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+// SPDX-FileCopyrightText: 2025 Tobias Böhm <code@aibor.de>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
+
+//go:build linux
 
 package sysinit
 
@@ -11,6 +13,17 @@ import (
 
 	"golang.org/x/sys/unix"
 )
+
+//revive:disable:var-naming
+
+// Mount flags.
+const (
+	MS_NOSUID = unix.MS_NOSUID
+	MS_NODEV  = unix.MS_NODEV
+	MS_NOEXEC = unix.MS_NOEXEC
+)
+
+//revive:enable:var-naming
 
 type MountFlags int
 

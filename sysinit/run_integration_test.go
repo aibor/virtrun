@@ -16,12 +16,6 @@ import (
 func TestMain(m *testing.M) {
 	sysinit.Run(
 		sysinit.ExitCodePrinter(os.Stdout),
-		// Mount /tmp so gocoverdir works.
-		sysinit.WithMountPoints(sysinit.MountPoints{
-			"/dev":  {FSType: sysinit.FSTypeDevTmp},
-			"/proc": {FSType: sysinit.FSTypeProc},
-			"/tmp":  {FSType: sysinit.FSTypeTmp},
-		}),
 		func() error {
 			if exitCode := m.Run(); exitCode != 0 {
 				return sysinit.ExitError(exitCode)

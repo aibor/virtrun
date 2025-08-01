@@ -46,7 +46,7 @@ func TestMount(t *testing.T) {
 			name: "nonexisting path",
 			path: "/test/some/new/path",
 			opts: sysinit.MountOptions{
-				FSType: sysinit.FSTypeTmp,
+				FSType: "tmpfs",
 			},
 		},
 	}
@@ -106,20 +106,24 @@ func TestMountAll(t *testing.T) {
 		{
 			name: "invalid mount points may fail",
 			mounts: sysinit.MountPoints{
-				"/test/somewhereelse": {
-					MayFail: true,
-				},
-				"/test/somewhereelse2": {
-					MayFail: true,
-				},
+				"/test/somewhereelse":  {},
+				"/test/somewhereelse2": {},
 			},
 			expectedErr: sysinit.OptionalMountError{},
 		},
 		{
-			name: "valid mounts",
+			name: "already mounted fails",
 			mounts: sysinit.MountPoints{
 				"/sys": {FSType: sysinit.FSTypeSys},
-				"/run": {FSType: sysinit.FSTypeTmp},
+				"/run": {FSType: "tmpfs"},
+			},
+			expectedErr: unix.EBUSY,
+		},
+		{
+			name: "valid mounts",
+			mounts: sysinit.MountPoints{
+				"/run": {FSType: "tmpfs"},
+				"/tmp": {FSType: "tmpfs"},
 			},
 		},
 	}

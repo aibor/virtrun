@@ -31,14 +31,11 @@ func TestMain(m *testing.M) {
 func TestMountPoints(t *testing.T) {
 	mounts := map[string]string{
 		"/dev":                "devtmpfs",
-		"/dev/shm":            "tmpfs",
 		"/proc":               "proc",
-		"/run":                "tmpfs",
 		"/sys":                "sysfs",
 		"/sys/fs/bpf":         "bpf",
 		"/sys/kernel/debug":   "debugfs",
 		"/sys/kernel/tracing": "tracefs",
-		"/tmp":                "tmpfs",
 	}
 
 	mountsFile, err := os.ReadFile("/proc/mounts")

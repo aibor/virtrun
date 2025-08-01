@@ -29,7 +29,6 @@ const (
 	FSTypePstore   FSType = "pstore"
 	FSTypeSecurity FSType = "securityfs"
 	FSTypeSys      FSType = "sysfs"
-	FSTypeTmp      FSType = "tmpfs"
 	FSTypeTracing  FSType = "tracefs"
 
 	defaultDirMode = 0o755
@@ -44,9 +43,7 @@ func SystemMountPoints() MountPoints {
 		"/dev/hugepages":           {FSType: FSTypeHugeTlb, MayFail: true},
 		"/dev/mqueue":              {FSType: FSTypeMqueue, MayFail: true},
 		"/dev/pts":                 {FSType: FSTypeDevPts, MayFail: true},
-		"/dev/shm":                 {FSType: FSTypeTmp, MayFail: true},
 		"/proc":                    {FSType: FSTypeProc},
-		"/run":                     {FSType: FSTypeTmp},
 		"/sys/fs/bpf":              {FSType: FSTypeBpf, MayFail: true},
 		"/sys/fs/cgroup":           {FSType: FSTypeCgroup2, MayFail: true},
 		"/sys/fs/fuse/connections": {FSType: FSTypeFuseCtl, MayFail: true},
@@ -56,7 +53,6 @@ func SystemMountPoints() MountPoints {
 		"/sys/kernel/debug":        {FSType: FSTypeDebug, MayFail: true},
 		"/sys/kernel/security":     {FSType: FSTypeSecurity, MayFail: true},
 		"/sys/kernel/tracing":      {FSType: FSTypeTracing, MayFail: true},
-		"/tmp":                     {FSType: FSTypeTmp},
 	}
 }
 

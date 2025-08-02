@@ -5,23 +5,11 @@
 package exitcode_test
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/aibor/virtrun/internal/exitcode"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-func TestFprint(t *testing.T) {
-	var actual bytes.Buffer
-
-	actualWritten, err := exitcode.Fprint(&actual, 42)
-	require.NoError(t, err)
-
-	assert.Equal(t, exitcode.Identifier+": 42\n", actual.String())
-	assert.Equal(t, len(exitcode.Identifier)+5, actualWritten)
-}
 
 func TestParse(t *testing.T) {
 	tests := []struct {
@@ -55,7 +43,7 @@ func TestParse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, found := exitcode.Parse(tt.input)
+			actual, found := exitcode.Parse([]byte(tt.input))
 			tt.assertFound(t, found)
 
 			assert.Equal(t, tt.expected, actual)

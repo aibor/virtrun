@@ -24,7 +24,7 @@ import (
 	"github.com/aibor/virtrun/sysinit"
 )
 
-func run(mainFunc sysinit.Func) {
+func run(mainFunc func() (int, error)) {
 	log.SetFlags(log.Lmicroseconds)
 	log.SetPrefix("VIRTRUN INIT: ")
 
@@ -33,18 +33,26 @@ func run(mainFunc sysinit.Func) {
 	env := sysinit.EnvVars{"PATH": "/data"}
 
 	sysinit.Run(
-		sysinit.ExitCodePrinter(os.Stdout),
 		sysinit.WithMountPoints(sysinit.SystemMountPoints()),
 		sysinit.WithModules("/lib/modules/*"),
 		sysinit.WithInterfaceUp("lo"),
 		sysinit.WithSymlinks(sysinit.DevSymlinks()),
 		sysinit.WithEnv(env),
-		mainFunc,
+		func(state *sysinit.State) error {
+			exitCode, err := mainFunc()
+			if err != nil {
+				return err
+			}
+
+			state.SetExitCode(exitCode)
+
+			return nil
+		},
 	)
 }
 
 func main() {
-	run(func(_ *sysinit.State) error {
+	run(func() (int, error) {
 		// "/main" is the file virtrun copies the given binary to.
 		cmd := exec.Command("/main", os.Args[1:]...)
 		cmd.Stdin = os.Stdin
@@ -53,13 +61,16 @@ func main() {
 
 		if err := cmd.Run(); err != nil {
 			var exitErr *exec.ExitError
-			if errors.As(err, &exitErr) {
-				err = sysinit.ExitError(exitErr.ExitCode())
+			// Only use exit code if the program actually exited itself. With
+			// this programs that are killed by be the kernel (e.g. the OOM
+			// killer) result in errors, as they should.
+			if errors.As(err, &exitErr) && exitErr.Exited() {
+				return exitErr.ExitCode(), nil
 			}
 
-			return fmt.Errorf("main program: %w", err)
+			return 0, fmt.Errorf("main program: %w", err)
 		}
 
-		return nil
+		return 0, nil
 	})
 }

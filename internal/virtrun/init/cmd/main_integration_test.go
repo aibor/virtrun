@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"context"
 	"flag"
+	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -17,18 +18,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aibor/virtrun/sysinit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
-	run(func(_ *sysinit.State) error {
-		if exitCode := m.Run(); exitCode != 0 {
-			return sysinit.ExitError(exitCode)
+	run(func() (int, error) {
+		exitCode := m.Run()
+		if exitCode != 0 {
+			panic(fmt.Sprintf("exit code, want 0, got %d", exitCode))
 		}
 
-		return nil
+		return exitCode, nil
 	})
 }
 

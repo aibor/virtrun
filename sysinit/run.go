@@ -6,7 +6,9 @@ package sysinit
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os"
 )
 
 // Func is a function run by [Run].
@@ -47,7 +49,7 @@ type Func func(*State) error
 //
 // Pay attention to the proper order: symlinks should be created after the
 // dependent mounts.
-func Run(exitHandler ExitHandler, funcs ...Func) {
+func Run(funcs ...Func) {
 	if !IsPidOne() {
 		panic(ErrNotPidOne)
 	}
@@ -57,24 +59,24 @@ func Run(exitHandler ExitHandler, funcs ...Func) {
 	}
 	allFns = append(allFns, funcs...)
 
-	defer func() {
-		if err := Poweroff(); err != nil {
-			log.Print("ERROR poweroff: ", err.Error())
-		}
-	}()
+	run(os.Stderr, logError, allFns)
 
-	run(exitHandler, allFns)
-}
-
-func run(exitHandler ExitHandler, funcs []Func) {
-	err := runFuncs(funcs)
-
-	if exitHandler != nil {
-		exitHandler(err)
+	if err := Poweroff(); err != nil {
+		logError(fmt.Errorf("poweroff: %w", err))
 	}
 }
 
-func runFuncs(funcs []Func) (err error) {
+func run(out io.Writer, errHandler func(error), funcs []Func) {
+	state := new(State)
+
+	funcs = append(funcs, cleanupFunc(errHandler), exitCodeFunc(out))
+
+	if err := runFuncs(state, funcs); err != nil {
+		errHandler(err)
+	}
+}
+
+func runFuncs(state *State, funcs []Func) (err error) {
 	defer func() {
 		rec := recover()
 		if rec == nil {
@@ -88,15 +90,17 @@ func runFuncs(funcs []Func) (err error) {
 		}
 	}()
 
-	state := new(State)
-
 	for _, fn := range funcs {
 		if err = fn(state); err != nil {
 			return err
 		}
 	}
 
-	state.doCleanup()
-
 	return nil
+}
+
+func logError(err error) {
+	if err != nil {
+		log.Print("ERROR ", err.Error())
+	}
 }

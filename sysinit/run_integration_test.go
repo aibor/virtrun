@@ -7,7 +7,6 @@
 package sysinit_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/aibor/virtrun/sysinit"
@@ -15,12 +14,8 @@ import (
 
 func TestMain(m *testing.M) {
 	sysinit.Run(
-		sysinit.ExitCodePrinter(os.Stdout),
-		func(_ *sysinit.State) error {
-			if exitCode := m.Run(); exitCode != 0 {
-				return sysinit.ExitError(exitCode)
-			}
-
+		func(state *sysinit.State) error {
+			state.SetExitCode(m.Run())
 			return nil
 		},
 	)

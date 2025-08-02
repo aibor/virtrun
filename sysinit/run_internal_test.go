@@ -9,14 +9,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRun(t *testing.T) {
-	t.Run("all nil", func(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
 		assert.NotPanics(t, func() {
-			run(nil, nil)
+			run(func(_ error) {}, nil)
 		})
 	})
 
@@ -37,21 +36,32 @@ func TestRun(t *testing.T) {
 				},
 				expectedErr: assert.AnError,
 			},
+			{
+				name: "with panic",
+				funcs: []Func{
+					func(_ *State) error { panic(assert.AnError) },
+				},
+				expectedErr: assert.AnError,
+			},
 		}
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				m := mock.Mock{}
-				m.On("1", mock.Anything).Once()
+				var calledWith error
 
-				exitHandler := func(err error) { m.Called(err) }
+				exitHandler := func(err error) {
+					require.NoError(
+						t,
+						calledWith,
+						"exit handler already called",
+					)
+
+					calledWith = err
+				}
 
 				run(exitHandler, tt.funcs)
 
-				if m.AssertExpectations(t) {
-					err := m.Calls[0].Arguments.Error(0)
-					require.ErrorIs(t, err, tt.expectedErr)
-				}
+				require.ErrorIs(t, calledWith, tt.expectedErr)
 			})
 		}
 	})

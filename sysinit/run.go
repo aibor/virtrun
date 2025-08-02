@@ -47,7 +47,7 @@ type Func func(*State) error
 //
 // Pay attention to the proper order: symlinks should be created after the
 // dependent mounts.
-func Run(exitHandler ExitHandler, funcs ...Func) {
+func Run(funcs ...Func) {
 	if !IsPidOne() {
 		panic(ErrNotPidOne)
 	}
@@ -57,21 +57,15 @@ func Run(exitHandler ExitHandler, funcs ...Func) {
 	}
 	allFns = append(allFns, funcs...)
 
-	defer func() {
-		if err := Poweroff(); err != nil {
-			log.Print("ERROR poweroff: ", err.Error())
-		}
-	}()
+	run(logError, allFns)
 
-	run(exitHandler, allFns)
+	if err := Poweroff(); err != nil {
+		logError(fmt.Errorf("poweroff: %w", err))
+	}
 }
 
-func run(exitHandler ExitHandler, funcs []Func) {
-	err := runFuncs(funcs)
-
-	if exitHandler != nil {
-		exitHandler(err)
-	}
+func run(exitHandler func(error), funcs []Func) {
+	exitHandler(runFuncs(funcs))
 }
 
 func runFuncs(funcs []Func) (err error) {
@@ -99,4 +93,10 @@ func runFuncs(funcs []Func) (err error) {
 	state.doCleanup()
 
 	return nil
+}
+
+func logError(err error) {
+	if err != nil {
+		log.Print("ERROR ", err.Error())
+	}
 }

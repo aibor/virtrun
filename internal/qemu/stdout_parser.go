@@ -16,7 +16,7 @@ var (
 // ExitCodeParser parses the given string and returns the exit code found in
 // the input or an error if the input does not contain the expected string or
 // parsing fails otherwise.
-type ExitCodeParser func(string) (int, bool)
+type ExitCodeParser func(line []byte) (int, bool)
 
 // stdoutParser provides a parser that parses stdout from the guest.
 //
@@ -36,20 +36,18 @@ type stdoutParser struct {
 
 // Parse can be used as [lineParseFunc].
 func (p *stdoutParser) Parse(data []byte) []byte {
-	line := string(data)
-
 	// Parse the output. Keep going after a match has been found, so
 	// the following lines are printed as well and enhance the context
 	// information in case of kernel error messages.
 	switch {
-	case oomRE.MatchString(line):
+	case oomRE.Match(data):
 		p.err = ErrGuestOom
 		return data
-	case panicRE.MatchString(line):
+	case panicRE.Match(data):
 		p.err = ErrGuestPanic
 		return data
 	case !p.exitCodeFound:
-		p.exitCode, p.exitCodeFound = p.ExitCodeParser(line)
+		p.exitCode, p.exitCodeFound = p.ExitCodeParser(data)
 	}
 
 	// Skip line printing once the guest exit code has been found unless the

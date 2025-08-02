@@ -5,25 +5,13 @@
 package sysinit
 
 import (
+	"fmt"
 	"io"
-	"log"
 
 	"github.com/aibor/virtrun/internal/exitcode"
 )
 
-// ExitHandler is passed to [Run] and called with the first error a [Func]
-// returns or nil if all [Func]s ran without error.
-type ExitHandler func(err error)
-
-// ExitCodePrinter returns an [ExitHandler] that writes the exit code based on
-// the given [ExitError] into the given writer.
-func ExitCodePrinter(writer io.Writer) ExitHandler {
-	return func(err error) {
-		exitCode, isExitErr := exitcode.From(err)
-		if err != nil && !isExitErr {
-			log.Print("ERROR ", err.Error())
-		}
-
-		_, _ = exitcode.Fprint(writer, exitCode)
-	}
+// PrintExitCode writes the exit code formatted into the given writer.
+func PrintExitCode(writer io.Writer, exitCode int) {
+	_, _ = fmt.Fprintln(writer, exitcode.Sprint(exitCode))
 }

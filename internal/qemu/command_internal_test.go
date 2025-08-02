@@ -7,8 +7,6 @@ package qemu
 import (
 	"bytes"
 	"fmt"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -177,7 +175,7 @@ func TestCommandSpec_Arguments(t *testing.T) {
 }
 
 func TestNewCommand(t *testing.T) {
-	exitCodeScan := func(_ string) (int, bool) { return 0, true }
+	exitCodeScan := func(_ []byte) (int, bool) { return 0, true }
 
 	tests := []struct {
 		name      string
@@ -254,13 +252,11 @@ func TestNewCommand(t *testing.T) {
 func TestCommand_Run(t *testing.T) {
 	tempDir := t.TempDir()
 
-	exitCodeScanner := func(s string) (int, bool) {
-		if d, found := strings.CutPrefix(s, "exit code: "); found {
-			i, err := strconv.Atoi(d)
-			return i, err == nil
-		}
+	exitCodeScanner := func(line []byte) (int, bool) {
+		var exitCode int
+		_, err := fmt.Sscanf(string(line), "exit code: %d", &exitCode)
 
-		return 0, false
+		return exitCode, err == nil
 	}
 
 	tests := []struct {

@@ -5,7 +5,7 @@
 package sysinit
 
 import (
-	"log"
+	"fmt"
 	"slices"
 )
 
@@ -24,7 +24,7 @@ func (s *State) doCleanup() {
 
 	for _, fn := range s.cleanupFns {
 		if err := fn(); err != nil {
-			log.Print("ERROR close: ", err.Error())
+			logError(fmt.Errorf("cleanup: %w", err))
 		}
 	}
 }

@@ -111,14 +111,14 @@ func buildInitramfsArchive(
 	}
 
 	initFn := func(b *fsBuilder, name string) error {
-		return b.add(name, initFileOpenFn)
+		return b.Add(name, initFileOpenFn)
 	}
 
 	// In standalone mode, the main file is supposed to work as a complete
 	// init matching our requirements.
 	if cfg.StandaloneInit {
 		initFn = func(b *fsBuilder, name string) error {
-			return b.symlink("main", name)
+			return b.Symlink("main", name)
 		}
 	}
 
@@ -172,7 +172,7 @@ func buildVirtFS(
 	}
 
 	for _, dir := range []string{"/run", "/tmp"} {
-		if err := builder.mkdirAll(dir); err != nil {
+		if err := builder.MkdirAll(dir); err != nil {
 			return nil, err
 		}
 	}

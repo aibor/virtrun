@@ -25,23 +25,11 @@ func modName(idx int, path string) string {
 }
 
 type fsBuilder struct {
-	fs virtfs.FSAdder
-}
-
-func (b *fsBuilder) mkdirAll(dir string) error {
-	return b.fs.MkdirAll(dir) //nolint:wrapcheck
-}
-
-func (b *fsBuilder) add(name string, openFn virtfs.FileOpenFunc) error {
-	return b.fs.Add(name, openFn) //nolint:wrapcheck
-}
-
-func (b *fsBuilder) symlink(target, name string) error {
-	return b.fs.Symlink(target, name) //nolint:wrapcheck
+	virtfs.FSAdder
 }
 
 func (b *fsBuilder) addFilePathAs(name, source string) error {
-	return b.add(name, func() (fs.File, error) {
+	return b.Add(name, func() (fs.File, error) {
 		return os.Open(source)
 	})
 }
@@ -51,7 +39,7 @@ func (b *fsBuilder) addFilesTo(
 	files []string,
 	nameFn nameFunc,
 ) error {
-	err := b.mkdirAll(dir)
+	err := b.MkdirAll(dir)
 	if err != nil {
 		return err
 	}
@@ -79,12 +67,12 @@ func (b *fsBuilder) symlinkTo(dir string, paths []string) error {
 			continue
 		}
 
-		err := b.mkdirAll(filepath.Dir(path))
+		err := b.MkdirAll(filepath.Dir(path))
 		if err != nil {
 			return err
 		}
 
-		err = b.symlink(dir, path)
+		err = b.Symlink(dir, path)
 		if err != nil {
 			return err
 		}

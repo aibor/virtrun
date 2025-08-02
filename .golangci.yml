@@ -51,6 +51,13 @@ linters:
         - name: unhandled-error
           arguments:
             - "fmt\\.(Fp|P)rint(f|ln)?"
+    wrapcheck:
+      extra-ignore-sigs:
+        - os.Open(
+        - os.OpenFile(
+        - os.Create(
+      ignore-sig-regexps:
+        - (github\.com/aibor/virtrun/internal/virtfs\.FSAdder)
   exclusions:
     generated: strict
     warn-unused: true

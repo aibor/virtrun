@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -15,6 +16,8 @@ func main() {
 	if err != nil {
 		panic("invalid input")
 	}
+
+	fmt.Fprintln(os.Stdout, "exit code:", exitCode)
 
 	os.Exit(exitCode)
 }

@@ -37,12 +37,14 @@ func TestIntegration(t *testing.T) {
 			name:             "return 0",
 			bin:              "testdata/bin/return",
 			initArgs:         []string{"0"},
+			expectedStdOut:   "exit code: 0",
 			expectedExitCode: 0,
 		},
 		{
 			name:             "return 55",
 			bin:              "testdata/bin/return",
 			initArgs:         []string{"55"},
+			expectedStdOut:   "exit code: 55",
 			expectedExitCode: 55,
 		},
 		{

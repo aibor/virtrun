@@ -7,6 +7,9 @@ package qemu
 import (
 	"bytes"
 	"fmt"
+	"slices"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/aibor/virtrun/internal/pipe"
@@ -209,6 +212,8 @@ func TestNewCommand(t *testing.T) {
 					"-serial", "chardev:stdio",
 					"-chardev", "file,id=con0,path=/dev/fd/3",
 					"-serial", "chardev:con0",
+					"-chardev", "file,id=con1,path=/dev/fd/4",
+					"-serial", "chardev:con1",
 					"-display", "none",
 					"-monitor", "none",
 					"-no-reboot",
@@ -273,8 +278,8 @@ func TestCommand_Run(t *testing.T) {
 	tests := []struct {
 		name           string
 		cmd            Command
-		expectedStdout string
-		expectedStderr string
+		expectedStdout []string
+		expectedStderr []string
 		assertErr      require.ErrorAssertionFunc
 	}{
 		{
@@ -289,7 +294,7 @@ func TestCommand_Run(t *testing.T) {
 			assertErr: require.NoError,
 		},
 		{
-			name: "success with stdout",
+			name: "success with stderr",
 			cmd: Command{
 				name: "echo",
 				args: []string{"some\n" + exitCode(0)},
@@ -297,7 +302,7 @@ func TestCommand_Run(t *testing.T) {
 					ExitCodeParser: exitCodeScanner,
 				},
 			},
-			expectedStdout: "some\n",
+			expectedStderr: []string{"some\n"},
 			assertErr:      require.NoError,
 		},
 		{
@@ -312,8 +317,7 @@ func TestCommand_Run(t *testing.T) {
 					ExitCodeParser: exitCodeScanner,
 				},
 			},
-			expectedStdout: "some\n",
-			expectedStderr: "fail\n",
+			expectedStderr: []string{"some\n", "fail\n"},
 			assertErr:      require.NoError,
 		},
 		{
@@ -322,9 +326,11 @@ func TestCommand_Run(t *testing.T) {
 				name: "sh",
 				args: []string{
 					"-c",
-					"echo foo | base64 >&3;" +
+					"echo bar | base64 >&4;" +
+						"echo foo | base64 >&3;" +
 						"echo fail >&2;" +
-						"echo 'some\n" + exitCode(0) + "'",
+						"echo some;" +
+						"echo " + exitCode(0),
 				},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
@@ -333,8 +339,8 @@ func TestCommand_Run(t *testing.T) {
 					tempDir + "/out1",
 				},
 			},
-			expectedStdout: "some\n",
-			expectedStderr: "fail\n",
+			expectedStdout: []string{"foo\n"},
+			expectedStderr: []string{"some\n", "fail\n"},
 			assertErr:      require.NoError,
 		},
 		{
@@ -343,9 +349,11 @@ func TestCommand_Run(t *testing.T) {
 				name: "sh",
 				args: []string{
 					"-c",
-					"echo foo | base64 >&3;" +
+					"echo foo | base64 >&4;" +
+						"echo foo | base64 >&3;" +
 						"echo fail >&2;" +
-						"echo 'some\n" + exitCode(0) + "'",
+						"echo some;" +
+						"echo " + exitCode(0),
 				},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
@@ -355,8 +363,8 @@ func TestCommand_Run(t *testing.T) {
 					tempDir + "/out2",
 				},
 			},
-			expectedStdout: "some\n",
-			expectedStderr: "fail\n",
+			expectedStdout: []string{"foo\n"},
+			expectedStderr: []string{"some\n", "fail\n"},
 			assertErr: func(t require.TestingT, err error, args ...any) {
 				require.ErrorIs(t, err, pipe.ErrNoOutput, args...)
 			},
@@ -373,7 +381,7 @@ func TestCommand_Run(t *testing.T) {
 					tempDir + "/out1",
 				},
 			},
-			expectedStdout: "exit\n",
+			expectedStderr: []string{"exit\n"},
 			assertErr: func(t require.TestingT, err error, args ...any) {
 				require.ErrorIs(t, err, ErrGuestNoExitCodeFound, args...)
 			},
@@ -422,13 +430,33 @@ func TestCommand_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer goleak.VerifyNone(t)
 
-			var outBuf, errBuf bytes.Buffer
+			var outBuf, errBuf seqWriter
 
 			err := tt.cmd.Run(t.Context(), nil, &outBuf, &errBuf)
+
+			t.Logf("stdout: %q", outBuf.buf.String())
+			t.Logf("stderr: %q", errBuf.buf.String())
+
 			tt.assertErr(t, err)
 
-			assert.Equal(t, tt.expectedStdout, outBuf.String(), "stdout")
-			assert.Equal(t, tt.expectedStderr, errBuf.String(), "stderr")
+			assert.ElementsMatch(t, tt.expectedStdout, outBuf.lines(), "stdout")
+			assert.ElementsMatch(t, tt.expectedStderr, errBuf.lines(), "stderr")
 		})
 	}
+}
+
+type seqWriter struct {
+	buf bytes.Buffer
+	mu  sync.Mutex
+}
+
+func (w *seqWriter) Write(b []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.buf.Write(b)
+}
+
+func (w *seqWriter) lines() []string {
+	return slices.Collect(strings.Lines(w.buf.String()))
 }

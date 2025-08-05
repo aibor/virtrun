@@ -45,7 +45,7 @@ func TestProcessGoTestFlags(t *testing.T) {
 			expectedArgs: []string{
 				"-test.paniconexit0",
 				"-test.gocoverdir=/tmp",
-				"-test.coverprofile=" + pipe.Path(1),
+				"-test.coverprofile=" + pipe.Path(2),
 			},
 			expectedFiles: []string{
 				"cover.out",
@@ -64,11 +64,11 @@ func TestProcessGoTestFlags(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"-test.paniconexit0",
-				"-test.blockprofile=" + pipe.Path(1),
-				"-test.cpuprofile=" + pipe.Path(2),
-				"-test.memprofile=" + pipe.Path(3),
-				"-test.mutexprofile=" + pipe.Path(4),
-				"-test.trace=" + pipe.Path(5),
+				"-test.blockprofile=" + pipe.Path(2),
+				"-test.cpuprofile=" + pipe.Path(3),
+				"-test.memprofile=" + pipe.Path(4),
+				"-test.mutexprofile=" + pipe.Path(5),
+				"-test.trace=" + pipe.Path(6),
 				"-test.outputdir=/tmp",
 			},
 			expectedFiles: []string{
@@ -92,11 +92,11 @@ func TestProcessGoTestFlags(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"-test.paniconexit0",
-				"-test.blockprofile=" + pipe.Path(1),
-				"-test.cpuprofile=" + pipe.Path(2),
-				"-test.memprofile=" + pipe.Path(3),
-				"-test.mutexprofile=" + pipe.Path(4),
-				"-test.trace=" + pipe.Path(5),
+				"-test.blockprofile=" + pipe.Path(2),
+				"-test.cpuprofile=" + pipe.Path(3),
+				"-test.memprofile=" + pipe.Path(4),
+				"-test.mutexprofile=" + pipe.Path(5),
+				"-test.trace=" + pipe.Path(6),
 				"-test.outputdir=/tmp",
 			},
 			expectedFiles: []string{

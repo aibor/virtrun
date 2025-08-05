@@ -75,6 +75,7 @@ linters:
           - gochecknoglobals
           - gochecknoinits
           - varnamelen
+          - wrapcheck
         path: (.+)_test\.go
 
 formatters:

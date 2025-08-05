@@ -5,6 +5,7 @@
 package pipe
 
 import (
+	"bufio"
 	"encoding/base64"
 	"io"
 )
@@ -28,6 +29,36 @@ var _ CopyFunc = Decode
 func Decode(dst io.Writer, src io.Reader) (int64, error) {
 	decoder := Decoder(src)
 	return io.Copy(dst, decoder) //nolint:wrapcheck
+}
+
+// DecodeLineBuffered is a [CopyFunc] that decodes and copies the data line
+// buffered.
+//
+// This function should be used if the output is consumed line based, e.g. by
+// a text parser.
+func DecodeLineBuffered(dst io.Writer, src io.Reader) (int64, error) {
+	var (
+		read int
+		err  error
+		buf  = bufio.NewReader(Decoder(src))
+	)
+
+	for err == nil {
+		var line []byte
+
+		line, err = buf.ReadSlice('\n')
+		if len(line) == 0 {
+			continue
+		}
+
+		read += len(line)
+
+		if _, writeErr := dst.Write(line); writeErr != nil {
+			err = writeErr
+		}
+	}
+
+	return int64(read), err
 }
 
 // Encoder returns a new streaming encoder.

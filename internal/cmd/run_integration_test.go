@@ -52,7 +52,6 @@ func TestIntegration(t *testing.T) {
 			bin:              "testdata/bin/panic",
 			args:             []string{"-standalone"},
 			expectedExitCode: -1,
-			expectedStdOut:   "Kernel panic",
 			expectedStdErr:   qemu.ErrGuestPanic.Error(),
 		},
 		{
@@ -60,7 +59,6 @@ func TestIntegration(t *testing.T) {
 			bin:              "testdata/bin/oom",
 			initArgs:         []string{"128"},
 			expectedExitCode: -1,
-			expectedStdOut:   "Killed process",
 			expectedStdErr:   qemu.ErrGuestOom.Error(),
 		},
 		{

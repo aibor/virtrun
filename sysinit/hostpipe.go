@@ -13,6 +13,13 @@ import (
 	"github.com/aibor/virtrun/internal/pipe"
 )
 
+// hostPipeStderr is the host pipe port reserved for plain text stderr and
+// kernel default console.
+const hostPipeStderr = 0
+
+// hostPipeStdout is the host pipe port connected to the user's stdout.
+const hostPipeStdout = 1
+
 // WithHostPipes returns a setup [Func] that sets up encoded named pipes for
 // communication with the host.
 func WithHostPipes() Func {
@@ -30,6 +37,30 @@ func WithHostPipes() Func {
 			if err := hostPipes.Wait(time.Second); err != nil {
 				return fmt.Errorf("host pipes: %w", err)
 			}
+
+			return nil
+		})
+
+		return nil
+	}
+}
+
+// WithStdoutHostPipe returns a setup [Func] that sets up an encoded pipe for
+// stdout. It replaces the original [os.Stdout].
+func WithStdoutHostPipe() Func {
+	return func(state *State) error {
+		stdout, err := os.OpenFile(pipe.Path(hostPipeStdout), os.O_WRONLY, 0)
+		if err != nil {
+			return err
+		}
+
+		var oldStdout *os.File
+
+		oldStdout, os.Stdout = os.Stdout, stdout
+
+		state.Cleanup(func() error {
+			os.Stdout = oldStdout
+			_ = stdout.Close()
 
 			return nil
 		})
@@ -56,9 +87,15 @@ func OpenConsolePipes(state *State) (*pipe.Pipes, error) {
 	hostPipes := &pipe.Pipes{}
 
 	for _, console := range consoles {
-		// Skip hvc0/ttyS0 which is used for stdout.
-		if console.port == 0 {
+		var mayBeSilent bool
+
+		switch console.port {
+		// Skip hvc0/ttyS0 which is used for stderr/kernel log.
+		case hostPipeStderr:
 			continue
+		// Allow no output for stdout.
+		case hostPipeStdout:
+			mayBeSilent = true
 		}
 
 		backend, err := os.OpenFile(console.path, os.O_WRONLY, 0)
@@ -83,6 +120,7 @@ func OpenConsolePipes(state *State) (*pipe.Pipes, error) {
 			InputCloser: fifoStop,
 			Output:      backend,
 			CopyFunc:    pipe.Encode,
+			MayBeSilent: mayBeSilent,
 		}
 
 		hostPipes.Run(hostPipe)

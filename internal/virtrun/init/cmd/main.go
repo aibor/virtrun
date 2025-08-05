@@ -39,6 +39,7 @@ func run(mainFunc func() (int, error)) {
 		sysinit.WithSymlinks(sysinit.DevSymlinks()),
 		sysinit.WithEnv(env),
 		sysinit.WithHostPipes(),
+		sysinit.WithStdoutHostPipe(),
 		func(state *sysinit.State) error {
 			exitCode, err := mainFunc()
 			if err != nil {

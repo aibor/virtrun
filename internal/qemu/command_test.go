@@ -17,7 +17,7 @@ func TestCommmandAddExtraFile(t *testing.T) {
 	d1 := s.AddConsole("test")
 	d2 := s.AddConsole("real")
 
-	assert.Equal(t, pipe.Path(1), d1)
-	assert.Equal(t, pipe.Path(2), d2)
+	assert.Equal(t, pipe.Path(2), d1)
+	assert.Equal(t, pipe.Path(3), d2)
 	assert.Equal(t, []string{"test", "real"}, s.AdditionalConsoles)
 }

@@ -28,9 +28,9 @@ type FSAdder interface {
 }
 
 var (
-	_ fs.FS      = (*FS)(nil)
-	_ ReadLinkFS = (*FS)(nil)
-	_ FSAdder    = (*FS)(nil)
+	_ fs.FS         = (*FS)(nil)
+	_ fs.ReadLinkFS = (*FS)(nil)
+	_ FSAdder       = (*FS)(nil)
 )
 
 // FS represents a simple [fs.FS] that supports directories, regular files and

@@ -10,6 +10,7 @@ linters:
     - depguard
     - exhaustruct
     - funlen
+    - noinlineerr
     - paralleltest
   settings:
     exhaustive:
@@ -34,6 +35,8 @@ linters:
         - name: confusing-naming
           disabled: true
         - name: cyclomatic
+          disabled: true
+        - name: enforce-switch-style
           disabled: true
         - name: exported
           arguments:

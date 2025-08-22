@@ -27,6 +27,7 @@ type ExitCodeParser func(line []byte) (int, bool)
 // an error is detected or the guest communicated a non zero exit code.
 type stdoutParser struct {
 	ExitCodeParser
+
 	Verbose bool
 
 	exitCodeFound bool
@@ -64,7 +65,6 @@ func (p *stdoutParser) Parse(data []byte) []byte {
 // Otherwise, it returns a [CommandError] with the guest flag set.
 func (p *stdoutParser) GuestSuccessful() error {
 	err := p.err
-
 	if err == nil {
 		switch {
 		case !p.exitCodeFound:

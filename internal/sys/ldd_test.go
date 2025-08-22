@@ -16,7 +16,7 @@ import (
 func TestTestdata(t *testing.T) {
 	var cmdErr *exec.ExitError
 
-	cmd := exec.Command("testdata/bin/main")
+	cmd := exec.CommandContext(t.Context(), "testdata/bin/main")
 	require.ErrorAs(t, cmd.Run(), &cmdErr)
 
 	// 73 is the exit code of the test binary if everything is properly linked.

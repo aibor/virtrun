@@ -54,7 +54,7 @@ func run(mainFunc func() (int, error)) {
 func main() {
 	run(func() (int, error) {
 		// "/main" is the file virtrun copies the given binary to.
-		cmd := exec.Command("/main", os.Args[1:]...)
+		cmd := exec.Command("/main", os.Args[1:]...) //nolint:noctx
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

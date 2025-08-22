@@ -47,6 +47,7 @@ func (e *dirEntry) Info() (fs.FileInfo, error) {
 
 type fileInfo struct {
 	dirEntry
+
 	size int64
 }
 

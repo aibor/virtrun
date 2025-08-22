@@ -20,10 +20,10 @@ func ArgumentValueAssertionFunc(
 	name string,
 	assertion assert.ComparisonAssertionFunc,
 ) assert.ComparisonAssertionFunc {
-	return func(t assert.TestingT, s, contains any, msgAndArgs ...any) bool {
+	return func(tt assert.TestingT, s, contains any, msgAndArgs ...any) bool {
 		args, ok := s.([]Argument)
 		if !ok {
-			t.Errorf("argument should be []Argument")
+			tt.Errorf("argument should be []Argument")
 			return false
 		}
 
@@ -32,10 +32,10 @@ func ArgumentValueAssertionFunc(
 				continue
 			}
 
-			return assertion(t, arg.value, contains, msgAndArgs...)
+			return assertion(tt, arg.value, contains, msgAndArgs...)
 		}
 
-		t.Errorf("Argument %s not found", name)
+		tt.Errorf("Argument %s not found", name)
 
 		return false
 	}
@@ -254,6 +254,7 @@ func TestCommand_Run(t *testing.T) {
 
 	exitCodeScanner := func(line []byte) (int, bool) {
 		var exitCode int
+
 		_, err := fmt.Sscanf(string(line), "exit code: %d", &exitCode)
 
 		return exitCode, err == nil

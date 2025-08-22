@@ -91,7 +91,7 @@ func runFuncs(state *State, funcs []Func) (err error) {
 	}()
 
 	for _, fn := range funcs {
-		if err = fn(state); err != nil {
+		if err := fn(state); err != nil {
 			return err
 		}
 	}

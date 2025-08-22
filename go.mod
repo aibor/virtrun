@@ -4,7 +4,7 @@
 
 module github.com/aibor/virtrun
 
-go 1.24
+go 1.24.6
 
 require (
 	github.com/aibor/cpio v0.1.0

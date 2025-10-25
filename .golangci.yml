@@ -40,7 +40,6 @@ linters:
           disabled: true
         - name: exported
           arguments:
-            - disableChecksOnConstants
             - disableChecksOnFunctions
             - disableChecksOnMethods
             - disableChecksOnTypes

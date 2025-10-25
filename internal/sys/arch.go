@@ -12,12 +12,16 @@ import (
 
 type Arch string
 
+// Supported guest architectures.
 const (
 	AMD64   Arch = "amd64"
 	ARM64   Arch = "arm64"
 	RISCV64 Arch = "riscv64"
-	Native  Arch = Arch(runtime.GOARCH)
 )
+
+// Native is the architecture of the host. Using the same architecture for the
+// guest allows using KVM, if available. Use [KVMAvailable] to check.
+const Native Arch = Arch(runtime.GOARCH)
 
 var ErrArchNotSupported = errors.New("architecture not supported")
 

@@ -132,6 +132,7 @@ func TestStdoutParser_Process(t *testing.T) {
 				Verbose: tt.verbose,
 				ExitCodeParser: func(line []byte) (int, bool) {
 					var exitCode int
+
 					_, err := fmt.Sscanf(string(line), exitCodeFmt, &exitCode)
 
 					return exitCode, err == nil

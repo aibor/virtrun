@@ -42,7 +42,7 @@ func newFlags(name string, output io.Writer) *flags {
 			Qemu: virtrun.Qemu{
 				CPU:    cpuDefault,
 				Memory: memDefault,
-				SMP:    1,
+				SMP:    smpDefault,
 			},
 		},
 	}

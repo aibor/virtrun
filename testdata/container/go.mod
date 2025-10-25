@@ -4,7 +4,7 @@
 
 module tools
 
-go 1.24
+go 1.25.3
 
 require (
 	github.com/boumenot/gocover-cobertura v1.4.0

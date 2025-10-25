@@ -49,8 +49,6 @@ linters:
           disabled: true
         - name: line-length-limit
           disabled: true
-        - name: package-comments
-          disabled: true
         - name: unhandled-error
           arguments:
             - "fmt\\.(Fp|P)rint(f|ln)?"

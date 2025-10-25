@@ -40,6 +40,7 @@ func (e *ParseArgsError) Error() string {
 	return fmt.Sprintf("%s: %v", e.msg, e.err)
 }
 
+// Is returns true if the given other error is a [ParseArgsError].
 func (*ParseArgsError) Is(other error) bool {
 	_, ok := other.(*ParseArgsError)
 	return ok

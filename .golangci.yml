@@ -38,11 +38,6 @@ linters:
           disabled: true
         - name: enforce-switch-style
           disabled: true
-        - name: exported
-          arguments:
-            - disableChecksOnFunctions
-            - disableChecksOnMethods
-            - disableChecksOnTypes
         - name: function-length
           disabled: true
         - name: line-length-limit

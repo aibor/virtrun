@@ -101,6 +101,7 @@ func handleRunError(err error) int {
 	return exitCode
 }
 
+// Run is the main entry point for the CLI command.
 func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	err := run(args, stdin, stdout, stderr)
 	return handleRunError(err)

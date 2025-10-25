@@ -252,6 +252,7 @@ func fdPath(fd int) string {
 	return fmt.Sprintf("/dev/fd/%d", fd)
 }
 
+// Command is single-use QEMU command.
 type Command struct {
 	name         string
 	args         []string

@@ -15,6 +15,7 @@ import (
 	"github.com/aibor/virtrun/internal/sys"
 )
 
+// Qemu specifies the input for creating a new [qemu.Command].
 type Qemu struct {
 	Executable          string
 	Kernel              string
@@ -73,6 +74,8 @@ func (s *Qemu) addDefaultsFor(arch sys.Arch) error {
 	return nil
 }
 
+// NewQemuCommand creates a new [qemu.Command] with the given spec and
+// initramfs.
 func NewQemuCommand(cfg Qemu, initramfsPath string) (*qemu.Command, error) {
 	cmdSpec := qemu.CommandSpec{
 		Executable:     cfg.Executable,

@@ -24,6 +24,7 @@ const (
 	modulesDir = "/lib/modules"
 )
 
+// Initramfs specifies the input for initramfs archive creation.
 type Initramfs struct {
 	// Binary is the main binary that is either called directly or by the init
 	// program depending on the StandaloneInit flag.

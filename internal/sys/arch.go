@@ -9,6 +9,7 @@ import (
 	"runtime"
 )
 
+// Arch is the name of a supported system architecture.
 type Arch string
 
 // Supported guest architectures.
@@ -26,6 +27,7 @@ func (a *Arch) String() string {
 	return string(*a)
 }
 
+// IsNative returns true if the [Arch] is the native architecture of the host.
 func (a *Arch) IsNative() bool {
 	return Native == *a
 }
@@ -42,6 +44,7 @@ func (a *Arch) KVMAvailable() bool {
 	return err == nil
 }
 
+// Set sets [Arch] to the given architecture, if valid.
 func (a *Arch) Set(s string) error {
 	switch Arch(s) {
 	case AMD64, ARM64, RISCV64:

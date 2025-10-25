@@ -21,6 +21,7 @@ type LibCollection struct {
 	searchPaths map[string]int
 }
 
+// Libs returns an iterator that iterates all libraries sorted by path.
 func (c *LibCollection) Libs() iter.Seq[string] {
 	return func(yield func(string) bool) {
 		for _, name := range slices.Sorted(maps.Keys(c.libs)) {
@@ -31,6 +32,8 @@ func (c *LibCollection) Libs() iter.Seq[string] {
 	}
 }
 
+// SearchPaths returns an iterator that iterates all search paths sorted by
+// path.
 func (c *LibCollection) SearchPaths() iter.Seq[string] {
 	return func(yield func(string) bool) {
 		for _, name := range slices.Sorted(maps.Keys(c.searchPaths)) {

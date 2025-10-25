@@ -25,6 +25,7 @@ func (e OptionalMountError) Error() string {
 	return fmt.Sprintf("optional mount errors: %q", []error(e))
 }
 
+// Is returns true if the given other error is an [OptionalMountError].
 func (OptionalMountError) Is(other error) bool {
 	_, ok := other.(OptionalMountError)
 	return ok

@@ -25,6 +25,7 @@ const (
 
 //revive:enable:var-naming
 
+// MountFlags is a set of flags passed to the [unix.Mount] syscall.
 type MountFlags int
 
 func mount(path, source, fsType string, flags MountFlags, data string) error {

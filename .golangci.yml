@@ -43,7 +43,6 @@ linters:
             - disableChecksOnFunctions
             - disableChecksOnMethods
             - disableChecksOnTypes
-            - disableChecksOnVariables
         - name: function-length
           disabled: true
         - name: line-length-limit

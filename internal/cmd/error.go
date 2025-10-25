@@ -20,6 +20,10 @@ var (
 	// ErrNotRegularFile is returned if a file should be read but is not a
 	// regular file.
 	ErrNotRegularFile = errors.New("not a regular file")
+
+	// ErrValueOutOfRange is returned if a given value is outside of the
+	// supported range.
+	ErrValueOutOfRange = errors.New("value is outside of range")
 )
 
 // ParseArgsError wraps errors that occur during argument parsing.

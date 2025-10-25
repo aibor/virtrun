@@ -23,4 +23,8 @@ var (
 
 	// ErrEmptyPath is returned if an empty path is given.
 	ErrEmptyPath = errors.New("path must not be empty")
+
+	// ErrArchNotSupported is returned if the requested architecture is not
+	// supported for the requested operation.
+	ErrArchNotSupported = errors.New("architecture not supported")
 )

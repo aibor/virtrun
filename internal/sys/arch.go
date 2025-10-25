@@ -5,7 +5,6 @@
 package sys
 
 import (
-	"errors"
 	"os"
 	"runtime"
 )
@@ -22,8 +21,6 @@ const (
 // Native is the architecture of the host. Using the same architecture for the
 // guest allows using KVM, if available. Use [KVMAvailable] to check.
 const Native Arch = Arch(runtime.GOARCH)
-
-var ErrArchNotSupported = errors.New("architecture not supported")
 
 func (a *Arch) String() string {
 	return string(*a)

@@ -5,12 +5,9 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 )
-
-var ErrValueOutOfRange = errors.New("value is outside of range")
 
 type limitedUintValue struct {
 	Value    *uint64

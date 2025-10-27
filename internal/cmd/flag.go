@@ -29,7 +29,7 @@ const (
 type flags struct {
 	name string
 
-	spec    *virtrun.Spec
+	spec    virtrun.Spec
 	flagSet *flag.FlagSet
 	version bool
 	debug   bool
@@ -38,7 +38,7 @@ type flags struct {
 func newFlags(name string, output io.Writer) *flags {
 	flags := &flags{
 		name: name,
-		spec: &virtrun.Spec{
+		spec: virtrun.Spec{
 			Qemu: virtrun.Qemu{
 				CPU:    cpuDefault,
 				Memory: memDefault,

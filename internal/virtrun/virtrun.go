@@ -30,7 +30,7 @@ type Spec struct {
 // [Spec.Initramfs.Keep] is set to true.
 func Run(
 	ctx context.Context,
-	spec *Spec,
+	spec Spec,
 	stdin io.Reader,
 	stdout, stderr io.Writer,
 ) error {

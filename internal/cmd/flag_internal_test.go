@@ -19,7 +19,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 	tests := []struct {
 		name              string
 		args              []string
-		expectedSpec      *virtrun.Spec
+		expectedSpec      virtrun.Spec
 		expectedDebugFlag bool
 		expecterErr       error
 	}{
@@ -67,7 +67,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 				"-debug",
 				"bin.test",
 			},
-			expectedSpec: &virtrun.Spec{
+			expectedSpec: virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
 					Binary: sys.MustAbsolutePath("bin.test"),
 				},
@@ -90,7 +90,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expectedSpec: &virtrun.Spec{
+			expectedSpec: virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
 					Binary: sys.MustAbsolutePath("bin.test"),
 				},
@@ -128,7 +128,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 				"-test.v=true",
 				"-test.timeout=10m0s",
 			},
-			expectedSpec: &virtrun.Spec{
+			expectedSpec: virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
 					Binary: sys.MustAbsolutePath("bin.test"),
 					Files: []string{
@@ -166,7 +166,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 				"-x",
 				"-standalone",
 			},
-			expectedSpec: &virtrun.Spec{
+			expectedSpec: virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
 					Binary: sys.MustAbsolutePath("bin.test"),
 				},

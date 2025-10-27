@@ -10,8 +10,8 @@ import (
 	"github.com/aibor/virtrun/internal/virtrun"
 )
 
-// Validate file parameters of the given [Spec].
-func Validate(spec *virtrun.Spec) error {
+// validateFilePaths validates file parameters of the given [Spec].
+func validateFilePaths(spec *virtrun.Spec) error {
 	err := ValidateFilePath(spec.Qemu.Kernel)
 	if err != nil {
 		return fmt.Errorf("kernel file: %w", err)

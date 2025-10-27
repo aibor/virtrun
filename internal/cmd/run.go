@@ -26,7 +26,7 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		return fmt.Errorf("parse args: %w", err)
 	}
 
-	err = Validate(&flags.spec)
+	err = validateFilePaths(&flags.spec)
 	if err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}

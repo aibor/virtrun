@@ -31,8 +31,10 @@ type flags struct {
 
 	spec    virtrun.Spec
 	flagSet *flag.FlagSet
-	version bool
-	debug   bool
+
+	version             bool
+	debug               bool
+	noGoTestFlagRewrite bool
 }
 
 func newFlags(name string, output io.Writer) *flags {
@@ -87,6 +89,14 @@ func (f *flags) ParseArgs(args []string) error {
 	// All further positional arguments after the binary file will be passed to
 	// the guest system's init program.
 	f.spec.Qemu.InitArgs = positionalArgs[1:]
+
+	// In order to be useful with "go test -exec", rewrite the file based flags
+	// so the output can be passed from guest to kernel via consoles.
+	if !f.noGoTestFlagRewrite {
+		initArgs, files := virtrun.RewriteGoTestFlagsPath(positionalArgs[1:])
+		f.spec.Qemu.InitArgs = initArgs
+		f.spec.Qemu.AdditionalOutputFiles = files
+	}
 
 	return nil
 }
@@ -172,9 +182,9 @@ func (f *flags) initFlagset(output io.Writer) {
 	)
 
 	flagSet.BoolVar(
-		&f.spec.Qemu.NoGoTestFlagRewrite,
+		&f.noGoTestFlagRewrite,
 		"noGoTestFlagRewrite",
-		f.spec.Qemu.NoGoTestFlagRewrite,
+		f.noGoTestFlagRewrite,
 		"disable automatic go test flag rewrite for file based output.",
 	)
 

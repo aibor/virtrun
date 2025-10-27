@@ -20,6 +20,15 @@ import (
 
 const minAdditionalFileDescriptor = 3
 
+// Console 0 is stderr. Console 1 is stdout.
+const reservedPipes = 2
+
+// AdditionalConsolePath returns guest's path to the additional console with the
+// given index.
+func AdditionalConsolePath(idx int) string {
+	return pipe.Path(idx + reservedPipes)
+}
+
 // CommandSpec defines the parameters for a [Command].
 type CommandSpec struct {
 	// Path to the qemu-system binary

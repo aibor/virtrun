@@ -2,17 +2,17 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package virtrun
+package virtrun_test
 
 import (
 	"testing"
 
 	"github.com/aibor/virtrun/internal/pipe"
-	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/internal/virtrun"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestProcessGoTestFlags(t *testing.T) {
+func TestRewriteGoTestFlags(t *testing.T) {
 	tests := []struct {
 		name          string
 		inputArgs     []string
@@ -20,7 +20,8 @@ func TestProcessGoTestFlags(t *testing.T) {
 		expectedFiles []string
 	}{
 		{
-			name: "empty",
+			name:         "empty",
+			expectedArgs: []string{},
 		},
 		{
 			name: "usual go test flags",
@@ -111,16 +112,11 @@ func TestProcessGoTestFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmdSpec := qemu.CommandSpec{
-				InitArgs: tt.inputArgs,
-			}
-			rewriteGoTestFlagsPath(&cmdSpec)
+			actualArgs, actualFiles := virtrun.RewriteGoTestFlagsPath(
+				tt.inputArgs,
+			)
 
-			var actualFiles []string
-
-			actualFiles = append(actualFiles, cmdSpec.AdditionalConsoles...)
-
-			assert.Equal(t, tt.expectedArgs, cmdSpec.InitArgs)
+			assert.Equal(t, tt.expectedArgs, actualArgs)
 			assert.Equal(t, tt.expectedFiles, actualFiles)
 		})
 	}

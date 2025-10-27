@@ -89,6 +89,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 				"-test.paniconexit0",
 				"-test.v=true",
 				"-test.timeout=10m0s",
+				"-test.coverprofile=/some/file/cover.out",
 			},
 			expectedSpec: virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
@@ -103,6 +104,10 @@ func TestFlags_ParseArgs(t *testing.T) {
 						"-test.paniconexit0",
 						"-test.v=true",
 						"-test.timeout=10m0s",
+						"-test.coverprofile=/dev/virtrun2",
+					},
+					AdditionalOutputFiles: []string{
+						"/some/file/cover.out",
 					},
 				},
 			},
@@ -127,6 +132,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 				"-test.paniconexit0",
 				"-test.v=true",
 				"-test.timeout=10m0s",
+				"-test.coverprofile=/some/file/cover.out",
 			},
 			expectedSpec: virtrun.Spec{
 				Initramfs: virtrun.Initramfs{
@@ -150,9 +156,9 @@ func TestFlags_ParseArgs(t *testing.T) {
 						"-test.paniconexit0",
 						"-test.v=true",
 						"-test.timeout=10m0s",
+						"-test.coverprofile=/some/file/cover.out",
 					},
-					Verbose:             true,
-					NoGoTestFlagRewrite: true,
+					Verbose: true,
 				},
 			},
 		},

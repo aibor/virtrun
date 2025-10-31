@@ -9,11 +9,13 @@ linters:
   disable:
     - depguard
     - exhaustruct
-    - funlen
     - paralleltest
   settings:
     exhaustive:
       default-signifies-exhaustive: true
+    funlen:
+      # Do not care for lines, but statements.
+      lines: -1
     gosec:
       excludes:
         - G204
@@ -62,6 +64,7 @@ linters:
         source: ^\s+defer \S+\.Close()
       - linters:
           - err113
+          - funlen
           - gochecknoglobals
           - gochecknoinits
           - varnamelen

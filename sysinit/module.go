@@ -54,11 +54,13 @@ func LoadModules(pattern string) error {
 	}
 
 	for _, file := range files {
-		if info, err := os.Stat(file); err == nil && info.IsDir() {
+		info, err := os.Stat(file)
+		if err == nil && info.IsDir() {
 			continue
 		}
 
-		if err := LoadModule(file, ""); err != nil {
+		err = LoadModule(file, "")
+		if err != nil {
 			return fmt.Errorf("load module %s: %w", file, err)
 		}
 	}

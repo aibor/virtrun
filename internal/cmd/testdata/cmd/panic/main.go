@@ -14,15 +14,18 @@ func main() {
 		panic("not PID 1")
 	}
 
-	if err := os.MkdirAll("/proc", os.ModePerm); err != nil {
+	err := os.MkdirAll("/proc", os.ModePerm)
+	if err != nil {
 		panic("mkdir: " + err.Error())
 	}
 
-	if err := syscall.Mount("proc", "/proc", "proc", 0, ""); err != nil {
+	err = syscall.Mount("proc", "/proc", "proc", 0, "")
+	if err != nil {
 		panic("mount: " + err.Error())
 	}
 
-	if err := os.WriteFile("/proc/sysrq-trigger", []byte{'c'}, 0); err != nil {
+	err = os.WriteFile("/proc/sysrq-trigger", []byte{'c'}, 0)
+	if err != nil {
 		panic("trigger panic: " + err.Error())
 	}
 }

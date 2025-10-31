@@ -146,7 +146,8 @@ func MountAll(mountPoints MountPoints) error {
 	var optionalErrs OptionalMountError
 
 	for path, opts := range sortedMap(mountPoints) {
-		if err := Mount(path, opts); err != nil {
+		err := Mount(path, opts)
+		if err != nil {
 			optionalErrs = append(optionalErrs, err)
 		}
 	}

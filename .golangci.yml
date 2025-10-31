@@ -10,7 +10,6 @@ linters:
     - depguard
     - exhaustruct
     - funlen
-    - noinlineerr
     - paralleltest
   settings:
     exhaustive:

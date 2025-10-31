@@ -61,7 +61,8 @@ func Run(funcs ...Func) {
 
 	run(os.Stderr, logError, allFns)
 
-	if err := Poweroff(); err != nil {
+	err := Poweroff()
+	if err != nil {
 		logError(fmt.Errorf("poweroff: %w", err))
 	}
 }
@@ -71,7 +72,8 @@ func run(out io.Writer, errHandler func(error), funcs []Func) {
 
 	funcs = append(funcs, cleanupFunc(errHandler), exitCodeFunc(out))
 
-	if err := runFuncs(state, funcs); err != nil {
+	err := runFuncs(state, funcs)
+	if err != nil {
 		errHandler(err)
 	}
 }
@@ -91,7 +93,8 @@ func runFuncs(state *State, funcs []Func) (err error) {
 	}()
 
 	for _, fn := range funcs {
-		if err := fn(state); err != nil {
+		err := fn(state)
+		if err != nil {
 			return err
 		}
 	}

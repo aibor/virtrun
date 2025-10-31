@@ -57,7 +57,8 @@ func newFlags(name string, output io.Writer) *flags {
 func (f *flags) ParseArgs(args []string) error {
 	// Parses arguments up to the first one that is not prefixed with a "-" or
 	// is "--".
-	if err := f.flagSet.Parse(args); err != nil {
+	err := f.flagSet.Parse(args)
+	if err != nil {
 		return &ParseArgsError{msg: "flag parse: %w", err: err}
 	}
 

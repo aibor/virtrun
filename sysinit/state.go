@@ -40,7 +40,8 @@ func (s *State) doCleanup(errHandler func(error)) {
 	slices.Reverse(s.cleanupFns)
 
 	for _, fn := range s.cleanupFns {
-		if err := fn(); err != nil {
+		err := fn()
+		if err != nil {
 			errHandler(fmt.Errorf("cleanup: %w", err))
 		}
 	}

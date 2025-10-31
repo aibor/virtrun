@@ -173,7 +173,8 @@ func buildVirtFS(
 	}
 
 	for _, dir := range []string{"/run", "/tmp"} {
-		if err := builder.MkdirAll(dir); err != nil {
+		err := builder.MkdirAll(dir)
+		if err != nil {
 			return nil, err
 		}
 	}

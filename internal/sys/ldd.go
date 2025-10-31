@@ -117,7 +117,8 @@ func ldd(ctx context.Context, interpreter, path string) (ldInfos, error) {
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
 
-	if err := cmd.Run(); err != nil {
+	err := cmd.Run()
+	if err != nil {
 		return nil, fmt.Errorf("ldd: %w: %s", err, stderrBuf.String())
 	}
 

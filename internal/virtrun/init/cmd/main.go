@@ -61,7 +61,8 @@ func main() {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-		if err := cmd.Run(); err != nil {
+		err := cmd.Run()
+		if err != nil {
 			var exitErr *exec.ExitError
 			// Only use exit code if the program actually exited itself. With
 			// this programs that are killed by be the kernel (e.g. the OOM

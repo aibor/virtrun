@@ -10,13 +10,16 @@ import (
 )
 
 // Parse parses the given string for the exit code.
-func Parse(b []byte) (int, bool) {
-	var buf bytes.Reader
+func Parse(line []byte) (int, bool) {
+	var (
+		buf      bytes.Reader
+		exitCode int
+	)
 
-	buf.Reset(b)
+	buf.Reset(line)
 
-	var exitCode int
-	if _, err := fmt.Fscanf(&buf, format, &exitCode); err != nil {
+	_, err := fmt.Fscanf(&buf, format, &exitCode)
+	if err != nil {
 		return 0, false
 	}
 

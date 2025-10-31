@@ -13,7 +13,8 @@ import "fmt"
 func Poweroff() error {
 	// Use restart instead of poweroff for shutting down the system since it
 	// does not require ACPI. The guest system should be started with noreboot.
-	if err := reboot(); err != nil {
+	err := reboot()
+	if err != nil {
 		return fmt.Errorf("poweroff failed: %w", err)
 	}
 

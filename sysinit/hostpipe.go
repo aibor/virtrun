@@ -34,7 +34,8 @@ func WithHostPipes() Func {
 		state.Cleanup(func() error {
 			// Let the host pipe writers finish. On busy hosts they might have a
 			// write in flight even if the input is already done.
-			if err := hostPipes.Wait(time.Second); err != nil {
+			err := hostPipes.Wait(time.Second)
+			if err != nil {
 				return fmt.Errorf("host pipes: %w", err)
 			}
 
@@ -140,7 +141,8 @@ func OpenConsolePipes(state *State) (*pipe.Pipes, error) {
 // The caller is responsible for removing the fifo in the file system once it is
 // not needed anymore.
 func CreateNamedPipe(path string) (io.ReadCloser, io.WriteCloser, error) {
-	if err := mkfifo(path); err != nil {
+	err := mkfifo(path)
+	if err != nil {
 		return nil, nil, err
 	}
 

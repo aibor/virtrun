@@ -10,7 +10,8 @@ type EnvVars map[string]string
 // SetEnv sets the given [EnvVars] in the environment.
 func SetEnv(envVars EnvVars) error {
 	for key, value := range envVars {
-		if err := setenv(key, value); err != nil {
+		err := setenv(key, value)
+		if err != nil {
 			return err
 		}
 	}

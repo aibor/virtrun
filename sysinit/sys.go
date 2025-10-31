@@ -52,7 +52,8 @@ func mount(path, source, fsType string, flags MountFlags, data string) error {
 }
 
 func initModule(data []byte, params string) error {
-	if err := unix.InitModule(data, params); err != nil {
+	err := unix.InitModule(data, params)
+	if err != nil {
 		return fmt.Errorf("init_module: %w", err)
 	}
 
@@ -64,7 +65,8 @@ type finitFlags int
 const finitFlagCompressedFile finitFlags = unix.MODULE_INIT_COMPRESSED_FILE
 
 func finitModule(fd int, params string, flags finitFlags) error {
-	if err := unix.FinitModule(fd, params, int(flags)); err != nil {
+	err := unix.FinitModule(fd, params, int(flags))
+	if err != nil {
 		// If finit_module is not available, EOPNOTSUPP is returned.
 		if errors.Is(err, unix.EOPNOTSUPP) {
 			err = errors.ErrUnsupported
@@ -77,7 +79,8 @@ func finitModule(fd int, params string, flags finitFlags) error {
 }
 
 func reboot() error {
-	if err := unix.Reboot(unix.LINUX_REBOOT_CMD_RESTART); err != nil {
+	err := unix.Reboot(unix.LINUX_REBOOT_CMD_RESTART)
+	if err != nil {
 		return fmt.Errorf("reboot: %w", err)
 	}
 
@@ -97,7 +100,8 @@ func setInterfaceUp(name string) error {
 
 	ifReq.SetUint16(unix.IFF_UP)
 
-	if err := unix.IoctlIfreq(sock, unix.SIOCSIFFLAGS, ifReq); err != nil {
+	err = unix.IoctlIfreq(sock, unix.SIOCSIFFLAGS, ifReq)
+	if err != nil {
 		return fmt.Errorf("ioctl: %w", err)
 	}
 
@@ -109,7 +113,8 @@ func sysctl(key, value string) error {
 
 	path := "/proc/sys/" + key
 
-	if err := os.WriteFile(path, []byte(value), mode); err != nil {
+	err := os.WriteFile(path, []byte(value), mode)
+	if err != nil {
 		return fmt.Errorf("sysctl %s: %w", key, err)
 	}
 
@@ -121,7 +126,8 @@ func getpid() int {
 }
 
 func setenv(key, value string) error {
-	if err := unix.Setenv(key, value); err != nil {
+	err := unix.Setenv(key, value)
+	if err != nil {
 		return fmt.Errorf("setenv %s: %w", key, err)
 	}
 
@@ -131,7 +137,8 @@ func setenv(key, value string) error {
 func mkfifo(path string) error {
 	const mode = 0o600
 
-	if err := unix.Mkfifo(path, mode); err != nil {
+	err := unix.Mkfifo(path, mode)
+	if err != nil {
 		return fmt.Errorf("mkfifo %s: %w", path, err)
 	}
 

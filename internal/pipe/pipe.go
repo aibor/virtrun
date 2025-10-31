@@ -131,7 +131,8 @@ func (p *Pipes) Wait(timeout time.Duration) error {
 		go func() {
 			defer close(errChs[idx])
 
-			if err := pipe.wait(deadline); err != nil {
+			err := pipe.wait(deadline)
+			if err != nil {
 				errChs[idx] <- &Error{
 					Name: pipe.Name,
 					Err:  err,
@@ -160,7 +161,8 @@ func (p *Pipes) Close() error {
 	for _, pipe := range p.p {
 		_ = os.RemoveAll(pipe.Name)
 
-		if err := pipe.close(); err != nil {
+		err := pipe.close()
+		if err != nil {
 			errs = append(errs, fmt.Errorf("close %s: %w", pipe, err))
 		}
 	}

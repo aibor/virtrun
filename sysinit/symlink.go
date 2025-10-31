@@ -30,7 +30,8 @@ type Symlinks map[string]string
 // This must be run after all file systems have been mounted.
 func CreateSymlinks(symlinks Symlinks) error {
 	for link, target := range sortedMap(symlinks) {
-		if err := os.Symlink(target, link); err != nil {
+		err := os.Symlink(target, link)
+		if err != nil {
 			return fmt.Errorf("create common symlink %s: %w", link, err)
 		}
 	}

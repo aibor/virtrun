@@ -53,7 +53,8 @@ func DecodeLineBuffered(dst io.Writer, src io.Reader) (int64, error) {
 
 		read += len(line)
 
-		if _, writeErr := dst.Write(line); writeErr != nil {
+		_, writeErr := dst.Write(line)
+		if writeErr != nil {
 			err = writeErr
 		}
 	}

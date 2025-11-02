@@ -58,7 +58,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: "{{defaultContext}}:testdata/container"
-          file: ./Containerfile
+          file: ./Dockerfile
           push: true
           build-args: ARCH=${{ matrix.arch.arg }}
           tags: ${{ steps.meta.outputs.tags }}

@@ -15,6 +15,8 @@ import (
 )
 
 const (
+	name = "virtrun"
+
 	cpuDefault = "max"
 
 	memDefault = 256
@@ -24,11 +26,25 @@ const (
 	smpDefault = 1
 	smpMin     = 1
 	smpMax     = 16
+
+	usageMessage = `Usage of 'virtrun':
+    virtrun [flags...] binary [initargs...]
+
+Using it directly:
+	virtrun -kernel=/path/to/kernel ./my_binary -flagForBinary=3
+
+Using it with go test:
+	go test -exec 'virtrun -kernel=/path/to/kernel' ./...
+
+All virtrun flags can also be provided via environment variable VIRTRUN_ARGS:
+	VIRTRUN_ARGS="-kernel=/path/to/kernel -debug" go test -exec virtrun ./...
+
+All virtrun falgs can also be provided via file ./virtrun-args, with one
+argument per line.
+`
 )
 
 type flags struct {
-	name string
-
 	spec    virtrun.Spec
 	flagSet *flag.FlagSet
 
@@ -37,9 +53,8 @@ type flags struct {
 	noGoTestFlagRewrite bool
 }
 
-func newFlags(name string, output io.Writer) *flags {
+func newFlags(output io.Writer) *flags {
 	flags := &flags{
-		name: name,
 		spec: virtrun.Spec{
 			Qemu: virtrun.Qemu{
 				CPU:    cpuDefault,
@@ -103,15 +118,15 @@ func (f *flags) ParseArgs(args []string) error {
 }
 
 func (f *flags) initFlagset(output io.Writer) {
-	fsName := f.name + " [flags...] binary [initargs...]"
-	flagSet := flag.NewFlagSet(fsName, flag.ContinueOnError)
+	flagSet := flag.NewFlagSet(name, flag.ContinueOnError)
 	flagSet.SetOutput(output)
+	flagSet.Usage = f.usage
 
 	flagSet.StringVar(
 		&f.spec.Qemu.Executable,
 		"qemuBin",
 		f.spec.Qemu.Executable,
-		"QEMU binary to use (default depends on binary arch)",
+		"QEMU binary to use (default depends on binary arch: qemu-system-*)",
 	)
 
 	flagSet.Var(
@@ -138,7 +153,8 @@ func (f *flags) initFlagset(output io.Writer) {
 		&f.spec.Qemu.NoKVM,
 		"nokvm",
 		f.spec.Qemu.NoKVM,
-		"disable hardware support (default depends on binary arch)",
+		"disable hardware support (default is enabled if present and binary "+
+			"matches the host arch)",
 	)
 
 	flagSet.Var(
@@ -178,8 +194,7 @@ func (f *flags) initFlagset(output io.Writer) {
 		&f.spec.Initramfs.StandaloneInit,
 		"standalone",
 		f.spec.Initramfs.StandaloneInit,
-		"run first given file as init itself. Use this if it has virtrun"+
-			" support built in.",
+		"run binary as init itself (must have virtrun supprot built in)",
 	)
 
 	flagSet.BoolVar(
@@ -193,7 +208,7 @@ func (f *flags) initFlagset(output io.Writer) {
 		&f.spec.Initramfs.Keep,
 		"keepInitramfs",
 		f.spec.Initramfs.Keep,
-		"do not delete initramfs once qemu is done. Intended for debugging. "+
+		"do not delete initramfs on exit. Intended for debugging. "+
 			"The path to the file is printed on stderr",
 	)
 
@@ -245,4 +260,10 @@ func (f *flags) printVersionInformation() error {
 	fmt.Fprintf(f.flagSet.Output(), "Version: %s\n", buildInfo.Main.Version)
 
 	return ErrHelp
+}
+
+func (f *flags) usage() {
+	fmt.Fprint(f.flagSet.Output(), usageMessage)
+	fmt.Fprintln(f.flagSet.Output(), "\nFlags:")
+	f.flagSet.PrintDefaults()
 }

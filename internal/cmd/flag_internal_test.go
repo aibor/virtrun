@@ -194,7 +194,7 @@ func TestFlags_ParseArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags := newFlags("test", io.Discard)
+			flags := newFlags(io.Discard)
 
 			err := flags.ParseArgs(tt.args)
 			require.ErrorIs(t, err, tt.expecterErr)

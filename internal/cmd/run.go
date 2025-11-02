@@ -22,7 +22,7 @@ import (
 const localConfigFile = ".virtrun-args"
 
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	flags := newFlags(args[0], stderr)
+	flags := newFlags(stderr)
 
 	confArgs, err := LocalConfigArgs(os.DirFS("."), localConfigFile)
 	if err != nil {

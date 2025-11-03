@@ -215,13 +215,15 @@ func (f *flags) initFlagset(output io.Writer) {
 	flagSet.Var(
 		(*FilePathList)(&f.spec.Initramfs.Files),
 		"addFile",
-		"file to add to guest's /data dir. Flag may be used more than once.",
+		"file to add to guest's /data dir. Flag may be used more than once. "+
+			"Empty value clears the list.",
 	)
 
 	flagSet.Var(
 		(*FilePathList)(&f.spec.Initramfs.Modules),
 		"addModule",
-		"kernel module to add to guest. Flag may be used more than once.",
+		"kernel module to add to guest. Flag may be used more than once. "+
+			"Empty value clears the list.",
 	)
 
 	flagSet.BoolVar(

@@ -19,8 +19,8 @@ func (f *FilePath) String() string {
 }
 
 // Set sets [FilePath] to the given path, if valid.
-func (f *FilePath) Set(s string) error {
-	path, err := sys.AbsolutePath(s)
+func (f *FilePath) Set(input string) error {
+	path, err := sys.AbsolutePath(input)
 	if err != nil {
 		return err //nolint:wrapcheck
 	}
@@ -37,9 +37,15 @@ func (f *FilePathList) String() string {
 	return strings.Join(*f, ",")
 }
 
-// Set adds the given file path to the list, if valid.
-func (f *FilePathList) Set(s string) error {
-	for e := range strings.SplitSeq(s, ",") {
+// Set adds the given file path to the list, if valid. An empty string clears
+// the list.
+func (f *FilePathList) Set(input string) error {
+	if input == "" {
+		*f = nil
+		return nil
+	}
+
+	for e := range strings.SplitSeq(input, ",") {
 		path, err := sys.AbsolutePath(e)
 		if err != nil {
 			return err //nolint:wrapcheck

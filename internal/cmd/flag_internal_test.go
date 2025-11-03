@@ -52,13 +52,31 @@ func TestFlags_ParseArgs(t *testing.T) {
 			expecterErr: &ParseArgsError{},
 		},
 		{
-			name: "additional file is empty",
+			name: "empty additional file resets list",
 			args: []string{
 				"-kernel=/boot/this",
+				"-addFile=/path",
 				"-addFile=",
+				"-addFile=/otherpath",
+				"-addFile=/third/path",
 				"bin.test",
 			},
-			expecterErr: &ParseArgsError{},
+			expectedSpec: virtrun.Spec{
+				Initramfs: virtrun.Initramfs{
+					Binary: sys.MustAbsolutePath("bin.test"),
+					Files: []string{
+						"/otherpath",
+						"/third/path",
+					},
+				},
+				Qemu: virtrun.Qemu{
+					Kernel:   "/boot/this",
+					CPU:      "max",
+					Memory:   256,
+					SMP:      1,
+					InitArgs: []string{},
+				},
+			},
 		},
 		{
 			name: "debug",

@@ -10,7 +10,7 @@ require (
 	github.com/aibor/cpio v0.1.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/goleak v1.3.0
-	golang.org/x/sys v0.37.0
+	golang.org/x/sys v0.38.0
 )
 
 require (

@@ -39,7 +39,7 @@ Using it with go test:
 All virtrun flags can also be provided via environment variable VIRTRUN_ARGS:
 	VIRTRUN_ARGS="-kernel=/path/to/kernel -debug" go test -exec virtrun ./...
 
-All virtrun falgs can also be provided via file ./virtrun-args, with one
+All virtrun flags can also be provided via file ./virtrun-args, with one
 argument per line.
 `
 )

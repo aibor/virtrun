@@ -257,7 +257,8 @@ func (c *CommandSpec) appendConsoleArgs(
 		return args
 	}
 
-	chardevOpts := []string{console.backend, "id=" + console.id}
+	chardevOpts := make([]string, 0, len(console.opts))
+	chardevOpts = append(chardevOpts, console.backend, "id="+console.id)
 	chardevOpts = append(chardevOpts, console.opts...)
 
 	chardevArg := RepeatableArg("chardev", strings.Join(chardevOpts, ","))

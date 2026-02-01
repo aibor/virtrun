@@ -54,9 +54,8 @@ func Run(funcs ...Func) {
 		panic(ErrNotPidOne)
 	}
 
-	allFns := []Func{
-		WithMountPoints(essentialMountPoints()),
-	}
+	allFns := make([]Func, 0, 1+len(funcs))
+	allFns = append(allFns, WithMountPoints(essentialMountPoints()))
 	allFns = append(allFns, funcs...)
 
 	run(os.Stderr, logError, allFns)

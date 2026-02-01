@@ -103,7 +103,8 @@ func buildInitramfsArchive(
 	cfg Initramfs,
 	initFileOpenFn virtfs.FileOpenFunc,
 ) (*virtfs.FS, error) {
-	binaryFiles := []string{cfg.Binary}
+	binaryFiles := make([]string, 0, 1+len(cfg.Files))
+	binaryFiles = append(binaryFiles, cfg.Binary)
 	binaryFiles = append(binaryFiles, cfg.Files...)
 
 	libs, err := sys.CollectLibsFor(ctx, binaryFiles...)

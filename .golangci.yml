@@ -67,6 +67,7 @@ linters:
           - funlen
           - gochecknoglobals
           - gochecknoinits
+          - prealloc
           - varnamelen
           - wrapcheck
         path: (.+)_test\.go

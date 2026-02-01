@@ -86,20 +86,20 @@ func (p *stdoutParser) Result() (int, error) {
 	return p.exitCode, p.err
 }
 
-// Parse can be used as [lineParseFunc].
-func (p *stdoutParser) parseLine(data []byte) bool {
+// parseLine interprets the given line and returns true if it should be written.
+func (p *stdoutParser) parseLine(line []byte) bool {
 	// Parse the output. Keep going after a match has been found, so
 	// the following lines are printed as well and enhance the context
 	// information in case of kernel error messages.
 	switch {
-	case oomRE.Match(data):
+	case oomRE.Match(line):
 		p.err = ErrGuestOom
 		return true
-	case panicRE.Match(data):
+	case panicRE.Match(line):
 		p.err = ErrGuestPanic
 		return true
 	case !p.exitCodeFound:
-		p.exitCode, p.exitCodeFound = p.ExitCodeParser(data)
+		p.exitCode, p.exitCodeFound = p.ExitCodeParser(line)
 		if p.exitCode != 0 {
 			p.err = ErrGuestNonZeroExitCode
 		}

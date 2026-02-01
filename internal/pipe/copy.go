@@ -45,16 +45,16 @@ func DecodeLineBuffered(dst io.Writer, src io.Reader) (int64, error) {
 
 	for {
 		line, readErr := buf.ReadSlice('\n')
-		read += int64(len(line))
-
 		if len(line) > 0 {
+			read += int64(len(line))
+
 			_, writeErr := dst.Write(line)
 			if writeErr != nil {
 				return read, fmt.Errorf("write: %w", writeErr)
 			}
 		}
 
-		if readErr != nil {
+		if readErr != nil && !errors.Is(readErr, bufio.ErrBufferFull) {
 			if errors.Is(readErr, io.EOF) {
 				return read, nil
 			}

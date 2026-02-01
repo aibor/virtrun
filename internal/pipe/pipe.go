@@ -128,22 +128,22 @@ func (p *Pipes) Wait(timeout time.Duration) error {
 	deadline := time.After(timeout)
 
 	for idx, pipe := range p.p {
-		errChs[idx] = make(chan error)
+		errChs[idx] = make(chan error, 1)
 
-		go func() {
-			defer close(errChs[idx])
+		go func(ch chan<- error, pipe *Pipe) {
+			defer close(ch)
 
 			err := pipe.wait(deadline)
 			if err != nil {
-				errChs[idx] <- &Error{
+				ch <- &Error{
 					Name: pipe.Name,
 					Err:  err,
 				}
 			}
-		}()
+		}(errChs[idx], pipe)
 	}
 
-	errs := []error{}
+	errs := make([]error, 0, len(p.p))
 
 	for _, errCh := range errChs {
 		for err := range errCh {

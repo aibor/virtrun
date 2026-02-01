@@ -70,20 +70,22 @@ func (p *Pipe) consume() {
 }
 
 func (p *Pipe) wait(deadline <-chan time.Time) error {
-	var err error
-
 	_ = p.closeInput()
 	select {
-	case <-p.done:
-		err = p.err
-		if err == nil && p.bytesRead == 0 && !p.MayBeSilent {
-			return ErrNoOutput
-		}
 	case <-deadline:
 		_ = p.close()
 		<-p.done
 
 		return ErrWaitTimeout
+	case <-p.done:
+	}
+
+	if p.err != nil {
+		return p.err
+	}
+
+	if p.bytesRead == 0 && !p.MayBeSilent {
+		return ErrNoOutput
 	}
 
 	return nil

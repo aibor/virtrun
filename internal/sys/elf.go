@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// ReadELFArch returns the [sys.Arch] of the given ELF file.
+// ReadELFArch returns the [Arch] of the given ELF file.
 //
 // It returns an error if the ELF file is not for Linux or is for an
 // unsupported architecture.

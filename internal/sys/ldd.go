@@ -82,10 +82,10 @@ func (l *ldInfos) realPaths() []string {
 
 	for _, i := range *l {
 		switch {
-		case i.path != "":
-			paths = append(paths, i.path)
 		case filepath.IsAbs(i.name):
 			paths = append(paths, i.name)
+		case i.path != "":
+			paths = append(paths, i.path)
 		}
 	}
 

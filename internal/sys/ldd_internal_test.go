@@ -116,7 +116,7 @@ func TestLdInfosParseFrom(t *testing.T) {
 			},
 			paths: []string{
 				"/usr/lib/libc.so.6",
-				"/usr/lib64/ld-linux-x86-64.so.2",
+				"/lib64/ld-linux-x86-64.so.2",
 			},
 		},
 	}

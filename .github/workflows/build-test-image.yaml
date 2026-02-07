@@ -9,7 +9,7 @@ on:
     branches:
       - "main"
     paths:
-      - testdata/container
+      - testdata/container/**
       - .github/workflows/build-test-image.yaml
 
 jobs:

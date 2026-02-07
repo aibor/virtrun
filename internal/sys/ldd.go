@@ -19,10 +19,10 @@ const lddTimeout = 5 * time.Second
 
 // Ldd gathers the required shared objects of the ELF file with the given path.
 //
-// It invokes the "ldd" executable which is expected to present on the system.
-// It returns an [LDDExecError] in case "ldd" is not available or it returned
-// with a non-zero exit code. This might be the case if the binary is not
-// dynamically linked.
+// It invokes the "ldd" executable which is expected to be present on the
+// system. It returns an [LDDExecError] in case "ldd" is not available or it
+// returned with a non-zero exit code. This might be the case if the binary is
+// not dynamically linked.
 func Ldd(ctx context.Context, path string) ([]string, error) {
 	var lddOutput bytes.Buffer
 

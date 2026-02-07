@@ -4,12 +4,12 @@
 
 package sys
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
-	// ErrNoInterpreter is returned if no interpreter is found in an ELF file.
-	ErrNoInterpreter = errors.New("no interpreter in ELF file")
-
 	// ErrNotELFFile is returned if the file does not have an ELF magic number.
 	ErrNotELFFile = errors.New("is not an ELF file")
 
@@ -28,3 +28,27 @@ var (
 	// supported for the requested operation.
 	ErrArchNotSupported = errors.New("architecture not supported")
 )
+
+// LDDExecError wraps errors that result when executing the "ldd" command.
+// Along with the error the output received on stdout is added to the error
+// message.
+type LDDExecError struct {
+	Err    error
+	Stderr string
+}
+
+// Error implements the [error] interface.
+func (e *LDDExecError) Error() string {
+	return fmt.Sprintf("ldd execution failed: %v: %s", e.Err, e.Stderr)
+}
+
+// Is implements the [errors.Is] interface.
+func (*LDDExecError) Is(other error) bool {
+	_, ok := other.(*LDDExecError)
+	return ok
+}
+
+// Unwrap implements the [errors.Unwrap] interface.
+func (e *LDDExecError) Unwrap() error {
+	return e.Err
+}

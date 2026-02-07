@@ -87,8 +87,7 @@ func collectLibsFor(
 	// deduplicated in a set.
 	paths, err := Ldd(ctx, name)
 	if err != nil {
-		if errors.Is(err, ErrNotELFFile) ||
-			errors.Is(err, ErrNoInterpreter) {
+		if errors.Is(err, &LDDExecError{}) {
 			return nil
 		}
 

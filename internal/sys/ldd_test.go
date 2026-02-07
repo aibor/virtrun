@@ -23,7 +23,7 @@ func TestTestdata(t *testing.T) {
 	assert.Equal(t, 73, cmdErr.ExitCode())
 }
 
-func TestFilesLdd(t *testing.T) {
+func TestLdd(t *testing.T) {
 	actual, err := sys.Ldd(t.Context(), "testdata/bin/main")
 	require.NoErrorf(t, err, "must resolve")
 

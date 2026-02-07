@@ -8,139 +8,64 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"debug/elf"
-	"errors"
 	"fmt"
 	"io"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"time"
-
-	"golang.org/x/sys/unix"
 )
 
 const lddTimeout = 5 * time.Second
 
 // Ldd gathers the required shared objects of the ELF file with the given path.
-// The path must point to an ELF file. [ErrNotELFFile] is returned if it is not
-// an ELF file. [ErrNoInterpreter] is returned if no interpreter path is found
-// in the ELF file. This is the case if the binary was statically linked.
 //
-// The objects are searched for in the usual search paths of the
-// file's interpreter. Note that the dynamic linker consumes the environment
-// variable LD_LIBRARY_PATH, so it can be used to add additional search paths.
-//
-// Since this implementation executes the ELF interpreter of the given file,
-// it should be run only for trusted binaries!
-//
-// Until version 2.27 the glibc provided ldd worked like this implementation
-// and executed the binaries ELF interpreter directly. Since this has some
-// security implications and may lead to unintended execution of arbitrary code
-// it was changed with version 2.27. With newer versions, ldd tries a set of
-// fixed known ELF interpreters. Since they are specific to the glibc build,
-// thus Linux distribution specific, it is not feasible for this
-// implementation. Because of this the former procedure is used, so use with
-// great care!
+// It invokes the "ldd" executable which is expected to present on the system.
+// It returns an [LDDExecError] in case "ldd" is not available or it returned
+// with a non-zero exit code. This might be the case if the binary is not
+// dynamically linked.
 func Ldd(ctx context.Context, path string) ([]string, error) {
-	interpreter, err := readInterpreter(path)
+	var lddOutput bytes.Buffer
+
+	err := runLdd(ctx, path, &lddOutput)
 	if err != nil {
 		return nil, err
-	}
-
-	infos, err := ldd(ctx, interpreter, path)
-	if err != nil {
-		return nil, err
-	}
-
-	paths := infos.realPaths()
-	// Append the interpreter itself to the paths, to make sure it is present
-	// in the list. Usually, it is already in there pulled in by libc.
-	if !slices.Contains(paths, interpreter) {
-		paths = append(paths, interpreter)
-	}
-
-	return paths, nil
-}
-
-// readInterpreter fetches the ELF interpreter path from the ELF file. If the
-// file does not have an ELF magic number, [ErrNoELFFile] is returned. If no
-// interpreter path is found, [ErrNoInterpreter] is returned.
-func readInterpreter(path string) (string, error) {
-	elfFile, err := elfOpen(path)
-	if err != nil {
-		return "", err
-	}
-	defer elfFile.Close()
-
-	for _, prog := range elfFile.Progs {
-		if prog.Type != elf.PT_INTERP {
-			continue
-		}
-
-		buf := make([]byte, prog.Filesz)
-		_, err := prog.Open().Read(buf)
-
-		if err != nil && !errors.Is(err, io.EOF) {
-			return "", fmt.Errorf("read interpreter: %w", err)
-		}
-		// Only terminate if the found path is not empty. If there is no other
-		// prog with a valid path, it will result in the final ErrNoInterpreter.
-		interpreter := unix.ByteSliceToString(buf)
-		if interpreter != "" {
-			return interpreter, nil
-		}
-	}
-
-	return "", ErrNoInterpreter
-}
-
-// ldd fetches the list of shared objects for the elfFile and populates its
-// ldInfos field.
-//
-// This is how the glibc provided ldd works. The main difference is, that
-// it does not try a list of interpreters, but uses the one found in the file
-// itself. so, call [elfFile.readInterpreter] before calling ldd.
-//
-// It returns ErrNoInterpreter if the elfFile has no interpreter set.
-func ldd(ctx context.Context, interpreter, path string) (ldInfos, error) {
-	if interpreter == "" {
-		return nil, ErrNoInterpreter
-	}
-
-	ctx, stop := context.WithTimeout(ctx, lddTimeout)
-	defer stop()
-
-	var stdoutBuf, stderrBuf bytes.Buffer
-
-	cmd := exec.CommandContext(ctx, interpreter, "--list", path)
-	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = &stderrBuf
-
-	err := cmd.Run()
-	if err != nil {
-		return nil, fmt.Errorf("ldd: %w: %s", err, stderrBuf.String())
 	}
 
 	var infos ldInfos
 
-	infos.parseFrom(&stdoutBuf)
+	infos.parseFrom(&lddOutput)
+	paths := infos.realPaths()
 
-	return infos, nil
+	return paths, nil
 }
 
-type ldInfo struct {
-	name  string
-	path  string
-	start uint
+func runLdd(ctx context.Context, path string, outW io.Writer) error {
+	var stderrBuf bytes.Buffer
+
+	ctx, stop := context.WithTimeout(ctx, lddTimeout)
+	defer stop()
+
+	cmd := exec.CommandContext(ctx, "ldd", path)
+	cmd.Stdout = outW
+	cmd.Stderr = &stderrBuf
+
+	err := cmd.Run()
+	if err != nil {
+		return &LDDExecError{
+			Err:    err,
+			Stderr: stderrBuf.String(),
+		}
+	}
+
+	return nil
 }
 
 type ldInfos []ldInfo
 
 // parseFrom takes a ldd output, processes each line and adds an [ldInfo] to
 // the list.
-func (l *ldInfos) parseFrom(buf *bytes.Buffer) {
-	scanner := bufio.NewScanner(buf)
+func (l *ldInfos) parseFrom(lddOutput io.Reader) {
+	scanner := bufio.NewScanner(lddOutput)
 	for scanner.Scan() {
 		var info ldInfo
 
@@ -165,6 +90,12 @@ func (l *ldInfos) realPaths() []string {
 	}
 
 	return paths
+}
+
+type ldInfo struct {
+	name  string
+	path  string
+	start uint
 }
 
 // parseLddLibPathFrom returns the resolved path to a shared object if the given

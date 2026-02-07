@@ -6,21 +6,38 @@ package sys
 
 import (
 	"bytes"
+	"io"
+	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestELFFileReadInterpreter(t *testing.T) {
-	interpreter, err := readInterpreter("testdata/bin/main")
-	require.NoError(t, err)
-	assert.NotEmpty(t, interpreter)
-}
+func TestRunLdd(t *testing.T) {
+	t.Run("no ldd", func(t *testing.T) {
+		t.Setenv("PATH", "")
+		err := runLdd(t.Context(), "testdata/bin/main", io.Discard)
+		require.ErrorIs(t, err, &LDDExecError{})
+		require.ErrorIs(t, err, exec.ErrNotFound)
+	})
 
-func TestELFFileLdd(t *testing.T) {
-	interpreter, err := readInterpreter("testdata/bin/main")
-	require.NoError(t, err, "must find interpreter")
+	t.Run("no file", func(t *testing.T) {
+		var exitErr *exec.ExitError
+
+		err := runLdd(t.Context(), "testdata/bin/nonexistent", io.Discard)
+		require.ErrorIs(t, err, &LDDExecError{})
+		require.ErrorAs(t, err, &exitErr)
+	})
+
+	t.Run("not dynamically linked", func(t *testing.T) {
+		var exitErr *exec.ExitError
+
+		err := runLdd(t.Context(), "testdata/lib/libfunc1", io.Discard)
+		require.ErrorIs(t, err, &LDDExecError{})
+		require.ErrorAs(t, err, &exitErr)
+	})
 
 	tests := []struct {
 		name     string
@@ -31,28 +48,37 @@ func TestELFFileLdd(t *testing.T) {
 			name: "direct reference",
 			file: "testdata/lib/libfunc3.so",
 			expected: []string{
-				"testdata/lib/libfunc1.so",
+				"lib/libfunc1.so",
 			},
 		},
 		{
 			name: "indirect reference",
 			file: "testdata/bin/main",
 			expected: []string{
-				"testdata/lib/libfunc2.so",
-				"testdata/lib/libfunc3.so",
-				"testdata/lib/libfunc1.so",
-				interpreter,
+				"lib/libfunc2.so",
+				"lib/libfunc3.so",
+				"lib/libfunc1.so",
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			infos, err := ldd(t.Context(), interpreter, tt.file)
+			var out bytes.Buffer
+
+			err := runLdd(t.Context(), tt.file, &out)
 			require.NoError(t, err, "must resolve")
 
-			actual := infos.realPaths()
-			AssertContainsPaths(t, tt.expected, actual)
+		expected:
+			for _, expected := range tt.expected {
+				for line := range strings.Lines(out.String()) {
+					if strings.Contains(line, expected) {
+						continue expected
+					}
+				}
+
+				assert.Failf(t, "no line contains %s", expected)
+			}
 		})
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os"
 
 	"github.com/aibor/virtrun/internal/sys"
 )
@@ -44,9 +45,20 @@ func Run(
 		return err
 	}
 
-	initFn := func() (fs.File, error) { return initProgFor(arch) }
+	var initProg fs.File
 
-	path, removeFn, err := BuildInitramfsArchive(ctx, spec.Initramfs, initFn)
+	// In standalone mode, the main file is supposed to work as a complete
+	// init matching our requirements.
+	if !spec.Initramfs.StandaloneInit {
+		initProg, err = initProgFor(arch)
+		if err != nil {
+			return fmt.Errorf("get init program: %w", err)
+		}
+	}
+
+	spec.Initramfs.Fsys = os.DirFS("/")
+
+	path, removeFn, err := BuildInitramfsArchive(ctx, spec.Initramfs, initProg)
 	if err != nil {
 		return err
 	}

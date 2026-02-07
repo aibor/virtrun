@@ -19,18 +19,9 @@ const (
 // FileOpenFunc returns an open [fs.File] or an error if opening fails.
 type FileOpenFunc func() (fs.File, error)
 
-// FSAdder defines the interface required to add files to a FS.
-type FSAdder interface {
-	Add(name string, openFn FileOpenFunc) error
-	Symlink(oldname, newname string) error
-	Mkdir(name string) error
-	MkdirAll(name string) error
-}
-
 var (
 	_ fs.FS         = (*FS)(nil)
 	_ fs.ReadLinkFS = (*FS)(nil)
-	_ FSAdder       = (*FS)(nil)
 )
 
 // FS represents a simple [fs.FS] that supports directories, regular files and

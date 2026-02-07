@@ -52,7 +52,7 @@ linters:
         - os.OpenFile(
         - os.Create(
       ignore-sig-regexps:
-        - (github\.com/aibor/virtrun/internal/virtfs\.FSAdder)
+        - (github\.com/aibor/virtrun/internal/virtrun\.fsBuilder)
   exclusions:
     generated: strict
     warn-unused: true

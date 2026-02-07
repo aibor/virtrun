@@ -5,77 +5,67 @@
 package virtrun
 
 import (
-	"fmt"
+	"errors"
 	"io/fs"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/aibor/virtrun/internal/virtfs"
 )
 
-type nameFunc func(idx int, path string) string
+type fileOpenFunc = virtfs.FileOpenFunc
 
-func baseName(_ int, path string) string {
-	return filepath.Base(path)
+type fsEntry interface {
+	addTo(builder fsBuilder) error
 }
 
-func modName(idx int, path string) string {
-	return fmt.Sprintf("%04d-%s", idx, filepath.Base(path))
+type fsBuilder interface {
+	Add(name string, openFn fileOpenFunc) error
+	Symlink(oldname, newname string) error
+	MkdirAll(name string) error
 }
 
-type fsBuilder struct {
-	virtfs.FSAdder
+var _ fsEntry = directory("")
+
+type directory string
+
+func (d directory) addTo(builder fsBuilder) error {
+	return builder.MkdirAll(string(d))
 }
 
-func (b *fsBuilder) addFilePathAs(name, source string) error {
-	return b.Add(name, func() (fs.File, error) {
-		return os.Open(source)
+var _ fsEntry = file{}
+
+type file struct {
+	Path   string
+	OpenFn fileOpenFunc
+}
+
+func (v file) addTo(builder fsBuilder) error {
+	return builder.Add(v.Path, v.OpenFn)
+}
+
+type copyFile struct {
+	Dest   string
+	Source string
+	Fsys   fs.FS
+}
+
+func (f copyFile) addTo(builder fsBuilder) error {
+	return builder.Add(f.Dest, func() (fs.File, error) {
+		return f.Fsys.Open(f.Source)
 	})
 }
 
-func (b *fsBuilder) addFilesTo(
-	dir string,
-	files []string,
-	nameFn nameFunc,
-) error {
-	err := b.MkdirAll(dir)
-	if err != nil {
-		return err
-	}
+var _ fsEntry = symlink{}
 
-	for idx, path := range files {
-		name := filepath.Join(dir, nameFn(idx, path))
-
-		err := b.addFilePathAs(name, path)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+type symlink struct {
+	Target   string
+	Path     string
+	MayExist bool
 }
 
-func (b *fsBuilder) symlinkTo(dir string, paths []string) error {
-	for _, path := range paths {
-		if path == dir {
-			continue
-		}
-
-		path := strings.TrimPrefix(path, string(filepath.Separator))
-		if path == "" || path == dir {
-			continue
-		}
-
-		err := b.MkdirAll(filepath.Dir(path))
-		if err != nil {
-			return err
-		}
-
-		err = b.Symlink(dir, path)
-		if err != nil {
-			return err
-		}
+func (s symlink) addTo(builder fsBuilder) error {
+	err := builder.Symlink(s.Target, s.Path)
+	if err != nil && (!s.MayExist || !errors.Is(err, virtfs.ErrFileExist)) {
+		return err
 	}
 
 	return nil

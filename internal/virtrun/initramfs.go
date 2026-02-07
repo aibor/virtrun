@@ -6,22 +6,24 @@ package virtrun
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
 	"os"
-	"slices"
+	"path/filepath"
+	"strings"
 
-	"github.com/aibor/cpio"
 	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/internal/virtfs"
 )
 
 const (
-	dataDir    = "/data"
-	libsDir    = "/lib"
-	modulesDir = "/lib/modules"
+	dataDir       = "data"
+	libsDir       = "lib"
+	modulesDir    = "lib/modules"
+	initPath      = "init"
+	mainPath      = "main"
+	archivePrefix = "virtrun-initramfs"
 )
 
 // Initramfs specifies the input for initramfs archive creation.
@@ -39,6 +41,9 @@ type Initramfs struct {
 	// modulesDir directory.
 	Modules []string
 
+	// Fsys is the file system all files should be copied from.
+	Fsys fs.FS
+
 	// StandaloneInit determines if the main Binary should be called as init
 	// directly. The main binary is responsible for a clean shutdown of the
 	// system.
@@ -48,6 +53,14 @@ type Initramfs struct {
 	// returned by [BuildInitramfsArchive]. If set to true, the file is not
 	// removed. Instead, a log message with the file's path is printed.
 	Keep bool
+}
+
+func (i Initramfs) binaries() []string {
+	binaryFiles := make([]string, 0, 1+len(i.Files))
+	binaryFiles = append(binaryFiles, i.Binary)
+	binaryFiles = append(binaryFiles, i.Files...)
+
+	return binaryFiles
 }
 
 // BuildInitramfsArchive creates a new initramfs CPIO archive file.
@@ -65,14 +78,24 @@ type Initramfs struct {
 func BuildInitramfsArchive(
 	ctx context.Context,
 	cfg Initramfs,
-	initFileOpenFn virtfs.FileOpenFunc,
+	initProg fs.File,
 ) (string, func() error, error) {
-	fsys, err := buildInitramfsArchive(ctx, cfg, initFileOpenFn)
+	libs, err := sys.CollectLibsFor(ctx, cfg.binaries()...)
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("collect libs: %w", err)
 	}
 
-	path, err := writeFSToTempFile(fsys, "")
+	fsys := virtfs.New()
+
+	entries := fsEntries(cfg, libs, initProg)
+	for _, entry := range entries {
+		err := entry.addTo(fsys)
+		if err != nil {
+			return "", nil, fmt.Errorf("add to fs: %w", err)
+		}
+	}
+
+	path, err := writeFSToTempFile(fsys, "", archivePrefix)
 	if err != nil {
 		return "", nil, err
 	}
@@ -96,113 +119,89 @@ func BuildInitramfsArchive(
 	return path, removeFn, nil
 }
 
-// buildInitramfsArchive creates a new CPIO archive file according to the given
-// [Initramfs] spec.
-func buildInitramfsArchive(
-	ctx context.Context,
-	cfg Initramfs,
-	initFileOpenFn virtfs.FileOpenFunc,
-) (*virtfs.FS, error) {
-	binaryFiles := make([]string, 0, 1+len(cfg.Files))
-	binaryFiles = append(binaryFiles, cfg.Binary)
-	binaryFiles = append(binaryFiles, cfg.Files...)
-
-	libs, err := sys.CollectLibsFor(ctx, binaryFiles...)
-	if err != nil {
-		return nil, fmt.Errorf("collect libs: %w", err)
-	}
-
-	initFn := func(b *fsBuilder, name string) error {
-		return b.Add(name, initFileOpenFn)
-	}
-
-	// In standalone mode, the main file is supposed to work as a complete
-	// init matching our requirements.
-	if cfg.StandaloneInit {
-		initFn = func(b *fsBuilder, name string) error {
-			return b.Symlink("main", name)
-		}
-	}
-
-	fsys, err := buildVirtFS(cfg, libs, initFn)
-	if err != nil {
-		return nil, fmt.Errorf("build: %w", err)
-	}
-
-	return fsys, nil
-}
-
-// buildVirtFS creates a new [virtfs.FS].
-//
-// It does not read any source files. Only the FS file tree is created.
-func buildVirtFS(
+func fsEntries(
 	cfg Initramfs,
 	libs sys.LibCollection,
-	initFn func(*fsBuilder, string) error,
-) (*virtfs.FS, error) {
-	fsys := virtfs.New()
-	builder := fsBuilder{fsys}
-
-	err := builder.addFilePathAs("main", cfg.Binary)
-	if err != nil {
-		return nil, err
+	initProg fs.File,
+) []fsEntry {
+	entries := []fsEntry{
+		directory(dataDir),
+		directory(libsDir),
+		directory(modulesDir),
+		directory("run"),
+		directory("tmp"),
 	}
 
-	err = initFn(&builder, "init")
-	if err != nil {
-		return nil, err
+	binaryPath := initPath
+	if initProg != nil {
+		binaryPath = mainPath
+
+		entries = append(entries, file{
+			Path: initPath,
+			OpenFn: func() (fs.File, error) {
+				return initProg, nil
+			},
+		})
 	}
 
-	err = builder.addFilesTo(dataDir, cfg.Files, baseName)
-	if err != nil {
-		return nil, err
+	entries = append(entries, copyFile{
+		Source: deroot(cfg.Binary),
+		Dest:   binaryPath,
+		Fsys:   cfg.Fsys,
+	})
+
+	for _, path := range cfg.Files {
+		entries = append(entries, copyFile{
+			Source: deroot(path),
+			Dest:   replaceDir(dataDir, path),
+			Fsys:   cfg.Fsys,
+		})
 	}
 
-	err = builder.addFilesTo(modulesDir, cfg.Modules, modName)
-	if err != nil {
-		return nil, err
+	for idx, path := range cfg.Modules {
+		name := fmt.Sprintf("%04d-%s", idx, filepath.Base(path))
+		entries = append(entries, copyFile{
+			Source: deroot(path),
+			Dest:   replaceDir(modulesDir, name),
+			Fsys:   cfg.Fsys,
+		})
 	}
 
-	err = builder.addFilesTo(libsDir, slices.Collect(libs.Libs()), baseName)
-	if err != nil {
-		return nil, err
+	for path := range libs.Libs() {
+		entries = append(entries, copyFile{
+			Source: deroot(path),
+			Dest:   replaceDir(libsDir, path),
+			Fsys:   cfg.Fsys,
+		})
 	}
 
-	err = builder.symlinkTo(libsDir, slices.Collect(libs.SearchPaths()))
-	if err != nil && !errors.Is(err, virtfs.ErrFileExist) {
-		return nil, err
-	}
-
-	for _, dir := range []string{"/run", "/tmp"} {
-		err := builder.MkdirAll(dir)
-		if err != nil {
-			return nil, err
+	for path := range libs.SearchPaths() {
+		path = deroot(path)
+		if path == libsDir {
+			continue
 		}
+
+		entries = append(entries,
+			directory(filepath.Dir(path)),
+			symlink{
+				Target:   root(libsDir),
+				Path:     path,
+				MayExist: true,
+			},
+		)
 	}
 
-	return fsys, nil
+	return entries
 }
 
-// writeFSToTempFile writes the [fs.FS] as CPIO archive into a new temporary
-// file and returns the absolute path to this file.
-//
-// If the given dir name is not empty, the file is created in this directory.
-// Otherwise the default tempdir is used. See [os.CreateTemp].
-func writeFSToTempFile(fsys fs.FS, dir string) (string, error) {
-	file, err := os.CreateTemp(dir, "initramfs")
-	if err != nil {
-		return "", fmt.Errorf("create archive file: %w", err)
-	}
-	defer file.Close()
+func root(s string) string {
+	return filepath.Join(string(filepath.Separator), s)
+}
 
-	writer := cpio.NewWriter(file)
-	defer writer.Close()
+func deroot(s string) string {
+	return strings.TrimPrefix(s, string(filepath.Separator))
+}
 
-	err = writer.AddFS(fsys)
-	if err != nil {
-		_ = os.Remove(file.Name())
-		return "", fmt.Errorf("write archive: %w", err)
-	}
-
-	return file.Name(), nil
+func replaceDir(dir, path string) string {
+	return filepath.Join(dir, filepath.Base(path))
 }

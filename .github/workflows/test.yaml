@@ -167,6 +167,7 @@ jobs:
             -skip "${{ env.SKIP }}" \
             -covermode atomic \
             -coverprofile coverage.txt \
+            -coverpkg $(go list ./internal/... | tr '\n' ,) \
             ./internal/... \
             | go-junit-report -set-exit-code -iocopy -out junit-report.xml
 

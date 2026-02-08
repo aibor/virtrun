@@ -8,9 +8,18 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/aibor/virtrun/internal/sys"
 )
 
 const minAdditionalFileDescriptor = 3
+
+const (
+	machineTypeMicroVM = "microvm"
+	machineTypePC      = "pc"
+	machineTypeQ35     = "q35"
+	machineTypeVirt    = "virt"
+)
 
 // CommandSpec defines the parameters for a [Command].
 type CommandSpec struct {
@@ -64,6 +73,51 @@ type CommandSpec struct {
 	Verbose bool
 }
 
+// AddDefaultsFor adds architecture specific default values to the given spec if
+// the fields are not set yet.
+func (c *CommandSpec) AddDefaultsFor(arch sys.Arch) error {
+	var (
+		executable    string
+		machine       string
+		transportType TransportType
+	)
+
+	switch arch {
+	case sys.AMD64:
+		executable = "qemu-system-x86_64"
+		machine = machineTypeQ35
+		transportType = TransportTypePCI
+	case sys.ARM64:
+		executable = "qemu-system-aarch64"
+		machine = machineTypeVirt
+		transportType = TransportTypeMMIO
+	case sys.RISCV64:
+		executable = "qemu-system-riscv64"
+		machine = machineTypeVirt
+		transportType = TransportTypeMMIO
+	default:
+		return sys.ErrArchNotSupported
+	}
+
+	if c.Executable == "" {
+		c.Executable = executable
+	}
+
+	if c.Machine == "" {
+		c.Machine = machine
+	}
+
+	if c.TransportType == "" {
+		c.TransportType = transportType
+	}
+
+	if !c.NoKVM {
+		c.NoKVM = !arch.KVMAvailable()
+	}
+
+	return nil
+}
+
 // Validate checks for known incompatibilities.
 func (c *CommandSpec) Validate() error {
 	if !c.TransportType.isKnown() {
@@ -73,7 +127,7 @@ func (c *CommandSpec) Validate() error {
 	}
 
 	switch c.Machine {
-	case "microvm":
+	case machineTypeMicroVM:
 		switch {
 		case c.TransportType == TransportTypePCI:
 			return &ArgumentError{"microvm does not support pci transport"}
@@ -83,11 +137,11 @@ func (c *CommandSpec) Validate() error {
 				"microvm supports only one isa serial port, used for stdio",
 			}
 		}
-	case "virt":
+	case machineTypeVirt:
 		if c.TransportType == TransportTypeISA {
 			return &ArgumentError{"virt requires virtio-mmio"}
 		}
-	case "q35", "pc":
+	case machineTypeQ35, machineTypePC:
 		if c.TransportType == TransportTypeMMIO {
 			return &ArgumentError{
 				c.Machine + " does not work with virtio-mmio",

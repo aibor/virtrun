@@ -38,7 +38,7 @@ func TestInits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.arch), func(t *testing.T) {
-			_, err := initProgFor(tt.arch)
+			_, err := InitProgFor(tt.arch)
 			require.ErrorIs(t, err, tt.expectedErr)
 		})
 	}

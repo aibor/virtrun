@@ -32,7 +32,7 @@ func TestInitramfs(t *testing.T) {
 	require.NoError(t, err)
 
 	spec := virtrun.Initramfs{
-		Binary: "binary",
+		Executable: "binary",
 		Files: []string{
 			"some/file1",
 			"other/file2",
@@ -42,13 +42,12 @@ func TestInitramfs(t *testing.T) {
 			"modules/a.ko.zst",
 		},
 		Fsys: testFS,
+		Init: init,
 	}
 
-	path, rm, err := virtrun.BuildInitramfsArchive(t.Context(), spec, init)
+	t.Setenv("TMPDIR", t.TempDir())
+	path, err := virtrun.BuildInitramfsArchive(t.Context(), spec)
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		require.NoError(t, rm())
-	})
 
 	archive, err := os.Open(path)
 	require.NoError(t, err)

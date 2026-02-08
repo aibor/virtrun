@@ -6,11 +6,32 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/aibor/virtrun/internal/cmd"
 )
 
+func run() int {
+	ctx, cancel := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGABRT,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+		syscall.SIGHUP,
+	)
+	defer cancel()
+
+	return cmd.Run(ctx, os.Args, cmd.IO{
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	})
+}
+
 func main() {
-	os.Exit(cmd.Run(os.Args, os.Stdin, os.Stdout, os.Stderr))
+	os.Exit(run())
 }

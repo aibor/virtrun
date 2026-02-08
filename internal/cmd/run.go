@@ -11,8 +11,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
@@ -21,8 +19,15 @@ import (
 
 const localConfigFile = ".virtrun-args"
 
-func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	flags := newFlags(stderr)
+// IO provides input and output details for the command.
+type IO struct {
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
+func run(ctx context.Context, args []string, cfg IO) error {
+	flags := newFlags(cfg.Stderr)
 
 	confArgs, err := LocalConfigArgs(os.DirFS("."), localConfigFile)
 	if err != nil {
@@ -52,19 +57,9 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		logLevel = slog.LevelDebug
 	}
 
-	setupLogging(stderr, logLevel)
+	setupLogging(cfg.Stderr, logLevel)
 
-	ctx, cancel := signal.NotifyContext(
-		context.Background(),
-		syscall.SIGABRT,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-		syscall.SIGHUP,
-	)
-	defer cancel()
-
-	err = virtrun.Run(ctx, flags.spec, stdin, stdout, stderr)
+	err = virtrun.Run(ctx, flags.spec, cfg.Stdin, cfg.Stdout, cfg.Stderr)
 	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
@@ -119,7 +114,7 @@ func handleRunError(err error) int {
 }
 
 // Run is the main entry point for the CLI command.
-func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	err := run(args, stdin, stdout, stderr)
+func Run(ctx context.Context, args []string, cfg IO) int {
+	err := run(ctx, args, cfg)
 	return handleRunError(err)
 }

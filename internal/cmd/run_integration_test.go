@@ -100,10 +100,10 @@ func TestIntegration(t *testing.T) {
 
 			var stdOut, stdErr bytes.Buffer
 
-			stdOutW := &synced{Writer: &stdOut}
-			stdErrW := &synced{Writer: &stdErr}
-
-			exitCode := cmd.Run(args, nil, stdOutW, stdErrW)
+			exitCode := cmd.Run(t.Context(), args, cmd.IO{
+				Stdout: &synced{Writer: &stdOut},
+				Stderr: &synced{Writer: &stdErr},
+			})
 
 			assert.Equal(t, tt.expectedExitCode, exitCode, "exit code")
 

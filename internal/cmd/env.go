@@ -43,3 +43,26 @@ func LocalConfigArgs(fsys fs.FS, file string) ([]string, error) {
 
 	return args, nil
 }
+
+// MergedArgs merges arguments from all sources.
+//
+// Order of precedence (from higher to
+// lower) is:
+// - CLI args
+// - local config file
+// - environment variable.
+func MergedArgs(
+	cliArgs []string,
+	fsys fs.FS,
+	confFile string,
+) ([]string, error) {
+	args, err := LocalConfigArgs(fsys, confFile)
+	if err != nil {
+		return nil, fmt.Errorf("local config: %w", err)
+	}
+
+	args = append(args, cliArgs[1:]...)
+	args = append(EnvArgs(), args...)
+
+	return args, nil
+}

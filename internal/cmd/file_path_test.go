@@ -14,12 +14,33 @@ import (
 )
 
 func TestFilePath_Set(t *testing.T) {
-	var path cmd.FilePath
+	tests := []struct {
+		name        string
+		input       string
+		expected    string
+		expectedErr error
+	}{
+		{
+			name:        "empty",
+			expectedErr: sys.ErrEmptyPath,
+		},
+		{
+			name:     "valid",
+			input:    "path",
+			expected: sys.MustAbsolutePath("path"),
+		},
+	}
 
-	require.NoError(t, path.Set("path"))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var path cmd.FilePath
 
-	expected := cmd.FilePath(sys.MustAbsolutePath("path"))
-	assert.Equal(t, expected, path)
+			err := path.Set(tt.input)
+			require.ErrorIs(t, err, tt.expectedErr)
+
+			assert.Equal(t, tt.expected, string(path))
+		})
+	}
 }
 
 func TestFilePath_String(t *testing.T) {

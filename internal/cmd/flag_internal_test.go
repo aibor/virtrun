@@ -10,18 +10,16 @@ import (
 
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
-	"github.com/aibor/virtrun/internal/virtrun"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestFlags_ParseArgs(t *testing.T) {
 	tests := []struct {
-		name              string
-		args              []string
-		expectedSpec      virtrun.Spec
-		expectedDebugFlag bool
-		expecterErr       error
+		name          string
+		args          []string
+		expectedFlags *flags
+		expecterErr   error
 	}{
 		{
 			name: "help",
@@ -35,7 +33,12 @@ func TestFlags_ParseArgs(t *testing.T) {
 			args: []string{
 				"-version",
 			},
-			expecterErr: ErrHelp,
+			expectedFlags: &flags{
+				CPUType: "max",
+				Memory:  256,
+				NumCPU:  1,
+				Version: true,
+			},
 		},
 		{
 			name: "no kernel",
@@ -61,21 +64,17 @@ func TestFlags_ParseArgs(t *testing.T) {
 				"-addFile=/third/path",
 				"bin.test",
 			},
-			expectedSpec: virtrun.Spec{
-				Initramfs: virtrun.Initramfs{
-					Binary: sys.MustAbsolutePath("bin.test"),
-					Files: []string{
-						"/otherpath",
-						"/third/path",
-					},
+			expectedFlags: &flags{
+				ExecutablePath: sys.MustAbsolutePath("bin.test"),
+				DataFilePaths: []string{
+					"/otherpath",
+					"/third/path",
 				},
-				Qemu: virtrun.Qemu{
-					Kernel:   "/boot/this",
-					CPU:      "max",
-					Memory:   256,
-					SMP:      1,
-					InitArgs: []string{},
-				},
+				KernelPath: "/boot/this",
+				CPUType:    "max",
+				Memory:     256,
+				NumCPU:     1,
+				InitArgs:   []string{},
 			},
 		},
 		{
@@ -85,49 +84,14 @@ func TestFlags_ParseArgs(t *testing.T) {
 				"-debug",
 				"bin.test",
 			},
-			expectedSpec: virtrun.Spec{
-				Initramfs: virtrun.Initramfs{
-					Binary: sys.MustAbsolutePath("bin.test"),
-				},
-				Qemu: virtrun.Qemu{
-					Kernel:   "/boot/this",
-					CPU:      "max",
-					Memory:   256,
-					SMP:      1,
-					InitArgs: []string{},
-				},
-			},
-			expectedDebugFlag: true,
-		},
-		{
-			name: "simple go test invocation",
-			args: []string{
-				"-kernel=/boot/this",
-				"bin.test",
-				"-test.paniconexit0",
-				"-test.v=true",
-				"-test.timeout=10m0s",
-				"-test.coverprofile=/some/file/cover.out",
-			},
-			expectedSpec: virtrun.Spec{
-				Initramfs: virtrun.Initramfs{
-					Binary: sys.MustAbsolutePath("bin.test"),
-				},
-				Qemu: virtrun.Qemu{
-					Kernel: "/boot/this",
-					CPU:    "max",
-					Memory: 256,
-					SMP:    1,
-					InitArgs: []string{
-						"-test.paniconexit0",
-						"-test.v=true",
-						"-test.timeout=10m0s",
-						"-test.coverprofile=/dev/virtrun2",
-					},
-					AdditionalOutputFiles: []string{
-						"/some/file/cover.out",
-					},
-				},
+			expectedFlags: &flags{
+				ExecutablePath: sys.MustAbsolutePath("bin.test"),
+				KernelPath:     "/boot/this",
+				CPUType:        "max",
+				Memory:         256,
+				NumCPU:         1,
+				InitArgs:       []string{},
+				Debug:          true,
 			},
 		},
 		{
@@ -152,32 +116,29 @@ func TestFlags_ParseArgs(t *testing.T) {
 				"-test.timeout=10m0s",
 				"-test.coverprofile=/some/file/cover.out",
 			},
-			expectedSpec: virtrun.Spec{
-				Initramfs: virtrun.Initramfs{
-					Binary: sys.MustAbsolutePath("bin.test"),
-					Files: []string{
-						"/file2",
-						"/dir/file3",
-					},
-					StandaloneInit: true,
-					Keep:           true,
+			expectedFlags: &flags{
+				ExecutablePath: sys.MustAbsolutePath("bin.test"),
+				DataFilePaths: []string{
+					"/file2",
+					"/dir/file3",
 				},
-				Qemu: virtrun.Qemu{
-					Kernel:        "/boot/this",
-					CPU:           "host",
-					Machine:       "pc",
-					TransportType: qemu.TransportTypeMMIO,
-					Memory:        269,
-					NoKVM:         true,
-					SMP:           7,
-					InitArgs: []string{
-						"-test.paniconexit0",
-						"-test.v=true",
-						"-test.timeout=10m0s",
-						"-test.coverprofile=/some/file/cover.out",
-					},
-					Verbose: true,
+				NoGoTestFlags: true,
+				Standalone:    true,
+				KeepInitramfs: true,
+				KernelPath:    "/boot/this",
+				CPUType:       "host",
+				Machine:       "pc",
+				TransportType: qemu.TransportTypeMMIO,
+				Memory:        269,
+				NoKVM:         true,
+				NumCPU:        7,
+				InitArgs: []string{
+					"-test.paniconexit0",
+					"-test.v=true",
+					"-test.timeout=10m0s",
+					"-test.coverprofile=/some/file/cover.out",
 				},
+				GuestVerbose: true,
 			},
 		},
 		{
@@ -190,21 +151,17 @@ func TestFlags_ParseArgs(t *testing.T) {
 				"-x",
 				"-standalone",
 			},
-			expectedSpec: virtrun.Spec{
-				Initramfs: virtrun.Initramfs{
-					Binary: sys.MustAbsolutePath("bin.test"),
-				},
-				Qemu: virtrun.Qemu{
-					Kernel: "/boot/this",
-					CPU:    "max",
-					Memory: 256,
-					SMP:    1,
-					InitArgs: []string{
-						"-test.paniconexit0",
-						"another.file",
-						"-x",
-						"-standalone",
-					},
+			expectedFlags: &flags{
+				ExecutablePath: sys.MustAbsolutePath("bin.test"),
+				KernelPath:     "/boot/this",
+				CPUType:        "max",
+				Memory:         256,
+				NumCPU:         1,
+				InitArgs: []string{
+					"-test.paniconexit0",
+					"another.file",
+					"-x",
+					"-standalone",
 				},
 			},
 		},
@@ -212,17 +169,14 @@ func TestFlags_ParseArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags := newFlags(io.Discard)
-
-			err := flags.ParseArgs(tt.args)
+			flags, err := parseArgs(tt.args, io.Discard)
 			require.ErrorIs(t, err, tt.expecterErr)
 
 			if tt.expecterErr != nil {
 				return
 			}
 
-			assert.Equal(t, tt.expectedSpec, flags.spec, "spec")
-			assert.Equal(t, tt.expectedDebugFlag, flags.debug, "debug flag")
+			assert.Equal(t, tt.expectedFlags, flags)
 		})
 	}
 }

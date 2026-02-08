@@ -8,10 +8,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"runtime/debug"
+	"log/slog"
 
+	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
-	"github.com/aibor/virtrun/internal/virtrun"
 )
 
 const (
@@ -44,228 +44,207 @@ argument per line.
 `
 )
 
-type flags struct {
-	spec    virtrun.Spec
-	flagSet *flag.FlagSet
-
-	version             bool
-	debug               bool
-	noGoTestFlagRewrite bool
+type flagSet struct {
+	*flag.FlagSet
 }
 
-func newFlags(output io.Writer) *flags {
-	flags := &flags{
-		spec: virtrun.Spec{
-			Qemu: virtrun.Qemu{
-				CPU:    cpuDefault,
-				Memory: memDefault,
-				SMP:    smpDefault,
-			},
-		},
-	}
+func newFlagSet(name string, flags *flags) *flagSet {
+	flagSet := flagSet{flag.NewFlagSet(name, flag.ContinueOnError)}
 
-	flags.initFlagset(output)
+	flagSet.StringVar(&flags.QemuBin, "qemuBin", flags.QemuBin,
+		"QEMU binary to use (default depends on binary arch: qemu-system-*)")
 
-	return flags
-}
+	flagSet.FilePath(&flags.KernelPath, "kernel",
+		"path to kernel to use")
 
-func (f *flags) ParseArgs(args []string) error {
-	// Parses arguments up to the first one that is not prefixed with a "-" or
-	// is "--".
-	err := f.flagSet.Parse(args)
-	if err != nil {
-		return &ParseArgsError{msg: "flag parse: %w", err: err}
-	}
+	flagSet.StringVar(&flags.Machine, "machine", flags.Machine,
+		"QEMU machine type to use (default depends on binary arch)")
 
-	// With version flag, just print the version and exit. Using [ErrHelp]
-	// the main binary is supposed to return with a non error exit code.
-	if f.version {
-		err := f.printVersionInformation()
-		return &ParseArgsError{msg: "version requested", err: err}
-	}
+	flagSet.StringVar(&flags.CPUType, "cpu", flags.CPUType,
+		"QEMU CPU type to use")
 
-	if f.spec.Qemu.Kernel == "" {
-		return f.fail("no kernel given (use -kernel)", nil)
-	}
-
-	positionalArgs := f.flagSet.Args()
-
-	// First positional argument is supposed to be a binary file.
-	if len(positionalArgs) < 1 {
-		return f.fail("no binary given", nil)
-	}
-
-	binary, err := sys.AbsolutePath(positionalArgs[0])
-	if err != nil {
-		return f.fail("binary path", err)
-	}
-
-	f.spec.Initramfs.Binary = binary
-
-	// All further positional arguments after the binary file will be passed to
-	// the guest system's init program.
-	f.spec.Qemu.InitArgs = positionalArgs[1:]
-
-	// In order to be useful with "go test -exec", rewrite the file based flags
-	// so the output can be passed from guest to kernel via consoles.
-	if !f.noGoTestFlagRewrite {
-		initArgs, files := virtrun.RewriteGoTestFlagsPath(positionalArgs[1:])
-		f.spec.Qemu.InitArgs = initArgs
-		f.spec.Qemu.AdditionalOutputFiles = files
-	}
-
-	return nil
-}
-
-func (f *flags) initFlagset(output io.Writer) {
-	flagSet := flag.NewFlagSet(name, flag.ContinueOnError)
-	flagSet.SetOutput(output)
-	flagSet.Usage = f.usage
-
-	flagSet.StringVar(
-		&f.spec.Qemu.Executable,
-		"qemuBin",
-		f.spec.Qemu.Executable,
-		"QEMU binary to use (default depends on binary arch: qemu-system-*)",
-	)
-
-	flagSet.Var(
-		(*FilePath)(&f.spec.Qemu.Kernel),
-		"kernel",
-		"path to kernel to use",
-	)
-
-	flagSet.StringVar(
-		&f.spec.Qemu.Machine,
-		"machine",
-		f.spec.Qemu.Machine,
-		"QEMU machine type to use (default depends on binary arch)",
-	)
-
-	flagSet.StringVar(
-		&f.spec.Qemu.CPU,
-		"cpu",
-		f.spec.Qemu.CPU,
-		"QEMU CPU type to use",
-	)
-
-	flagSet.BoolVar(
-		&f.spec.Qemu.NoKVM,
-		"nokvm",
-		f.spec.Qemu.NoKVM,
+	flagSet.BoolVar(&flags.NoKVM, "nokvm", flags.NoKVM,
 		"disable hardware support (default is enabled if present and binary "+
-			"matches the host arch)",
-	)
+			"matches the host arch)")
 
-	flagSet.Var(
-		&f.spec.Qemu.TransportType,
-		"transport",
-		"io transport type: isa, pci, mmio (default depends on binary arch)",
-	)
+	flagSet.Var(&flags.TransportType, "transport",
+		"io transport type: isa, pci, mmio (default depends on binary arch)")
 
-	flagSet.BoolVar(
-		&f.spec.Qemu.Verbose,
-		"verbose",
-		f.spec.Qemu.Verbose,
-		"enable verbose guest system output",
-	)
+	flagSet.BoolVar(&flags.GuestVerbose, "verbose", flags.GuestVerbose,
+		"enable verbose guest system output")
 
-	flagSet.Var(
-		&limitedUintValue{
-			Value: &f.spec.Qemu.Memory,
-			min:   memMin,
-			max:   memMax,
-		},
-		"memory",
-		"memory (in MB) for the QEMU VM",
-	)
+	flagSet.LimitedUintVar(&flags.Memory, memMin, memMax, "memory",
+		"memory (in MB) for the QEMU VM")
 
-	flagSet.Var(
-		&limitedUintValue{
-			Value: &f.spec.Qemu.SMP,
-			min:   smpMin,
-			max:   smpMax,
-		},
-		"smp",
-		"number of CPUs for the QEMU VM",
-	)
+	flagSet.LimitedUintVar(&flags.NumCPU, smpMin, smpMax, "smp",
+		"number of CPUs for the QEMU VM")
 
-	flagSet.BoolVar(
-		&f.spec.Initramfs.StandaloneInit,
-		"standalone",
-		f.spec.Initramfs.StandaloneInit,
-		"run binary as init itself (must have virtrun supprot built in)",
-	)
+	flagSet.BoolVar(&flags.Standalone, "standalone", flags.Standalone,
+		"run binary as init itself (must have virtrun supprot built in)")
 
-	flagSet.BoolVar(
-		&f.noGoTestFlagRewrite,
-		"noGoTestFlagRewrite",
-		f.noGoTestFlagRewrite,
-		"disable automatic go test flag rewrite for file based output.",
-	)
+	flagSet.BoolVar(&flags.NoGoTestFlags, "noGoTestFlagRewrite",
+		flags.NoGoTestFlags,
+		"disable automatic go test flag rewrite for file based output.")
 
-	flagSet.BoolVar(
-		&f.spec.Initramfs.Keep,
-		"keepInitramfs",
-		f.spec.Initramfs.Keep,
+	flagSet.BoolVar(&flags.KeepInitramfs, "keepInitramfs", flags.KeepInitramfs,
 		"do not delete initramfs on exit. Intended for debugging. "+
-			"The path to the file is printed on stderr",
-	)
+			"The path to the file is printed on stderr")
 
-	flagSet.Var(
-		(*FilePathList)(&f.spec.Initramfs.Files),
-		"addFile",
+	flagSet.FilePathList(&flags.DataFilePaths, "addFile",
 		"file to add to guest's /data dir. Flag may be used more than once. "+
-			"Empty value clears the list.",
-	)
+			"Empty value clears the list.")
 
-	flagSet.Var(
-		(*FilePathList)(&f.spec.Initramfs.Modules),
-		"addModule",
+	flagSet.FilePathList(&flags.ModulePaths, "addModule",
 		"kernel module to add to guest. Flag may be used more than once. "+
-			"Empty value clears the list.",
-	)
+			"Empty value clears the list.")
 
-	flagSet.BoolVar(
-		&f.debug,
-		"debug",
-		f.debug,
-		"enable debug output",
-	)
+	flagSet.BoolVar(&flags.Debug, "debug", flags.Debug,
+		"enable debug output")
 
-	flagSet.BoolVar(
-		&f.version,
-		"version",
-		f.version,
-		"show version and exit",
-	)
+	flagSet.BoolVar(&flags.Version, "version", flags.Version,
+		"show version and exit")
 
-	f.flagSet = flagSet
+	return &flagSet
+}
+
+func (f *flagSet) LimitedUintVar(
+	value *uint64,
+	lower, upper uint64,
+	name string,
+	usage string,
+) {
+	flagValue := LimitedUintValue{
+		Value: value,
+		Lower: lower,
+		Upper: upper,
+	}
+	f.Var(&flagValue, name, usage)
+}
+
+func (f *flagSet) FilePath(value *string, name string, usage string) {
+	f.Var((*FilePath)(value), name, usage)
+}
+
+func (f *flagSet) FilePathList(value *[]string, name string, usage string) {
+	f.Var((*FilePathList)(value), name, usage)
 }
 
 // fail fails like flag does. It prints the error first and then usage.
-func (f *flags) fail(msg string, err error) error {
+func (f *flagSet) fail(msg string, err error) error {
 	err = &ParseArgsError{msg: msg, err: err}
-	fmt.Fprintln(f.flagSet.Output(), err.Error())
+	fmt.Fprintln(f.Output(), err.Error())
 
-	f.flagSet.Usage()
+	f.Usage()
 
 	return err
 }
 
-func (f *flags) printVersionInformation() error {
-	buildInfo, ok := debug.ReadBuildInfo()
-	if !ok {
-		return ErrReadBuildInfo
-	}
-
-	fmt.Fprintf(f.flagSet.Output(), "Version: %s\n", buildInfo.Main.Version)
-
-	return ErrHelp
+// flags is a collection of all defined command flags.
+type flags struct {
+	QemuBin        string
+	CPUType        string
+	Machine        string
+	Memory         uint64
+	NumCPU         uint64
+	TransportType  qemu.TransportType
+	KernelPath     string
+	ExecutablePath string
+	DataFilePaths  []string
+	ModulePaths    []string
+	InitArgs       []string
+	Standalone     bool
+	KeepInitramfs  bool
+	NoKVM          bool
+	GuestVerbose   bool
+	NoGoTestFlags  bool
+	Version        bool
+	Debug          bool
 }
 
-func (f *flags) usage() {
-	fmt.Fprint(f.flagSet.Output(), usageMessage)
-	fmt.Fprintln(f.flagSet.Output(), "\nFlags:")
-	f.flagSet.PrintDefaults()
+// parseArgs parses the given argument list into [flags]. Additional error
+// output is written to the given writer.
+func parseArgs(args []string, output io.Writer) (*flags, error) {
+	flags := &flags{
+		CPUType: cpuDefault,
+		Memory:  memDefault,
+		NumCPU:  smpDefault,
+	}
+
+	flagSet := newFlagSet(name, flags)
+	flagSet.SetOutput(output)
+	flagSet.Usage = func() {
+		fmt.Fprint(output, usageMessage)
+		fmt.Fprintln(output, "\nFlags:")
+		flagSet.PrintDefaults()
+	}
+
+	// Parses arguments up to the first one that is not prefixed with a "-" or
+	// is "--".
+	err := flagSet.Parse(args)
+	if err != nil {
+		return nil, &ParseArgsError{msg: "flag parse: %w", err: err}
+	}
+
+	// With version flag, just print the version and exit.
+	if flags.Version {
+		return flags, nil
+	}
+
+	if flags.KernelPath == "" {
+		return nil, flagSet.fail("no kernel given (use -kernel)", nil)
+	}
+
+	positionalArgs := flagSet.Args()
+
+	// First positional argument is supposed to be a binary file.
+	if len(positionalArgs) < 1 {
+		return nil, flagSet.fail("no binary given", nil)
+	}
+
+	flags.ExecutablePath, err = sys.AbsolutePath(positionalArgs[0])
+	if err != nil {
+		return nil, flagSet.fail("binary path", err)
+	}
+
+	// All further positional arguments after the binary file will be passed to
+	// the guest system's init program.
+	flags.InitArgs = positionalArgs[1:]
+
+	return flags, nil
+}
+
+func (f *flags) logLevel() slog.Level {
+	if f.Debug {
+		return slog.LevelDebug
+	}
+
+	return slog.LevelWarn
+}
+
+func (f *flags) validateFilePaths() error {
+	err := ValidateFilePath(f.KernelPath)
+	if err != nil {
+		return fmt.Errorf("kernel file: %w", err)
+	}
+
+	for _, file := range f.DataFilePaths {
+		err := ValidateFilePath(file)
+		if err != nil {
+			return fmt.Errorf("additional file: %w", err)
+		}
+	}
+
+	for _, file := range f.ModulePaths {
+		err := ValidateFilePath(file)
+		if err != nil {
+			return fmt.Errorf("module: %w", err)
+		}
+	}
+
+	err = ValidateFilePath(f.ExecutablePath)
+	if err != nil {
+		return fmt.Errorf("main binary: %w", err)
+	}
+
+	return nil
 }

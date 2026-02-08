@@ -8,8 +8,6 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
-	"log/slog"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -28,9 +26,9 @@ const (
 
 // Initramfs specifies the input for initramfs archive creation.
 type Initramfs struct {
-	// Binary is the main binary that is either called directly or by the init
-	// program depending on the StandaloneInit flag.
-	Binary string
+	// Executable is the main binary that is either executed directly or by the
+	// init program depending on the presence of [Initramfs.Init].
+	Executable string
 
 	// Files is a list of any additional files that should be added to the
 	// dataDir directory. For ELF files the required dynamic libraries are
@@ -44,28 +42,23 @@ type Initramfs struct {
 	// Fsys is the file system all files should be copied from.
 	Fsys fs.FS
 
-	// StandaloneInit determines if the main Binary should be called as init
-	// directly. The main binary is responsible for a clean shutdown of the
-	// system.
-	StandaloneInit bool
-
-	// Keep determines if the archive file is removed by the cleanup function
-	// returned by [BuildInitramfsArchive]. If set to true, the file is not
-	// removed. Instead, a log message with the file's path is printed.
-	Keep bool
+	// Init provides the init program. If not set, the [Initramfs.Executable] is
+	// used as init program itself and expected to handle system setup and clean
+	// shutdown.
+	Init fs.File
 }
 
-func (i Initramfs) binaries() []string {
-	binaryFiles := make([]string, 0, 1+len(i.Files))
-	binaryFiles = append(binaryFiles, i.Binary)
-	binaryFiles = append(binaryFiles, i.Files...)
+func (i Initramfs) executables() []string {
+	files := make([]string, 0, 1+len(i.Files))
+	files = append(files, i.Executable)
+	files = append(files, i.Files...)
 
-	return binaryFiles
+	return files
 }
 
 // BuildInitramfsArchive creates a new initramfs CPIO archive file.
 //
-// The archive consists of a main binary that is either called directly or
+// The archive consists of a main executable that is either executed directly or
 // by the init program. All other files are added to the dataDir directory.
 // Kernel modules are added to modulesDir directory. For all ELF files the
 // dynamically linked shared objects are collected and added to the libsDir
@@ -75,54 +68,33 @@ func (i Initramfs) binaries() []string {
 // The CPIO archive is written to [os.TempDir]. The path to the file is
 // returned along with a cleanup function. The caller is responsible to call
 // the function once the archive file is no longer needed.
-func BuildInitramfsArchive(
-	ctx context.Context,
-	cfg Initramfs,
-	initProg fs.File,
-) (string, func() error, error) {
-	libs, err := sys.CollectLibsFor(ctx, cfg.binaries()...)
+func BuildInitramfsArchive(ctx context.Context, cfg Initramfs) (string, error) {
+	libs, err := sys.CollectLibsFor(ctx, cfg.executables()...)
 	if err != nil {
-		return "", nil, fmt.Errorf("collect libs: %w", err)
+		return "", fmt.Errorf("collect libs: %w", err)
 	}
 
 	fsys := virtfs.New()
 
-	entries := fsEntries(cfg, libs, initProg)
+	entries := fsEntries(cfg, libs)
 	for _, entry := range entries {
 		err := entry.addTo(fsys)
 		if err != nil {
-			return "", nil, fmt.Errorf("add to fs: %w", err)
+			return "", fmt.Errorf("add to fs: %w", err)
 		}
 	}
 
 	path, err := WriteToTempFile(fsys, "", archivePrefix)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
-	slog.Debug("Created initramfs archive", slog.String("path", path))
-
-	var removeFn func() error
-
-	if cfg.Keep {
-		removeFn = func() error {
-			slog.Info("Keep initramfs archive", slog.String("path", path))
-			return nil
-		}
-	} else {
-		removeFn = func() error {
-			slog.Debug("Remove initramfs archive", slog.String("path", path))
-			return os.Remove(path)
-		}
-	}
-
-	return path, removeFn, nil
+	return path, nil
 }
 
 func fsEntries(
 	cfg Initramfs,
 	libs sys.LibCollection,
-	initProg fs.File,
 ) []fsEntry {
 	entries := []fsEntry{
 		directory(dataDir),
@@ -132,21 +104,21 @@ func fsEntries(
 		directory("tmp"),
 	}
 
-	binaryPath := initPath
-	if initProg != nil {
-		binaryPath = mainPath
+	executablePath := initPath
+	if cfg.Init != nil {
+		executablePath = mainPath
 
 		entries = append(entries, file{
 			Path: initPath,
 			OpenFn: func() (fs.File, error) {
-				return initProg, nil
+				return cfg.Init, nil
 			},
 		})
 	}
 
 	entries = append(entries, copyFile{
-		Source: deroot(cfg.Binary),
-		Dest:   binaryPath,
+		Source: deroot(cfg.Executable),
+		Dest:   executablePath,
 		Fsys:   cfg.Fsys,
 	})
 

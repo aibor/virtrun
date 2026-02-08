@@ -9,13 +9,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"log/slog"
 	"os"
 	"runtime/debug"
 
+	"github.com/aibor/virtrun/internal/exitcode"
 	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/internal/virtrun"
 )
 
@@ -42,50 +45,132 @@ func newFlags(args []string, cfg IO) (*flags, error) {
 	return flags, nil
 }
 
+func newInitramfs(
+	ctx context.Context,
+	flags *flags,
+	arch sys.Arch,
+) (string, error) {
+	var initProg fs.File
+
+	// In standalone mode, the main file is supposed to work as a complete
+	// init matching our requirements.
+	if !flags.Standalone {
+		var err error
+
+		initProg, err = virtrun.InitProgFor(arch)
+		if err != nil {
+			return "", fmt.Errorf("get init program: %w", err)
+		}
+	}
+
+	initramfsSpec := virtrun.Initramfs{
+		Executable: flags.ExecutablePath,
+		Files:      flags.DataFilePaths,
+		Modules:    flags.ModulePaths,
+		Fsys:       os.DirFS("/"),
+		Init:       initProg,
+	}
+
+	initFSPath, err := virtrun.BuildInitramfsArchive(ctx, initramfsSpec)
+	if err != nil {
+		return "", fmt.Errorf("build initramfs: %w", err)
+	}
+
+	return initFSPath, nil
+}
+
+func newQemuCommand(
+	flags *flags,
+	arch sys.Arch,
+	initramfsPath string,
+) (*qemu.Command, error) {
+	qemuSpec := qemu.CommandSpec{
+		Executable:    flags.QemuBin,
+		Kernel:        flags.KernelPath,
+		Initramfs:     initramfsPath,
+		Machine:       flags.Machine,
+		CPU:           flags.CPUType,
+		SMP:           flags.NumCPU,
+		Memory:        flags.Memory,
+		TransportType: flags.TransportType,
+		InitArgs:      flags.InitArgs,
+		NoKVM:         flags.NoKVM,
+		Verbose:       flags.GuestVerbose,
+	}
+
+	err := qemuSpec.AddDefaultsFor(arch)
+	if err != nil {
+		return nil, fmt.Errorf("qemu defaults: %w", err)
+	}
+
+	// In order to be useful with "go test -exec", rewrite the file based flags
+	// so the output can be passed from guest to kernel via consoles.
+	if !flags.NoGoTestFlags {
+		qemuSpec.RewriteGoTestFlagsPath()
+	}
+
+	cmd, err := qemu.NewCommand(qemuSpec, exitcode.Parse)
+	if err != nil {
+		return nil, fmt.Errorf("new qemu command: %w", err)
+	}
+
+	return cmd, nil
+}
+
 func run(ctx context.Context, flags *flags, cfg IO) error {
 	err := flags.validateFilePaths()
 	if err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 
-	var initArgs, outputs []string
-
-	// In order to be useful with "go test -exec", rewrite the file based flags
-	// so the output can be passed from guest to kernel via consoles.
-	if !flags.NoGoTestFlags {
-		initArgs, outputs = virtrun.RewriteGoTestFlagsPath(flags.InitArgs)
-	}
-
-	spec := virtrun.Spec{
-		Qemu: virtrun.Qemu{
-			Executable:            flags.QemuBin,
-			Kernel:                flags.KernelPath,
-			Machine:               flags.Machine,
-			CPU:                   flags.CPUType,
-			SMP:                   flags.NumCPU,
-			Memory:                flags.Memory,
-			TransportType:         flags.TransportType,
-			InitArgs:              initArgs,
-			AdditionalOutputFiles: outputs,
-			NoKVM:                 flags.NoKVM,
-			Verbose:               flags.GuestVerbose,
-		},
-		Initramfs: virtrun.Initramfs{
-			Binary:         flags.ExecutablePath,
-			Files:          flags.DataFilePaths,
-			Modules:        flags.ModulePaths,
-			Fsys:           os.DirFS("/"),
-			StandaloneInit: flags.Standalone,
-			Keep:           flags.KeepInitramfs,
-		},
-	}
-
-	err = virtrun.Run(ctx, spec, cfg.Stdin, cfg.Stdout, cfg.Stderr)
+	arch, err := sys.ReadELFArch(flags.ExecutablePath)
 	if err != nil {
-		return fmt.Errorf("run: %w", err)
+		return fmt.Errorf("read main executable arch: %w", err)
+	}
+
+	initFSPath, err := newInitramfs(ctx, flags, arch)
+	if err != nil {
+		return err
+	}
+
+	slog.Debug("Created initramfs archive",
+		slog.String("path", initFSPath))
+
+	cmd, err := newQemuCommand(flags, arch, initFSPath)
+	if err != nil {
+		_ = os.Remove(initFSPath)
+		return err
+	}
+
+	slog.Debug("QEMU command",
+		slog.String("command", cmd.String()))
+
+	if flags.KeepInitramfs {
+		defer slog.Info("Preserving initramfs archive",
+			slog.String("path", initFSPath))
+	} else {
+		defer removeInitramfs(initFSPath)
+	}
+
+	err = cmd.Run(ctx, cfg.Stdin, cfg.Stdout, cfg.Stderr)
+	if err != nil {
+		return fmt.Errorf("qemu: %w", err)
 	}
 
 	return nil
+}
+
+func removeInitramfs(path string) {
+	slog.Debug("Removing initramfs archive", slog.String("path", path))
+
+	err := os.Remove(path)
+	if err != nil {
+		slog.Error(
+			"Failed to remove initramfs archive",
+			slog.String("path", path),
+			slog.Any("error", err),
+		)
+	}
 }
 
 func handleParseArgsError(err error) int {

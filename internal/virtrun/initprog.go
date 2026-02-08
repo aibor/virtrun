@@ -19,11 +19,11 @@ import (
 //go:embed init/bin/riscv64
 var initsFS embed.FS
 
-// initProgFor returns the pre-built init binary for the arch.
+// InitProgFor returns the pre-built init executable for the given architecture.
 //
 // The init binary is supposed to set up the system and execute the file
-// "/main". The returned file name can be opened with initFS.Open.
-func initProgFor(arch sys.Arch) (fs.File, error) {
+// "/main".
+func InitProgFor(arch sys.Arch) (fs.File, error) {
 	name := filepath.Join("init", "bin", arch.String())
 
 	file, err := initsFS.Open(name)

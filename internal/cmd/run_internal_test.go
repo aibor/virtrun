@@ -15,16 +15,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHandleRunError(t *testing.T) {
+func TestHandleParseArgsError(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          error
 		expectedCode int
 		expectedOut  string
 	}{
-		{
-			name: "no error",
-		},
 		{
 			name: "flag help",
 			err:  flag.ErrHelp,
@@ -34,6 +31,32 @@ func TestHandleRunError(t *testing.T) {
 			err:          &ParseArgsError{},
 			expectedCode: -1,
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdErr bytes.Buffer
+
+			log.SetOutput(&stdErr)
+			log.SetFlags(0)
+
+			actualExitCode := handleParseArgsError(tt.err)
+
+			assert.Equal(t, tt.expectedCode, actualExitCode,
+				"exit code should be as expected")
+			assert.Equal(t, tt.expectedOut, stdErr.String(),
+				"stderr output should be as expected")
+		})
+	}
+}
+
+func TestHandleRunError(t *testing.T) {
+	tests := []struct {
+		name         string
+		err          error
+		expectedCode int
+		expectedOut  string
+	}{
 		{
 			name: "qemu command host error",
 			err: &qemu.CommandError{

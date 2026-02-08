@@ -9,12 +9,13 @@ import (
 	"strconv"
 )
 
-type limitedUintValue struct {
-	Value    *uint64
-	min, max uint64
+// LimitedUintValue is a uint64 with lower and upper limits.
+type LimitedUintValue struct {
+	Value        *uint64
+	Lower, Upper uint64
 }
 
-func (u *limitedUintValue) String() string {
+func (u *LimitedUintValue) String() string {
 	if u.Value == nil {
 		return "0"
 	}
@@ -22,18 +23,19 @@ func (u *limitedUintValue) String() string {
 	return strconv.FormatUint(*u.Value, 10)
 }
 
-func (u *limitedUintValue) Set(s string) error {
+// Set sets [LimitedUintValue] to the given value, if valid.
+func (u *LimitedUintValue) Set(s string) error {
 	value, err := strconv.ParseUint(s, 10, 0)
 	if err != nil {
 		return fmt.Errorf("parse: %w", err)
 	}
 
-	if u.min > 0 && value < u.min {
-		return fmt.Errorf("%d < %d: %w", value, u.min, ErrValueOutOfRange)
+	if u.Lower > 0 && value < u.Lower {
+		return fmt.Errorf("%d < %d: %w", value, u.Lower, ErrValueOutOfRange)
 	}
 
-	if u.max > 0 && value > u.max {
-		return fmt.Errorf("%d > %d: %w", value, u.max, ErrValueOutOfRange)
+	if u.Upper > 0 && value > u.Upper {
+		return fmt.Errorf("%d > %d: %w", value, u.Upper, ErrValueOutOfRange)
 	}
 
 	*u.Value = value

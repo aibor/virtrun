@@ -9,8 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"os"
+	"runtime/debug"
 
 	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
@@ -26,40 +28,59 @@ type IO struct {
 	Stderr io.Writer
 }
 
-func run(ctx context.Context, args []string, cfg IO) error {
-	flags := newFlags(cfg.Stderr)
-
-	confArgs, err := LocalConfigArgs(os.DirFS("."), localConfigFile)
+func newFlags(args []string, cfg IO) (*flags, error) {
+	args, err := MergedArgs(args, os.DirFS("."), localConfigFile)
 	if err != nil {
-		return fmt.Errorf("local config: %w", err)
+		return nil, err
 	}
 
-	// Merge arguments from all sources. Order of precedence (from higher to
-	// lower) is:
-	// - CLI flags
-	// - local config file
-	// - environment variable
-	args = append(confArgs, args[1:]...)
-	args = append(EnvArgs(), args...)
-
-	err = flags.ParseArgs(args)
+	flags, err := parseArgs(args, cfg.Stderr)
 	if err != nil {
-		return fmt.Errorf("parse args: %w", err)
+		return nil, fmt.Errorf("parse args: %w", err)
 	}
 
-	err = validateFilePaths(&flags.spec)
+	return flags, nil
+}
+
+func run(ctx context.Context, flags *flags, cfg IO) error {
+	err := flags.validateFilePaths()
 	if err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 
-	logLevel := slog.LevelWarn
-	if flags.debug {
-		logLevel = slog.LevelDebug
+	var initArgs, outputs []string
+
+	// In order to be useful with "go test -exec", rewrite the file based flags
+	// so the output can be passed from guest to kernel via consoles.
+	if !flags.NoGoTestFlags {
+		initArgs, outputs = virtrun.RewriteGoTestFlagsPath(flags.InitArgs)
 	}
 
-	setupLogging(cfg.Stderr, logLevel)
+	spec := virtrun.Spec{
+		Qemu: virtrun.Qemu{
+			Executable:            flags.QemuBin,
+			Kernel:                flags.KernelPath,
+			Machine:               flags.Machine,
+			CPU:                   flags.CPUType,
+			SMP:                   flags.NumCPU,
+			Memory:                flags.Memory,
+			TransportType:         flags.TransportType,
+			InitArgs:              initArgs,
+			AdditionalOutputFiles: outputs,
+			NoKVM:                 flags.NoKVM,
+			Verbose:               flags.GuestVerbose,
+		},
+		Initramfs: virtrun.Initramfs{
+			Binary:         flags.ExecutablePath,
+			Files:          flags.DataFilePaths,
+			Modules:        flags.ModulePaths,
+			Fsys:           os.DirFS("/"),
+			StandaloneInit: flags.Standalone,
+			Keep:           flags.KeepInitramfs,
+		},
+	}
 
-	err = virtrun.Run(ctx, flags.spec, cfg.Stdin, cfg.Stdout, cfg.Stderr)
+	err = virtrun.Run(ctx, spec, cfg.Stdin, cfg.Stdout, cfg.Stderr)
 	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}
@@ -67,23 +88,23 @@ func run(ctx context.Context, args []string, cfg IO) error {
 	return nil
 }
 
-func handleRunError(err error) int {
-	if err == nil {
-		return 0
-	}
-
+func handleParseArgsError(err error) int {
 	// [ErrHelp] is returned when help is requested. So exit without error
 	// in this case.
 	if errors.Is(err, ErrHelp) {
 		return 0
 	}
 
-	exitCode := -1
-
 	// ParseArgs already prints errors, so we just exit without an error.
-	if errors.Is(err, &ParseArgsError{}) {
-		return exitCode
+	if !errors.Is(err, &ParseArgsError{}) {
+		slog.Error(err.Error())
 	}
+
+	return -1
+}
+
+func handleRunError(err error) int {
+	exitCode := -1
 
 	var qemuErr *qemu.CommandError
 	if errors.As(err, &qemuErr) {
@@ -104,17 +125,51 @@ func handleRunError(err error) int {
 
 	// Do not print the error in case the guest process ran successfully and
 	// the guest properly communicated a non-zero exit code.
-	if errors.Is(err, qemu.ErrGuestNonZeroExitCode) {
-		return exitCode
+	if !errors.Is(err, qemu.ErrGuestNonZeroExitCode) {
+		slog.Error(err.Error())
 	}
-
-	slog.Error(err.Error())
 
 	return exitCode
 }
 
 // Run is the main entry point for the CLI command.
 func Run(ctx context.Context, args []string, cfg IO) int {
-	err := run(ctx, args, cfg)
-	return handleRunError(err)
+	log.SetOutput(cfg.Stderr)
+	log.SetFlags(log.Lmicroseconds)
+	log.SetPrefix("VIRTRUN: ")
+
+	flags, err := newFlags(args, cfg)
+	if err != nil {
+		return handleParseArgsError(err)
+	}
+
+	slog.SetLogLoggerLevel(flags.logLevel())
+
+	if flags.Version {
+		buildInfo, err := getBuildInfo()
+		if err != nil {
+			slog.Error(err.Error())
+			return -1
+		}
+
+		fmt.Fprintf(cfg.Stdout, "Version: %s\n", buildInfo.Main.Version)
+
+		return 0
+	}
+
+	err = run(ctx, flags, cfg)
+	if err != nil {
+		return handleRunError(err)
+	}
+
+	return 0
+}
+
+func getBuildInfo() (*debug.BuildInfo, error) {
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		return nil, ErrReadBuildInfo
+	}
+
+	return buildInfo, nil
 }

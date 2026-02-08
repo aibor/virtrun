@@ -201,7 +201,6 @@ func TestNewCommand(t *testing.T) {
 				AdditionalConsoles: []string{"one"},
 				NoKVM:              true,
 				Verbose:            true,
-				ExitCodeParser:     exitCodeScan,
 			},
 			expected: &Command{
 				name: "test",
@@ -238,7 +237,7 @@ func TestNewCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, err := NewCommand(tt.spec)
+			actual, err := NewCommand(tt.spec, exitCodeScan)
 			tt.assertErr(t, err)
 
 			if tt.expected != nil {

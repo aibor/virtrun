@@ -79,9 +79,6 @@ type CommandSpec struct {
 
 	// Increase guest kernel logging.
 	Verbose bool
-
-	// ExitCodeParser parses the guest system's exit code from stdout.
-	ExitCodeParser ExitCodeParser
 }
 
 // Validate checks for known incompatibilities.
@@ -271,7 +268,7 @@ type Command struct {
 }
 
 // NewCommand builds the final [Command] with the given [CommandSpec].
-func NewCommand(spec CommandSpec) (*Command, error) {
+func NewCommand(spec CommandSpec, exitParser ExitCodeParser) (*Command, error) {
 	// Do some simple input validation to catch most obvious issues.
 	err := spec.Validate()
 	if err != nil {
@@ -288,7 +285,7 @@ func NewCommand(spec CommandSpec) (*Command, error) {
 		args:               cmdArgs,
 		additionalConsoles: spec.AdditionalConsoles,
 		stdoutParser: stdoutParser{
-			ExitCodeParser: spec.ExitCodeParser,
+			ExitCodeParser: exitParser,
 			Verbose:        spec.Verbose,
 		},
 	}

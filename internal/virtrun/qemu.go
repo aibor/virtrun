@@ -91,8 +91,7 @@ func NewQemuCommand(spec Qemu, initramfsPath string) (*qemu.Command, error) {
 		ExtraArgs:          spec.ExtraArgs,
 		NoKVM:              spec.NoKVM,
 		Verbose:            spec.Verbose,
-		ExitCodeParser:     exitcode.Parse,
-	})
+	}, exitcode.Parse)
 	if err != nil {
 		return nil, fmt.Errorf("build command: %w", err)
 	}

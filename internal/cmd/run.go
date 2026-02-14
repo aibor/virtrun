@@ -16,10 +16,10 @@ import (
 	"runtime/debug"
 
 	"github.com/aibor/virtrun/internal/exitcode"
+	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
-	"github.com/aibor/virtrun/internal/virtrun"
 )
 
 const localConfigFile = ".virtrun-args"
@@ -57,13 +57,13 @@ func newInitramfs(
 	if !flags.Standalone {
 		var err error
 
-		initProg, err = virtrun.InitProgFor(arch)
+		initProg, err = initramfs.InitProgFor(arch)
 		if err != nil {
 			return "", fmt.Errorf("get init program: %w", err)
 		}
 	}
 
-	initramfsSpec := virtrun.Initramfs{
+	initramfsSpec := initramfs.Spec{
 		Executable: flags.ExecutablePath,
 		Files:      flags.DataFilePaths,
 		Modules:    flags.ModulePaths,
@@ -71,7 +71,7 @@ func newInitramfs(
 		Init:       initProg,
 	}
 
-	initFSPath, err := virtrun.BuildInitramfsArchive(ctx, initramfsSpec)
+	initFSPath, err := initramfs.BuildArchive(ctx, initramfsSpec)
 	if err != nil {
 		return "", fmt.Errorf("build initramfs: %w", err)
 	}

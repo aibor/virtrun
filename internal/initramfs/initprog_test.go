@@ -2,15 +2,15 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package virtrun_test
+package initramfs_test
 
 import (
 	"debug/elf"
 	"io"
 	"testing"
 
+	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/aibor/virtrun/internal/sys"
-	"github.com/aibor/virtrun/internal/virtrun"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -46,7 +46,7 @@ func TestInits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.arch), func(t *testing.T) {
-			file, err := virtrun.InitProgFor(tt.arch)
+			file, err := initramfs.InitProgFor(tt.arch)
 			require.ErrorIs(t, err, tt.expectedErr)
 
 			if tt.expectedErr != nil {

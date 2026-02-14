@@ -139,7 +139,7 @@ provides helper functions for these tasks.
 You can build a simple init using `sysinit.Run`, which is the main entry point
 for an init system. It runs user-provided functions and shuts down the system on
 termination. For an example, see the 
-[simple init program](internal/virtrun/init/cmd/main.go) that is embedded in the
+[simple init program](internal/initramfs/init/cmd/main.go) that is embedded in the
 virtrun binary and used as the init in the default wrapped mode.
 
 Standalone mode is enabled by using the `-standalone` flag.

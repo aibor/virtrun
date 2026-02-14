@@ -232,7 +232,7 @@ jobs:
             -coverprofile coverage.txt \
             -coverpkg ./sysinit \
             ./sysinit \
-            ./internal/virtrun/init/cmd \
+            ./internal/initramfs/init/cmd \
             -testModules tun,veth \
             | go-junit-report -set-exit-code -iocopy -out junit-report-sysinit.xml
 

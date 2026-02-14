@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package virtrun_test
+package initramfs_test
 
 import (
 	"errors"
@@ -13,7 +13,7 @@ import (
 	"testing/fstest"
 
 	"github.com/aibor/cpio"
-	"github.com/aibor/virtrun/internal/virtrun"
+	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +31,7 @@ func TestInitramfs(t *testing.T) {
 	init, err := testFS.Open("init")
 	require.NoError(t, err)
 
-	spec := virtrun.Initramfs{
+	spec := initramfs.Spec{
 		Executable: "binary",
 		Files: []string{
 			"some/file1",
@@ -46,7 +46,7 @@ func TestInitramfs(t *testing.T) {
 	}
 
 	t.Setenv("TMPDIR", t.TempDir())
-	path, err := virtrun.BuildInitramfsArchive(t.Context(), spec)
+	path, err := initramfs.BuildArchive(t.Context(), spec)
 	require.NoError(t, err)
 
 	archive, err := os.Open(path)

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package virtrun
+package initramfs
 
 import (
 	"context"
@@ -24,8 +24,8 @@ const (
 	archivePrefix = "virtrun-initramfs"
 )
 
-// Initramfs specifies the input for initramfs archive creation.
-type Initramfs struct {
+// Spec specifies the input for initramfs archive creation.
+type Spec struct {
 	// Executable is the main binary that is either executed directly or by the
 	// init program depending on the presence of [Initramfs.Init].
 	Executable string
@@ -48,7 +48,7 @@ type Initramfs struct {
 	Init fs.File
 }
 
-func (i Initramfs) executables() []string {
+func (i Spec) executables() []string {
 	files := make([]string, 0, 1+len(i.Files))
 	files = append(files, i.Executable)
 	files = append(files, i.Files...)
@@ -56,7 +56,7 @@ func (i Initramfs) executables() []string {
 	return files
 }
 
-// BuildInitramfsArchive creates a new initramfs CPIO archive file.
+// BuildArchive creates a new initramfs CPIO archive file.
 //
 // The archive consists of a main executable that is either executed directly or
 // by the init program. All other files are added to the dataDir directory.
@@ -68,7 +68,7 @@ func (i Initramfs) executables() []string {
 // The CPIO archive is written to [os.TempDir]. The path to the file is
 // returned along with a cleanup function. The caller is responsible to call
 // the function once the archive file is no longer needed.
-func BuildInitramfsArchive(ctx context.Context, cfg Initramfs) (string, error) {
+func BuildArchive(ctx context.Context, cfg Spec) (string, error) {
 	libs, err := sys.CollectLibsFor(ctx, cfg.executables()...)
 	if err != nil {
 		return "", fmt.Errorf("collect libs: %w", err)
@@ -93,10 +93,10 @@ func BuildInitramfsArchive(ctx context.Context, cfg Initramfs) (string, error) {
 }
 
 func fsEntries(
-	cfg Initramfs,
+	cfg Spec,
 	libs sys.LibCollection,
-) []fsEntry {
-	entries := []fsEntry{
+) []entry {
+	entries := []entry{
 		directory(dataDir),
 		directory(libsDir),
 		directory(modulesDir),

@@ -155,7 +155,7 @@ jobs:
 
       - name: Run tests
         env:
-          SKIP: ${{ matrix.arch != 'amd64' && 'TestIntegration/linked' }}
+          SKIP: ${{ matrix.arch != 'amd64' && 'TestIntegration/linked' || '' }}
           VIRTRUN_ARGS: "-kernel /kernel/vmlinuz-virt \
                          -transport pci \
                          -memory 128 \
@@ -165,6 +165,7 @@ jobs:
           go test -v \
             -tags integration \
             -skip "${{ env.SKIP }}" \
+            -race \
             -covermode atomic \
             -coverprofile coverage.txt \
             -coverpkg $(go list ./internal/... | tr '\n' ,) \
@@ -214,6 +215,7 @@ jobs:
       - name: Run sysinit test
         env:
           GOARCH: "${{ matrix.arch }}"
+          RACE: ${{ matrix.arch == 'amd64' && '-race' || '' }}
           VIRTRUN_ARGS: "-kernel /kernel/vmlinuz-virt \
                          -addModule /kernel/tun.ko.gz \
                          -addModule /kernel/veth.ko.gz \
@@ -225,6 +227,7 @@ jobs:
           go test -v \
             -tags integration_sysinit \
             -exec /virtrun \
+            ${{ env.RACE }} \
             -covermode atomic \
             -coverprofile coverage.txt \
             -coverpkg ./sysinit \

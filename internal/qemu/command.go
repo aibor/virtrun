@@ -84,14 +84,6 @@ type CommandSpec struct {
 	ExitCodeParser ExitCodeParser
 }
 
-// AddConsole adds an additional file to the QEMU command. This will be
-// writable from the guest via the file descriptor number returned by this
-// command. The guest is expected to write base64 encoded into the console.
-func (c *CommandSpec) AddConsole(file string) string {
-	c.AdditionalConsoles = append(c.AdditionalConsoles, file)
-	return pipe.Path(c.numFDConsoles())
-}
-
 // Validate checks for known incompatibilities.
 func (c *CommandSpec) Validate() error {
 	if !c.TransportType.isKnown() {

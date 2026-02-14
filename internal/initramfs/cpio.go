@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package virtrun
+package initramfs
 
 import (
 	"fmt"

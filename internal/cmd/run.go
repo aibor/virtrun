@@ -17,10 +17,10 @@ import (
 
 	"github.com/aibor/virtrun/internal/exitcode"
 	"github.com/aibor/virtrun/internal/initprog"
+	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
-	"github.com/aibor/virtrun/internal/virtrun"
 )
 
 const localConfigFile = ".virtrun-args"
@@ -84,7 +84,7 @@ func run(ctx context.Context, flags *flags, cfg IO) error {
 		qemuSpec.RewriteGoTestFlagsPath()
 	}
 
-	initramfsSpec := virtrun.Initramfs{
+	initramfsSpec := initramfs.Spec{
 		Executable: flags.ExecutablePath,
 		Files:      flags.DataFilePaths,
 		Modules:    flags.ModulePaths,
@@ -100,7 +100,7 @@ func run(ctx context.Context, flags *flags, cfg IO) error {
 		}
 	}
 
-	initramfsPath, err := virtrun.BuildInitramfsArchive(ctx, initramfsSpec)
+	initramfsPath, err := initramfs.BuildArchive(ctx, initramfsSpec)
 	if err != nil {
 		return fmt.Errorf("build initramfs: %w", err)
 	}

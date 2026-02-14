@@ -81,7 +81,7 @@ func run(ctx context.Context, flags *flags, cfg IO) error {
 	// In order to be useful with "go test -exec", rewrite the file based flags
 	// so the output can be passed from guest to kernel via consoles.
 	if !flags.NoGoTestFlags {
-		virtrun.RewriteGoTestFlagsPath(&qemuSpec)
+		qemuSpec.RewriteGoTestFlagsPath()
 	}
 
 	initramfsSpec := virtrun.Initramfs{

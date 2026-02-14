@@ -2,14 +2,13 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package virtrun_test
+package qemu_test
 
 import (
 	"testing"
 
 	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
-	"github.com/aibor/virtrun/internal/virtrun"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -127,8 +126,9 @@ func TestRewriteGoTestFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			virtrun.RewriteGoTestFlagsPath(&tt.spec)
-			assert.Equal(t, tt.expected, tt.spec)
+			actual := tt.spec
+			actual.RewriteGoTestFlagsPath()
+			assert.Equal(t, tt.expected, actual)
 		})
 	}
 }

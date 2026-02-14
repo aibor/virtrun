@@ -132,10 +132,12 @@ func (f regularFile) open(info dirEntry) (fs.File, error) {
 
 	sourceInfo, err := file.Stat()
 	if err != nil {
+		_ = file.Close()
 		return nil, err //nolint:wrapcheck
 	}
 
 	if !sourceInfo.Mode().IsRegular() {
+		_ = file.Close()
 		return nil, ErrFileNotRegular
 	}
 

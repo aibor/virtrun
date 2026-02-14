@@ -16,6 +16,7 @@ import (
 	"runtime/debug"
 
 	"github.com/aibor/virtrun/internal/exitcode"
+	"github.com/aibor/virtrun/internal/initprog"
 	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
@@ -93,7 +94,7 @@ func run(ctx context.Context, flags *flags, cfg IO) error {
 	// In standalone mode, the main file is supposed to work as a complete
 	// init matching our requirements.
 	if !flags.Standalone {
-		initramfsSpec.Init, err = virtrun.InitProgFor(arch)
+		initramfsSpec.Init, err = initprog.For(arch)
 		if err != nil {
 			return fmt.Errorf("get init program: %w", err)
 		}

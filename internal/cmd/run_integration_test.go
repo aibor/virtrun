@@ -11,9 +11,11 @@ package cmd_test
 import (
 	"bytes"
 	"flag"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/aibor/virtrun/internal/cmd"
@@ -98,7 +100,11 @@ func TestIntegration(t *testing.T) {
 
 			var stdOut, stdErr bytes.Buffer
 
-			exitCode := cmd.Run(args, nil, &stdOut, &stdErr)
+			stdOutW := &synced{Writer: &stdOut}
+			stdErrW := &synced{Writer: &stdErr}
+
+			exitCode := cmd.Run(args, nil, stdOutW, stdErrW)
+
 			assert.Equal(t, tt.expectedExitCode, exitCode, "exit code")
 
 			assertBufContains(t, stdOut, tt.expectedStdOut, "stdout")
@@ -121,4 +127,17 @@ func assertBufContains(
 	}
 
 	assert.Contains(t, actual, expected, scope)
+}
+
+type synced struct {
+	io.Writer
+
+	mu sync.Mutex
+}
+
+func (b *synced) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.Writer.Write(p)
 }

@@ -95,7 +95,7 @@ func BuildInitramfsArchive(
 		}
 	}
 
-	path, err := writeFSToTempFile(fsys, "", archivePrefix)
+	path, err := WriteToTempFile(fsys, "", archivePrefix)
 	if err != nil {
 		return "", nil, err
 	}

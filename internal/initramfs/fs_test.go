@@ -5,20 +5,16 @@
 package initramfs_test
 
 import (
-	"errors"
-	"io"
 	"io/fs"
-	"os"
 	"testing"
 	"testing/fstest"
 
-	"github.com/aibor/cpio"
 	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitramfs(t *testing.T) {
+func TestNew(t *testing.T) {
 	testFS := fstest.MapFS{
 		"binary":           {Data: []byte("binary")},
 		"some/file1":       {Data: []byte("file 1")},
@@ -46,10 +42,7 @@ func TestInitramfs(t *testing.T) {
 	}
 
 	t.Setenv("TMPDIR", t.TempDir())
-	path, err := initramfs.BuildArchive(t.Context(), spec)
-	require.NoError(t, err)
-
-	archive, err := os.Open(path)
+	actualFS, err := initramfs.New(t.Context(), spec)
 	require.NoError(t, err)
 
 	type entry struct {
@@ -57,24 +50,24 @@ func TestInitramfs(t *testing.T) {
 		typ  fs.FileMode
 	}
 
-	cpioReader := cpio.NewReader(archive)
 	actual := []entry{}
 
-	for {
-		hdr, err := cpioReader.Next()
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		require.NoError(t, err)
-
+	err = fs.WalkDir(actualFS, "", func(
+		path string,
+		d fs.DirEntry,
+		err error,
+	) error {
 		actual = append(actual, entry{
-			name: hdr.Name,
-			typ:  hdr.FileInfo().Mode().Type(),
+			name: path,
+			typ:  d.Type(),
 		})
-	}
+
+		return err
+	})
+	require.NoError(t, err)
 
 	expected := []entry{
+		{"", fs.ModeDir},
 		{"data", fs.ModeDir},
 		{"data/file1", 0},
 		{"data/file2", 0},

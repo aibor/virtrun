@@ -16,12 +16,11 @@ import (
 )
 
 const (
-	dataDir       = "data"
-	libsDir       = "lib"
-	modulesDir    = "lib/modules"
-	initPath      = "init"
-	mainPath      = "main"
-	archivePrefix = "virtrun-initramfs"
+	dataDir    = "data"
+	libsDir    = "lib"
+	modulesDir = "lib/modules"
+	initPath   = "init"
+	mainPath   = "main"
 )
 
 // Spec specifies the input for initramfs archive creation.
@@ -56,7 +55,10 @@ func (i Spec) executables() []string {
 	return files
 }
 
-// BuildArchive creates a new initramfs CPIO archive file.
+// FS is a virtual file system tree that represents the initramfs.
+type FS = virtfs.FS
+
+// New creates a new initramfs CPIO archive file.
 //
 // The archive consists of a main executable that is either executed directly or
 // by the init program. All other files are added to the dataDir directory.
@@ -64,14 +66,10 @@ func (i Spec) executables() []string {
 // dynamically linked shared objects are collected and added to the libsDir
 // directory. The paths to the directories they have been found at are added as
 // symlinks to the libsDir directory as well.
-//
-// The CPIO archive is written to [os.TempDir]. The path to the file is
-// returned along with a cleanup function. The caller is responsible to call
-// the function once the archive file is no longer needed.
-func BuildArchive(ctx context.Context, cfg Spec) (string, error) {
+func New(ctx context.Context, cfg Spec) (*FS, error) {
 	libs, err := sys.CollectLibsFor(ctx, cfg.executables()...)
 	if err != nil {
-		return "", fmt.Errorf("collect libs: %w", err)
+		return nil, fmt.Errorf("collect libs: %w", err)
 	}
 
 	fsys := virtfs.New()
@@ -80,22 +78,14 @@ func BuildArchive(ctx context.Context, cfg Spec) (string, error) {
 	for _, entry := range entries {
 		err := entry.addTo(fsys)
 		if err != nil {
-			return "", fmt.Errorf("add to fs: %w", err)
+			return nil, fmt.Errorf("add to fs: %w", err)
 		}
 	}
 
-	path, err := WriteToTempFile(fsys, "", archivePrefix)
-	if err != nil {
-		return "", err
-	}
-
-	return path, nil
+	return fsys, nil
 }
 
-func fsEntries(
-	cfg Spec,
-	libs sys.LibCollection,
-) []entry {
+func fsEntries(cfg Spec, libs sys.LibCollection) []entry {
 	entries := []entry{
 		directory(dataDir),
 		directory(libsDir),

@@ -24,6 +24,8 @@ import (
 
 const localConfigFile = ".virtrun-args"
 
+const archivePrefix = "virtrun-initramfs"
+
 // IO provides input and output details for the command.
 type IO struct {
 	Stdin  io.Reader
@@ -49,7 +51,7 @@ func newInitramfs(
 	ctx context.Context,
 	flags *flags,
 	arch sys.Arch,
-) (string, error) {
+) (*initramfs.FS, error) {
 	var initProg fs.File
 
 	// In standalone mode, the main file is supposed to work as a complete
@@ -59,7 +61,7 @@ func newInitramfs(
 
 		initProg, err = initramfs.InitProgFor(arch)
 		if err != nil {
-			return "", fmt.Errorf("get init program: %w", err)
+			return nil, fmt.Errorf("get init program: %w", err)
 		}
 	}
 
@@ -71,12 +73,12 @@ func newInitramfs(
 		Init:       initProg,
 	}
 
-	initFSPath, err := initramfs.BuildArchive(ctx, initramfsSpec)
+	initramFS, err := initramfs.New(ctx, initramfsSpec)
 	if err != nil {
-		return "", fmt.Errorf("build initramfs: %w", err)
+		return nil, fmt.Errorf("build initramfs: %w", err)
 	}
 
-	return initFSPath, nil
+	return initramFS, nil
 }
 
 func newQemuCommand(
@@ -128,9 +130,14 @@ func run(ctx context.Context, flags *flags, cfg IO) error {
 		return fmt.Errorf("read main executable arch: %w", err)
 	}
 
-	initFSPath, err := newInitramfs(ctx, flags, arch)
+	initFS, err := newInitramfs(ctx, flags, arch)
 	if err != nil {
 		return err
+	}
+
+	initFSPath, err := initramfs.WriteToTempFile(initFS, "", archivePrefix)
+	if err != nil {
+		return fmt.Errorf("write initramfs: %w", err)
 	}
 
 	slog.Debug("Created initramfs archive",

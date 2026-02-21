@@ -7,6 +7,7 @@ package sysinit
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"time"
 
@@ -38,6 +39,11 @@ func WithHostPipes() Func {
 			if err != nil {
 				return fmt.Errorf("host pipes: %w", err)
 			}
+
+			log.Printf(
+				"Guest encoded pipes bytes written: %v",
+				hostPipes.BytesWritten(),
+			)
 
 			return nil
 		})
@@ -116,7 +122,7 @@ func OpenConsolePipes(state *State) (*pipe.Pipes, error) {
 		}
 
 		hostPipe := &pipe.Pipe{
-			Name:        path,
+			Name:        fmt.Sprintf("%s(->%s)", path, console.path),
 			InputReader: fifo,
 			InputCloser: fifoStop,
 			Output:      backend,

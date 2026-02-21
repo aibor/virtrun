@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -79,6 +80,9 @@ func (c *Command) Run(
 	stdin io.Reader,
 	stdout, stderr io.Writer,
 ) error {
+	stderrCopyFn := c.stdoutParser.Copy
+	stdoutCopyFn := pipe.DecodeLineBuffered
+
 	outputFiles, err := openFiles(c.additionalConsoles)
 	if err != nil {
 		return err
@@ -100,7 +104,7 @@ func (c *Command) Run(
 	// The guest is supposed to only write errors and host communication like
 	// the exit code into the default console. Thus, write the command's stdout
 	// into stderr.
-	stderrPipe, err := pipes.addPipe(stderr, c.stdoutParser.Copy, true)
+	stderrPipe, err := pipes.addPipe("stderr", stderr, stderrCopyFn, true)
 	if err != nil {
 		return err
 	}
@@ -117,7 +121,7 @@ func (c *Command) Run(
 
 	// The guest is supposed to use the first virtrun pipe as stdout for its
 	// payload.
-	stdoutPipe, err := pipes.addPipe(stdout, pipe.DecodeLineBuffered, true)
+	stdoutPipe, err := pipes.addPipe("stdout", stdout, stdoutCopyFn, true)
 	if err != nil {
 		return err
 	}
@@ -125,8 +129,10 @@ func (c *Command) Run(
 	cmd.ExtraFiles = append(cmd.ExtraFiles, stdoutPipe)
 
 	// Additional console output.
-	for _, output := range outputFiles {
-		writer, err := pipes.addPipe(output, pipe.Decode, false)
+	for idx, output := range outputFiles {
+		name := c.additionalConsoles[idx]
+
+		writer, err := pipes.addPipe(name, output, pipe.Decode, false)
 		if err != nil {
 			return err
 		}
@@ -137,6 +143,9 @@ func (c *Command) Run(
 	runErr := cmd.Run()
 
 	pipesErr := pipes.Wait(time.Second)
+
+	slog.Debug("Host pipes result",
+		slog.Any("bytes written", pipes.BytesWritten()))
 
 	if runErr != nil {
 		var exitErr *exec.ExitError
@@ -167,6 +176,7 @@ type guestPipes struct {
 }
 
 func (p *guestPipes) addPipe(
+	name string,
 	output io.Writer,
 	copyFn pipe.CopyFunc,
 	maybeSilent bool,
@@ -177,7 +187,7 @@ func (p *guestPipes) addPipe(
 	}
 
 	p.Run(&pipe.Pipe{
-		Name:        pipe.Path(p.Len()),
+		Name:        fmt.Sprintf("%s(->%s)", pipe.Path(p.Len()), name),
 		InputReader: pipeReader,
 		InputCloser: pipeWriter,
 		Output:      output,

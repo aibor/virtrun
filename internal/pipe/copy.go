@@ -7,7 +7,6 @@ package pipe
 import (
 	"bufio"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 )
@@ -39,29 +38,29 @@ func Decode(dst io.Writer, src io.Reader) (int64, error) {
 // This function should be used if the output is consumed line based, e.g. by
 // a text parser.
 func DecodeLineBuffered(dst io.Writer, src io.Reader) (int64, error) {
-	var read int64
+	var written int64
 
-	buf := bufio.NewReader(Decoder(src))
+	scanner := bufio.NewScanner(Decoder(src))
 
-	for {
-		line, readErr := buf.ReadSlice('\n')
+	for scanner.Scan() {
+		line := scanner.Text()
 		if len(line) > 0 {
-			read += int64(len(line))
+			n, err := fmt.Fprintln(dst, line)
 
-			_, writeErr := dst.Write(line)
-			if writeErr != nil {
-				return read, fmt.Errorf("write: %w", writeErr)
+			written += int64(n)
+
+			if err != nil {
+				return written, fmt.Errorf("write: %w", err)
 			}
-		}
-
-		if readErr != nil && !errors.Is(readErr, bufio.ErrBufferFull) {
-			if errors.Is(readErr, io.EOF) {
-				return read, nil
-			}
-
-			return read, fmt.Errorf("read: %w", readErr)
 		}
 	}
+
+	err := scanner.Err()
+	if err != nil {
+		return written, fmt.Errorf("scan: %w", err)
+	}
+
+	return written, nil
 }
 
 // Encoder returns a new streaming encoder.

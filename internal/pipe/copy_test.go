@@ -55,8 +55,8 @@ func TestDecodeLineBuffered(t *testing.T) {
 			name:      "read data with eof",
 			reader:    iotest.DataErrReader(encoder("test\ndata\nmore")),
 			writer:    &bytes.Buffer{},
-			expected:  "test\ndata\nmore",
-			expectedN: 14,
+			expected:  "test\ndata\nmore\n",
+			expectedN: 15,
 		},
 		{
 			// bufio.Reader has 4096 bytes buffer.
@@ -78,7 +78,7 @@ func TestDecodeLineBuffered(t *testing.T) {
 			name:        "write error",
 			reader:      encoder("test\ndata\n"),
 			writer:      errWriter{},
-			expectedN:   5,
+			expectedN:   0,
 			expectedErr: assert.AnError,
 		},
 	}

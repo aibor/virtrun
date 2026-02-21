@@ -159,3 +159,33 @@ func TestPipes(t *testing.T) {
 		assert.Equal(t, 2, pipes.Len(), "length")
 	})
 }
+
+func TestPipes_ByteWritten(t *testing.T) {
+	pipes := new(pipe.Pipes)
+
+	pipes.Run(&pipe.Pipe{
+		Name:        "one",
+		InputReader: io.NopCloser(strings.NewReader("6bytes")),
+		InputCloser: io.NopCloser(nil),
+		Output:      io.Discard,
+		CopyFunc:    io.Copy,
+	})
+
+	pipes.Run(&pipe.Pipe{
+		Name:        "two",
+		InputReader: io.NopCloser(strings.NewReader("07bytes")),
+		InputCloser: io.NopCloser(nil),
+		Output:      io.Discard,
+		CopyFunc:    io.Copy,
+	})
+
+	err := pipes.Wait(time.Second)
+	require.NoError(t, err)
+
+	expected := map[string]int64{
+		"one": 6,
+		"two": 7,
+	}
+
+	assert.Equal(t, expected, pipes.BytesWritten())
+}

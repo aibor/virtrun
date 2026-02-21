@@ -158,6 +158,16 @@ func (p *Pipes) Wait(timeout time.Duration) error {
 	return errors.Join(errs...)
 }
 
+// BytesWritten returns the number of bytes written by name of the pipe.
+func (p *Pipes) BytesWritten() map[string]int64 {
+	bytesWritten := make(map[string]int64, len(p.p))
+	for _, pipe := range p.p {
+		bytesWritten[pipe.Name] = pipe.bytesWritten
+	}
+
+	return bytesWritten
+}
+
 // Close closes all readers.
 //
 // It interrupts active operations.

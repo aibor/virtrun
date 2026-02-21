@@ -38,12 +38,17 @@ type Pipe struct {
 
 	done chan struct{}
 
-	bytesRead int64
-	err       error
+	bytesWritten int64
+	err          error
 }
 
 func (p *Pipe) String() string {
 	return p.Name
+}
+
+// BytesWritten returns the bytes written by the pipe.
+func (p *Pipe) BytesWritten() int64 {
+	return p.bytesWritten
 }
 
 func (p *Pipe) close() error {
@@ -65,7 +70,7 @@ func (p *Pipe) closeInput() error {
 }
 
 func (p *Pipe) consume() {
-	p.bytesRead, p.err = p.CopyFunc(p.Output, p.InputReader)
+	p.bytesWritten, p.err = p.CopyFunc(p.Output, p.InputReader)
 }
 
 func (p *Pipe) wait(deadline <-chan time.Time) error {
@@ -83,7 +88,7 @@ func (p *Pipe) wait(deadline <-chan time.Time) error {
 		return p.err
 	}
 
-	if p.bytesRead == 0 && !p.MayBeSilent {
+	if p.bytesWritten == 0 && !p.MayBeSilent {
 		return ErrNoOutput
 	}
 

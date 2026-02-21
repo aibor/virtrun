@@ -20,8 +20,8 @@ type CopyFunc func(dst io.Writer, src io.Reader) (int64, error)
 var _ CopyFunc = io.Copy
 
 // Decoder returns a new streaming decoder.
-func Decoder(reader io.Reader) io.Reader {
-	return base64.NewDecoder(base64.StdEncoding, reader)
+func Decoder(src io.Reader) io.Reader {
+	return base64.NewDecoder(base64.StdEncoding, src)
 }
 
 var _ CopyFunc = Decode
@@ -67,8 +67,8 @@ func DecodeLineBuffered(dst io.Writer, src io.Reader) (int64, error) {
 //
 // The host side is expected to use [Decoder] for decoding the console
 // output.
-func Encoder(written io.Writer) io.WriteCloser {
-	return base64.NewEncoder(base64.StdEncoding, written)
+func Encoder(dst io.Writer) io.WriteCloser {
+	return base64.NewEncoder(base64.StdEncoding, dst)
 }
 
 var _ CopyFunc = Encode

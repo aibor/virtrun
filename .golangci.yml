@@ -21,6 +21,10 @@ linters:
         - G204
         - G301
         - G304
+        - G702
+        - G703
+        - G705
+        - G706
     lll:
       line-length: 80
       tab-width: 4

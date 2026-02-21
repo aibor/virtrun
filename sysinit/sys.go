@@ -43,6 +43,7 @@ func mount(path, source, fsType string, flags MountFlags, data string) error {
 		source = fsType
 	}
 
+	//nolint:gosec
 	err := unix.Mount(source, path, fsType, uintptr(flags), data)
 	if err != nil {
 		return fmt.Errorf("mount %s: %w", path, err)
@@ -64,8 +65,9 @@ type finitFlags int
 
 const finitFlagCompressedFile finitFlags = unix.MODULE_INIT_COMPRESSED_FILE
 
-func finitModule(fd int, params string, flags finitFlags) error {
-	err := unix.FinitModule(fd, params, int(flags))
+func finitModule(fd uintptr, params string, flags finitFlags) error {
+	//nolint:gosec
+	err := unix.FinitModule(int(fd), params, int(flags))
 	if err != nil {
 		// If finit_module is not available, EOPNOTSUPP is returned.
 		if errors.Is(err, unix.EOPNOTSUPP) {

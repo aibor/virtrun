@@ -150,8 +150,6 @@ func TestStdoutParser(t *testing.T) {
 
 			input := strings.NewReader(strings.Join(tt.input, ""))
 
-			expectedBytes := int64(input.Len())
-
 			parser := stdoutParser{
 				ExitCodeParser: exitCodeScanner,
 				Verbose:        tt.verbose,
@@ -160,7 +158,8 @@ func TestStdoutParser(t *testing.T) {
 			actualBytes, err := parser.Copy(&output, input)
 			require.NoError(t, err)
 
-			assert.Equal(t, expectedBytes, actualBytes, "bytes read")
+			expectedBytes := int64(len(strings.Join(tt.expectedOut, "")))
+			assert.Equal(t, expectedBytes, actualBytes, "bytes written")
 
 			actualOut := slices.Collect(strings.Lines(output.String()))
 			assert.Equal(t, tt.expectedOut, actualOut, "output")

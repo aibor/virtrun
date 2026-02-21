@@ -47,15 +47,9 @@ var _ pipe.CopyFunc = (*stdoutParser)(nil).Copy
 //
 // Once done [stdoutParser.Result] can be called to retrieve the result.
 func (p *stdoutParser) Copy(dst io.Writer, src io.Reader) (int64, error) {
-	var read int64
+	var written int64
 
 	scanner := bufio.NewScanner(src)
-	scanner.Split(func(data []byte, atEOF bool) (int, []byte, error) {
-		advance, token, err := bufio.ScanLines(data, atEOF)
-		read += int64(advance)
-
-		return advance, token, err //nolint:wrapcheck
-	})
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -65,9 +59,12 @@ func (p *stdoutParser) Copy(dst io.Writer, src io.Reader) (int64, error) {
 
 		data = append(data, '\n')
 
-		_, err := dst.Write(data)
+		n, err := dst.Write(data)
+
+		written += int64(n)
+
 		if err != nil {
-			return read, fmt.Errorf("print: %w", err)
+			return written, fmt.Errorf("print: %w", err)
 		}
 	}
 
@@ -75,7 +72,12 @@ func (p *stdoutParser) Copy(dst io.Writer, src io.Reader) (int64, error) {
 		p.err = ErrGuestNoExitCodeFound
 	}
 
-	return read, scanner.Err() //nolint:wrapcheck
+	err := scanner.Err()
+	if err != nil {
+		return written, fmt.Errorf("scan: %w", err)
+	}
+
+	return written, nil
 }
 
 // Result returns the exitcode and any error found in the guest's output.

@@ -128,32 +128,24 @@ func (p *Pipes) Run(pipe *Pipe) {
 // Wait waits for all consumers to terminate. It closes the readers forcefully
 // if waiting exceeds the given timeout.
 func (p *Pipes) Wait(timeout time.Duration) error {
-	errChs := make([]chan error, len(p.p))
+	errs := make([]error, len(p.p))
 	deadline := time.After(timeout)
 
+	var finishers sync.WaitGroup
+
 	for idx, pipe := range p.p {
-		errChs[idx] = make(chan error, 1)
-
-		go func(ch chan<- error, pipe *Pipe) {
-			defer close(ch)
-
+		finishers.Go(func() {
 			err := pipe.wait(deadline)
 			if err != nil {
-				ch <- &Error{
+				errs[idx] = &Error{
 					Name: pipe.Name,
 					Err:  err,
 				}
 			}
-		}(errChs[idx], pipe)
+		})
 	}
 
-	errs := make([]error, 0, len(p.p))
-
-	for _, errCh := range errChs {
-		for err := range errCh {
-			errs = append(errs, err)
-		}
-	}
+	finishers.Wait()
 
 	return errors.Join(errs...)
 }

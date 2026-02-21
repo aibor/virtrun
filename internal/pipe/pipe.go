@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -161,8 +160,6 @@ func (p *Pipes) Close() error {
 	errs := []error{}
 
 	for _, pipe := range p.p {
-		_ = os.RemoveAll(pipe.Name)
-
 		err := pipe.close()
 		if err != nil {
 			errs = append(errs, fmt.Errorf("close %s: %w", pipe, err))

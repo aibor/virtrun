@@ -63,8 +63,7 @@ type CommandSpec struct {
 
 	// Additional files attached to consoles besides the default one used for
 	// stdout. They will be present in the guest system as "/dev/ttySx" or
-	// "/dev/hvcx" where x is the index of the slice + 1. The guest is expected
-	// to write all content base64 encoded.
+	// "/dev/hvcx" where x is the index of the slice + 1.
 	AdditionalConsoles []string
 
 	// Arguments to pass to the init binary.

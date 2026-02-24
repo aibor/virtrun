@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"log"
 	"log/slog"
@@ -17,7 +16,6 @@ import (
 
 	"github.com/aibor/virtrun/internal/exitcode"
 	"github.com/aibor/virtrun/internal/initramfs"
-	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
 )
@@ -28,9 +26,9 @@ const archivePrefix = "virtrun-initramfs"
 
 // IO provides input and output details for the command.
 type IO struct {
-	Stdin  io.Reader
-	Stdout io.Writer
-	Stderr io.Writer
+	Stdin  *os.File
+	Stdout *os.File
+	Stderr *os.File
 }
 
 func newFlags(args []string, cfg IO) (*flags, error) {
@@ -202,16 +200,6 @@ func handleRunError(err error) int {
 	if errors.As(err, &qemuErr) {
 		if qemuErr.ExitCode != 0 {
 			exitCode = qemuErr.ExitCode
-		}
-	}
-
-	var pipeErr *pipe.Error
-	if errors.As(err, &pipeErr) {
-		if errors.Is(err, pipe.ErrNoOutput) {
-			slog.Warn(
-				"maybe wrong transport type or /dev not mounted in guest",
-				slog.String("pipe", pipeErr.Name),
-			)
 		}
 	}
 

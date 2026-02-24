@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/aibor/virtrun/internal/cmd"
@@ -25,6 +24,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type outputAssertionFunc func(t *testing.T, file *os.File, args ...any)
+
 func TestIntegration(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -32,36 +33,54 @@ func TestIntegration(t *testing.T) {
 		args             []string
 		initArgs         []string
 		expectedExitCode int
-		expectedStdOut   string
-		expectedStdErr   string
+		assertStdout     outputAssertionFunc
+		assertStderr     outputAssertionFunc
 	}{
 		{
 			name:             "return 0",
 			bin:              "testdata/bin/return",
 			initArgs:         []string{"0"},
-			expectedStdOut:   "exit code: 0",
+			assertStdout:     assertOutputIs("exit code: 0"),
 			expectedExitCode: 0,
 		},
 		{
 			name:             "return 55",
 			bin:              "testdata/bin/return",
 			initArgs:         []string{"55"},
-			expectedStdOut:   "exit code: 55",
+			assertStdout:     assertOutputIs("exit code: 55"),
 			expectedExitCode: 55,
+		},
+		{
+			name:         "output all bytes",
+			bin:          "testdata/bin/output",
+			initArgs:     []string{"256", "1"},
+			assertStdout: assertOutputIs(makeOutput(256, 1)),
+		},
+		{
+			name:         "output all bytes multi line",
+			bin:          "testdata/bin/output",
+			initArgs:     []string{"65536", "500"},
+			assertStdout: assertOutputIs(makeOutput(65536, 500)),
+		},
+		{
+			name:         "output all bytes long line",
+			bin:          "testdata/bin/output",
+			initArgs:     []string{"33554432", "1"},
+			assertStdout: assertOutputIs(makeOutput(1<<25, 1)),
 		},
 		{
 			name:             "panic",
 			bin:              "testdata/bin/panic",
 			args:             []string{"-standalone"},
 			expectedExitCode: -1,
-			expectedStdErr:   qemu.ErrGuestPanic.Error(),
+			assertStderr:     assertOutputContains(qemu.ErrGuestPanic.Error()),
 		},
 		{
 			name:             "oom",
 			bin:              "testdata/bin/oom",
 			initArgs:         []string{"128"},
 			expectedExitCode: -1,
-			expectedStdErr:   qemu.ErrGuestOom.Error(),
+			assertStderr:     assertOutputContains(qemu.ErrGuestOom.Error()),
 		},
 		{
 			name:     "cputest",
@@ -98,46 +117,79 @@ func TestIntegration(t *testing.T) {
 
 			t.Logf("virtrun args: % s", args)
 
-			var stdOut, stdErr bytes.Buffer
+			stdOutFile, err := os.CreateTemp(t.TempDir(), "stdout")
+			require.NoError(t, err)
+
+			stdErrFile, err := os.CreateTemp(t.TempDir(), "stderr")
+			require.NoError(t, err)
 
 			exitCode := cmd.Run(t.Context(), args, cmd.IO{
-				Stdout: &synced{Writer: &stdOut},
-				Stderr: &synced{Writer: &stdErr},
+				Stdout: stdOutFile,
+				Stderr: stdErrFile,
 			})
 
 			assert.Equal(t, tt.expectedExitCode, exitCode, "exit code")
 
-			assertBufContains(t, stdOut, tt.expectedStdOut, "stdout")
-			assertBufContains(t, stdErr, tt.expectedStdErr, "stderr")
+			if tt.assertStdout != nil {
+				tt.assertStdout(t, stdOutFile, "stdout")
+			}
+
+			if tt.assertStderr != nil {
+				tt.assertStderr(t, stdErrFile, "stderr")
+			}
 		})
 	}
 }
 
-func assertBufContains(
-	t *testing.T,
-	buf bytes.Buffer,
-	expected string,
-	scope string,
-) {
+func assertOutputContains(expected string) outputAssertionFunc {
+	return func(t *testing.T, file *os.File, args ...any) {
+		t.Helper()
+
+		actual := readOutputFile(t, file, args...)
+		assert.Contains(t, actual, expected, args...)
+	}
+}
+
+func assertOutputIs(expected string) outputAssertionFunc {
+	return func(t *testing.T, file *os.File, args ...any) {
+		t.Helper()
+
+		actual := readOutputFile(t, file, args...)
+		if assert.Len(t, actual, len(expected), "length") {
+			assert.Equal(t, expected, actual, args...)
+		}
+	}
+}
+
+func readOutputFile(t *testing.T, file *os.File, args ...any) string {
 	t.Helper()
 
-	actual := strings.TrimSpace(buf.String())
-	if actual != "" {
-		t.Log(scope+":", actual)
+	_, err := file.Seek(0, 0)
+	require.NoError(t, err, args...)
+
+	stdOut, err := io.ReadAll(file)
+	require.NoError(t, err, args...)
+
+	return strings.TrimSpace(string(stdOut))
+}
+
+func makeOutput(length int, lines int) string {
+	const maxBytes = 256
+
+	line := make([]byte, length)
+	for i := range length {
+		line[i] = byte(i % maxBytes)
 	}
 
-	assert.Contains(t, actual, expected, scope)
-}
+	var output bytes.Buffer
 
-type synced struct {
-	io.Writer
+	for i := range lines {
+		if i > 0 {
+			_ = output.WriteByte('\n')
+		}
 
-	mu sync.Mutex
-}
+		_, _ = output.Write(line)
+	}
 
-func (b *synced) Write(p []byte) (int, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	return b.Writer.Write(p)
+	return output.String()
 }

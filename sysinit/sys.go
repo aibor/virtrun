@@ -31,6 +31,9 @@ const (
 // Open flags.
 const (
 	O_CLOEXEC = unix.O_CLOEXEC
+	O_WRONLY  = unix.O_WRONLY
+	O_NOCTTY  = unix.O_NOCTTY
+	O_NDELAY  = unix.O_NDELAY
 )
 
 //revive:enable:var-naming
@@ -136,12 +139,40 @@ func setenv(key, value string) error {
 	return nil
 }
 
-func mkfifo(path string) error {
-	const mode = 0o600
-
-	err := unix.Mkfifo(path, mode)
+func fopen(path string, mode int, perm uint32) (int, error) {
+	handle, err := unix.Open(path, mode, perm)
 	if err != nil {
-		return fmt.Errorf("mkfifo %s: %w", path, err)
+		return 0, fmt.Errorf("open %s: %w", path, err)
+	}
+
+	return handle, nil
+}
+
+func fclose(fd int) error {
+	err := unix.Close(fd)
+	if err != nil {
+		return fmt.Errorf("close: %w", err)
+	}
+
+	return nil
+}
+
+func configureConsole(handle int) error {
+	settings, err := unix.IoctlGetTermios(handle, unix.TCGETS)
+	if err != nil {
+		return fmt.Errorf("get: %w", err)
+	}
+
+	// Disable most features. Especially any character processing/replacing
+	// (OPOST).
+	settings.Cflag = unix.CLOCAL
+	settings.Lflag = 0
+	settings.Iflag = 0
+	settings.Oflag = 0
+
+	err = unix.IoctlSetTermios(handle, unix.TCSETS, settings)
+	if err != nil {
+		return fmt.Errorf("set: %w", err)
 	}
 
 	return nil

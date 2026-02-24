@@ -9,11 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/aibor/virtrun/internal/pipe"
 )
@@ -77,12 +75,10 @@ func (c *Command) String() string {
 // returned.
 func (c *Command) Run(
 	ctx context.Context,
-	stdin io.Reader,
-	stdout, stderr io.Writer,
+	stdin *os.File,
+	stdout *os.File,
+	stderr *os.File,
 ) error {
-	stderrCopyFn := c.stdoutParser.Copy
-	stdoutCopyFn := pipe.DecodeLineBuffered
-
 	outputFiles, err := openFiles(c.additionalConsoles)
 	if err != nil {
 		return err
@@ -98,65 +94,45 @@ func (c *Command) Run(
 		return cmd.Process.Signal(os.Interrupt)
 	}
 
-	pipes := guestPipes{}
-	defer pipes.Close()
+	// The guest is supposed to use the first virtrun pipe as stdout for its
+	// payload.
+	cmd.ExtraFiles = append(cmd.ExtraFiles, stdout)
+
+	// Additional console output.
+	cmd.ExtraFiles = append(cmd.ExtraFiles, outputFiles...)
+
+	cmd.Stdin = stdin
+	cmd.Stderr = stderr
+
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("stdout pipe: %w", err)
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return fmt.Errorf("start: %w", err)
+	}
 
 	// The guest is supposed to only write errors and host communication like
 	// the exit code into the default console. Thus, write the command's stdout
 	// into stderr.
-	stderrPipe, err := pipes.addPipe("stderr", stderr, stderrCopyFn, true)
+	_, err = c.stdoutParser.Copy(stderr, stdoutPipe)
 	if err != nil {
 		return err
 	}
 
-	cmd.Stdin = stdin
-	cmd.Stdout = stderrPipe
-	cmd.Stderr = stderr
-
-	// Append the write end of the console processor pipe as extra file, so
-	// it is present as additional file descriptor which can be used with
-	// the "file" backend for QEMU console devices. The processor reads from
-	// the read end of the pipe, decodes the output and writes it into the
-	// actual target writer
-
-	// The guest is supposed to use the first virtrun pipe as stdout for its
-	// payload.
-	stdoutPipe, err := pipes.addPipe("stdout", stdout, stdoutCopyFn, true)
+	err = cmd.Wait()
 	if err != nil {
-		return err
-	}
-
-	cmd.ExtraFiles = append(cmd.ExtraFiles, stdoutPipe)
-
-	// Additional console output.
-	for idx, output := range outputFiles {
-		name := c.additionalConsoles[idx]
-
-		writer, err := pipes.addPipe(name, output, pipe.Decode, false)
-		if err != nil {
-			return err
-		}
-
-		cmd.ExtraFiles = append(cmd.ExtraFiles, writer)
-	}
-
-	runErr := cmd.Run()
-
-	pipesErr := pipes.Wait(time.Second)
-
-	slog.Debug("Host pipes result",
-		slog.Any("bytes written", pipes.BytesWritten()))
-
-	if runErr != nil {
 		var exitErr *exec.ExitError
-		if errors.As(runErr, &exitErr) {
+		if errors.As(err, &exitErr) {
 			return &CommandError{
-				Err:      runErr,
+				Err:      err,
 				ExitCode: exitErr.ExitCode(),
 			}
 		}
 
-		return fmt.Errorf("command: %w", runErr)
+		return fmt.Errorf("command: %w", err)
 	}
 
 	guestExitCode, err := c.stdoutParser.Result()
@@ -168,38 +144,11 @@ func (c *Command) Run(
 		}
 	}
 
-	return pipesErr //nolint:wrapcheck
+	return nil
 }
 
-type guestPipes struct {
-	pipe.Pipes
-}
-
-func (p *guestPipes) addPipe(
-	name string,
-	output io.Writer,
-	copyFn pipe.CopyFunc,
-	maybeSilent bool,
-) (*os.File, error) {
-	pipeReader, pipeWriter, err := os.Pipe()
-	if err != nil {
-		return nil, fmt.Errorf("pipe: %w", err)
-	}
-
-	p.Run(&pipe.Pipe{
-		Name:        fmt.Sprintf("%s(->%s)", pipe.Path(p.Len()), name),
-		InputReader: pipeReader,
-		InputCloser: pipeWriter,
-		Output:      output,
-		CopyFunc:    copyFn,
-		MayBeSilent: maybeSilent,
-	})
-
-	return pipeWriter, nil
-}
-
-func openFiles(paths []string) ([]io.WriteCloser, error) {
-	outputs := []io.WriteCloser{}
+func openFiles(paths []string) ([]*os.File, error) {
+	outputs := []*os.File{}
 
 	for _, path := range paths {
 		output, err := os.Create(path)

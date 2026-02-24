@@ -10,7 +10,6 @@ import (
 	"log"
 	"testing"
 
-	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/stretchr/testify/assert"
 )
@@ -102,17 +101,6 @@ func TestHandleRunError(t *testing.T) {
 			},
 			expectedCode: -1,
 			expectedOut:  "ERROR guest: system panicked\n",
-		},
-		{
-			name: "console no output",
-			err: &pipe.Error{
-				Err:  pipe.ErrNoOutput,
-				Name: "stdfoo",
-			},
-			expectedCode: -1,
-			expectedOut: "WARN maybe wrong transport type " +
-				"or /dev not mounted in guest pipe=stdfoo\n" +
-				"ERROR pipe stdfoo: pipe did not output anything\n",
 		},
 		{
 			name:         "any error",

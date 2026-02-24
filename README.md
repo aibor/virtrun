@@ -278,8 +278,7 @@ is parsed by virtrun. All other output on stdout is printed directly as-is.
 
 For writing to files on the host (such as Go test profiles), a dedicated virtual
 console is established for each file. To accommodate any binary data
-transmission, the data is written in base64 encoded format to the serial
-console.
+transmission, all features of the serial consoles are disabled.
 
 ### Architecture Detection
 
@@ -311,8 +310,6 @@ flags.
     - Rewrite go test flags, replacing file paths with serial consoles that the
       guest writes into. The host forwards the data into the actual files.
     - Open any optional additional output files.
-    - Set up base 64 encoded serial console output parsers to parse and write
-      any output.
 
 - **Guest**
   - **Initialize system**

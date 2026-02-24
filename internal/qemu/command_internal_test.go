@@ -5,14 +5,13 @@
 package qemu
 
 import (
-	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"slices"
 	"strings"
-	"sync"
 	"testing"
 
-	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
@@ -323,8 +322,8 @@ func TestCommand_Run(t *testing.T) {
 				name: "sh",
 				args: []string{
 					"-c",
-					"echo bar | base64 >&4;" +
-						"echo foo | base64 >&3;" +
+					"echo bar >&4;" +
+						"echo foo >&3;" +
 						"echo fail >&2;" +
 						"echo some;" +
 						"echo " + exitCode(0),
@@ -346,8 +345,8 @@ func TestCommand_Run(t *testing.T) {
 				name: "sh",
 				args: []string{
 					"-c",
-					"echo foo | base64 >&4;" +
-						"echo foo | base64 >&3;" +
+					"echo foo >&4;" +
+						"echo foo >&3;" +
 						"echo fail >&2;" +
 						"echo some;" +
 						"echo " + exitCode(0),
@@ -362,9 +361,7 @@ func TestCommand_Run(t *testing.T) {
 			},
 			expectedStdout: []string{"foo\n"},
 			expectedStderr: []string{"some\n", "fail\n"},
-			assertErr: func(t require.TestingT, err error, args ...any) {
-				require.ErrorIs(t, err, pipe.ErrNoOutput, args...)
-			},
+			assertErr:      require.NoError,
 		},
 		{
 			name: "missing exit code",
@@ -378,6 +375,7 @@ func TestCommand_Run(t *testing.T) {
 					tempDir + "/out1",
 				},
 			},
+			expectedStdout: []string{"foo\n"},
 			expectedStderr: []string{"exit\n"},
 			assertErr: func(t require.TestingT, err error, args ...any) {
 				require.ErrorIs(t, err, ErrGuestNoExitCodeFound, args...)
@@ -398,6 +396,7 @@ func TestCommand_Run(t *testing.T) {
 					tempDir + "/out1",
 				},
 			},
+			expectedStdout: []string{"foo\n"},
 			assertErr: func(t require.TestingT, err error, args ...any) {
 				var cmdErr *CommandError
 				require.ErrorAs(t, err, &cmdErr, args...)
@@ -427,33 +426,32 @@ func TestCommand_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer goleak.VerifyNone(t)
 
-			var outBuf, errBuf seqWriter
+			stdoutFile, err := os.CreateTemp(t.TempDir(), "stdout")
+			require.NoError(t, err)
 
-			err := tt.cmd.Run(t.Context(), nil, &outBuf, &errBuf)
+			stderrFile, err := os.CreateTemp(t.TempDir(), "stderr")
+			require.NoError(t, err)
 
-			t.Logf("stdout: %q", outBuf.buf.String())
-			t.Logf("stderr: %q", errBuf.buf.String())
-
+			err = tt.cmd.Run(t.Context(), nil, stdoutFile, stderrFile)
 			tt.assertErr(t, err)
 
-			assert.ElementsMatch(t, tt.expectedStdout, outBuf.lines(), "stdout")
-			assert.ElementsMatch(t, tt.expectedStderr, errBuf.lines(), "stderr")
+			assertLines(t, stdoutFile, tt.expectedStdout, "stdout")
+			assertLines(t, stderrFile, tt.expectedStderr, "stderr")
 		})
 	}
 }
 
-type seqWriter struct {
-	buf bytes.Buffer
-	mu  sync.Mutex
-}
+func assertLines(t *testing.T, file *os.File, expected []string, args ...any) {
+	t.Helper()
 
-func (w *seqWriter) Write(b []byte) (int, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+	_, err := file.Seek(0, 0)
+	require.NoError(t, err, args...)
 
-	return w.buf.Write(b)
-}
+	output, err := io.ReadAll(file)
+	require.NoError(t, err, args...)
 
-func (w *seqWriter) lines() []string {
-	return slices.Collect(strings.Lines(w.buf.String()))
+	t.Logf("output: %q", string(output))
+
+	stdoutLines := slices.Collect(strings.Lines(string(output)))
+	assert.ElementsMatch(t, expected, stdoutLines, args...)
 }

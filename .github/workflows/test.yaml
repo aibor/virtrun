@@ -176,7 +176,7 @@ jobs:
         run: gocover-cobertura -by-files < coverage.txt > coverage.xml
 
       - name: Upload test output
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results-integration-${{ matrix.arch }}
@@ -184,7 +184,7 @@ jobs:
           retention-days: 2
 
       - name: Upload coverage data
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: ${{ matrix.arch == 'amd64' }}
         with:
           name: go-coverage
@@ -240,7 +240,7 @@ jobs:
         run: gocover-cobertura -by-files < coverage.txt > coverage.xml
 
       - name: Upload test output
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results-integration-sysinit-${{ matrix.arch }}
@@ -248,7 +248,7 @@ jobs:
           retention-days: 2
 
       - name: Upload coverage data
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: ${{ matrix.arch == 'amd64' }}
         with:
           name: go-coverage-sysinit

@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -27,10 +26,9 @@ func AdditionalConsolePath(idx int) string {
 
 // Command is single-use QEMU command.
 type Command struct {
-	name               string
-	args               []string
-	stdoutParser       stdoutParser
-	additionalConsoles []string
+	name         string
+	args         []string
+	stdoutParser stdoutParser
 }
 
 // NewCommand builds the final [Command] with the given [CommandSpec].
@@ -47,9 +45,8 @@ func NewCommand(spec CommandSpec, exitParser ExitCodeParser) (*Command, error) {
 	}
 
 	cmd := &Command{
-		name:               spec.Executable,
-		args:               cmdArgs,
-		additionalConsoles: spec.AdditionalConsoles,
+		name: spec.Executable,
+		args: cmdArgs,
 		stdoutParser: stdoutParser{
 			ExitCodeParser: exitParser,
 			Verbose:        spec.Verbose,
@@ -79,12 +76,6 @@ func (c *Command) Run(
 	stdout *os.File,
 	stderr *os.File,
 ) error {
-	outputFiles, err := openFiles(c.additionalConsoles)
-	if err != nil {
-		return err
-	}
-	defer cleanup(outputFiles)
-
 	cmd := exec.CommandContext(ctx, c.name, c.args...)
 
 	// The default cancel function set by [exec.CommandContext] sends SIGKILL
@@ -97,9 +88,6 @@ func (c *Command) Run(
 	// The guest is supposed to use the first virtrun pipe as stdout for its
 	// payload.
 	cmd.ExtraFiles = append(cmd.ExtraFiles, stdout)
-
-	// Additional console output.
-	cmd.ExtraFiles = append(cmd.ExtraFiles, outputFiles...)
 
 	cmd.Stdin = stdin
 	cmd.Stderr = stderr
@@ -145,29 +133,4 @@ func (c *Command) Run(
 	}
 
 	return nil
-}
-
-func openFiles(paths []string) ([]*os.File, error) {
-	outputs := []*os.File{}
-
-	for _, path := range paths {
-		output, err := os.Create(path)
-		if err != nil {
-			for _, c := range outputs {
-				_ = c.Close()
-			}
-
-			return nil, err
-		}
-
-		outputs = append(outputs, output)
-	}
-
-	return outputs, nil
-}
-
-func cleanup[T io.Closer](closer []T) {
-	for _, c := range closer {
-		_ = c.Close()
-	}
 }

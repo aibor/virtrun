@@ -13,7 +13,7 @@ import (
 	"github.com/aibor/virtrun/internal/sys"
 )
 
-const minAdditionalFileDescriptor = 3
+const dedicatedStdoutFileDescriptor = 3
 
 const (
 	machineTypeMicroVM = "microvm"
@@ -209,13 +209,6 @@ func (s *CommandSpec) Validate() error {
 	return nil
 }
 
-// numFDConsoles returns the number of consoles attached via additional file
-// descriptors. It is the number of additional consoles given by the user plus
-// an additional one for a separate stdout channel.
-func (s *CommandSpec) numFDConsoles() int {
-	return len(s.AdditionalConsoles) + 1
-}
-
 // arguments compiles the argument list for the QEMU command.
 func (s *CommandSpec) arguments() []Argument {
 	args := []Argument{
@@ -251,19 +244,23 @@ func (s *CommandSpec) arguments() []Argument {
 		args = append(args, RepeatableArg("device", value))
 	}
 
-	// Add stdout console.
+	// Add stderr console.
 	args = s.appendConsoleArgs(args, consoleArg{
 		id:      "stdio",
 		backend: "stdio",
 	})
 
-	// Write console output to file descriptors. Those are provided by the
-	// [exec.Cmd.ExtraFiles].
-	for idx := range s.numFDConsoles() {
-		// FDs 0, 1, 2 are standard in, out, err, so start at 3.
-		path := fdPath(minAdditionalFileDescriptor + idx)
+	// Add stdout console. This is provided by the [exec.Cmd.ExtraFiles].
+	args = s.appendConsoleArgs(args, consoleArg{
+		id:      fmt.Sprintf("con%d", 0),
+		backend: "file",
+		opts:    []string{"path=" + fdPath(dedicatedStdoutFileDescriptor)},
+	})
+
+	// Write console output to file descriptors.
+	for idx, path := range s.AdditionalConsoles {
 		args = s.appendConsoleArgs(args, consoleArg{
-			id:      fmt.Sprintf("con%d", idx),
+			id:      fmt.Sprintf("con%d", idx+1),
 			backend: "file",
 			opts:    []string{"path=" + path},
 		})

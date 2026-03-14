@@ -44,139 +44,6 @@ func ArgumentValueAssertionFunc(
 	}
 }
 
-func TestCommandSpec_Arguments(t *testing.T) {
-	tests := []struct {
-		name   string
-		spec   CommandSpec
-		expect any
-		assert assert.ComparisonAssertionFunc
-	}{
-		{
-			name: "machine params",
-			spec: CommandSpec{
-				Machine: "pc4.2",
-				CPU:     "8086",
-				SMP:     23,
-				Memory:  269,
-			},
-			expect: []Argument{
-				UniqueArg("machine", "pc4.2"),
-				UniqueArg("cpu", "8086"),
-				UniqueArg("smp", "23"),
-				UniqueArg("m", "269"),
-			},
-			assert: assert.Subset,
-		},
-		{
-			name:   "yes-kvm",
-			spec:   CommandSpec{},
-			expect: UniqueArg("enable-kvm"),
-			assert: assert.Contains,
-		},
-		{
-			name: "no-kvm",
-			spec: CommandSpec{
-				NoKVM: true,
-			},
-			expect: UniqueArg("enable-kvm"),
-			assert: assert.NotContains,
-		},
-
-		{
-			name: "yes-verbose",
-			spec: CommandSpec{
-				Verbose: true,
-			},
-			expect: "quiet",
-			assert: ArgumentValueAssertionFunc("append", assert.NotContains),
-		},
-
-		{
-			name:   "no-verbose",
-			spec:   CommandSpec{},
-			expect: "quiet",
-			assert: ArgumentValueAssertionFunc("append", assert.Contains),
-		},
-		{
-			name: "init args",
-			spec: CommandSpec{
-				InitArgs: []string{
-					"first",
-					"second",
-					"third",
-				},
-			},
-			expect: " -- first second third",
-			assert: ArgumentValueAssertionFunc("append", assert.Contains),
-		},
-		{
-			name: "serial files virtio-mmio",
-			spec: CommandSpec{
-				AdditionalConsoles: []string{
-					"/output/file1",
-					"/output/file2",
-				},
-				TransportType: TransportTypeMMIO,
-			},
-			expect: []Argument{
-				RepeatableArg("device", "virtio-serial-device,max_ports=8"),
-				RepeatableArg("chardev", "stdio,id=stdio"),
-				RepeatableArg("device", "virtconsole,chardev=stdio"),
-				RepeatableArg("chardev", "file,id=con0,path=/dev/fd/3"),
-				RepeatableArg("device", "virtconsole,chardev=con0"),
-				RepeatableArg("chardev", "file,id=con1,path=/dev/fd/4"),
-				RepeatableArg("device", "virtconsole,chardev=con1"),
-			},
-			assert: assert.Subset,
-		},
-		{
-			name: "serial files virtio-pci",
-			spec: CommandSpec{
-				AdditionalConsoles: []string{
-					"/output/file1",
-					"/output/file2",
-				},
-				TransportType: TransportTypePCI,
-			},
-			expect: []Argument{
-				RepeatableArg("device", "virtio-serial-pci,max_ports=8"),
-				RepeatableArg("chardev", "stdio,id=stdio"),
-				RepeatableArg("device", "virtconsole,chardev=stdio"),
-				RepeatableArg("chardev", "file,id=con0,path=/dev/fd/3"),
-				RepeatableArg("device", "virtconsole,chardev=con0"),
-				RepeatableArg("chardev", "file,id=con1,path=/dev/fd/4"),
-				RepeatableArg("device", "virtconsole,chardev=con1"),
-			},
-			assert: assert.Subset,
-		},
-		{
-			name: "serial files isa-pci",
-			spec: CommandSpec{
-				AdditionalConsoles: []string{
-					"/output/file1",
-					"/output/file2",
-				},
-				TransportType: TransportTypeISA,
-			},
-			expect: []Argument{
-				RepeatableArg("chardev", "stdio,id=stdio"),
-				RepeatableArg("serial", "chardev:stdio"),
-				RepeatableArg("chardev", "file,id=con0,path=/dev/fd/3"),
-				RepeatableArg("serial", "chardev:con0"),
-				RepeatableArg("chardev", "file,id=con1,path=/dev/fd/4"),
-				RepeatableArg("serial", "chardev:con1"),
-			},
-			assert: assert.Subset,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.assert(t, tt.spec.arguments(), tt.expect)
-		})
-	}
-}
-
 func TestNewCommand(t *testing.T) {
 	exitCodeScan := func(_ []byte) (int, bool) { return 0, true }
 
@@ -210,7 +77,7 @@ func TestNewCommand(t *testing.T) {
 					"-serial", "chardev:stdio",
 					"-chardev", "file,id=con0,path=/dev/fd/3",
 					"-serial", "chardev:con0",
-					"-chardev", "file,id=con1,path=/dev/fd/4",
+					"-chardev", "file,id=con1,path=one",
 					"-serial", "chardev:con1",
 					"-display", "none",
 					"-monitor", "none",
@@ -228,7 +95,6 @@ func TestNewCommand(t *testing.T) {
 					ExitCodeParser: exitCodeScan,
 					Verbose:        true,
 				},
-				additionalConsoles: []string{"one"},
 			},
 			assertErr: require.NoError,
 		},
@@ -241,11 +107,6 @@ func TestNewCommand(t *testing.T) {
 
 			if tt.expected != nil {
 				assert.Equal(t, tt.expected.String(), actual.String())
-				assert.Equal(
-					t,
-					tt.expected.additionalConsoles,
-					actual.additionalConsoles,
-				)
 
 				// Hack: Compare string representations because functions can
 				// not compared. The string representation has the address of
@@ -258,7 +119,6 @@ func TestNewCommand(t *testing.T) {
 }
 
 func TestCommand_Run(t *testing.T) {
-	tempDir := t.TempDir()
 	exitCodeFmt := "exit code: %d"
 	exitCode := func(e int) string {
 		return fmt.Sprintf(exitCodeFmt, e)
@@ -307,56 +167,13 @@ func TestCommand_Run(t *testing.T) {
 				name: "sh",
 				args: []string{
 					"-c",
-					"echo fail >&2; echo 'some\n" + exitCode(0) + "'",
-				},
-				stdoutParser: stdoutParser{
-					ExitCodeParser: exitCodeScanner,
-				},
-			},
-			expectedStderr: []string{"some\n", "fail\n"},
-			assertErr:      require.NoError,
-		},
-		{
-			name: "success with consoles",
-			cmd: Command{
-				name: "sh",
-				args: []string{
-					"-c",
-					"echo bar >&4;" +
-						"echo foo >&3;" +
+					"echo foo >&3;" +
 						"echo fail >&2;" +
 						"echo some;" +
 						"echo " + exitCode(0),
 				},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
-				},
-				additionalConsoles: []string{
-					tempDir + "/out1",
-				},
-			},
-			expectedStdout: []string{"foo\n"},
-			expectedStderr: []string{"some\n", "fail\n"},
-			assertErr:      require.NoError,
-		},
-		{
-			name: "success but consoles no output",
-			cmd: Command{
-				name: "sh",
-				args: []string{
-					"-c",
-					"echo foo >&4;" +
-						"echo foo >&3;" +
-						"echo fail >&2;" +
-						"echo some;" +
-						"echo " + exitCode(0),
-				},
-				stdoutParser: stdoutParser{
-					ExitCodeParser: exitCodeScanner,
-				},
-				additionalConsoles: []string{
-					tempDir + "/out1",
-					tempDir + "/out2",
 				},
 			},
 			expectedStdout: []string{"foo\n"},
@@ -370,9 +187,6 @@ func TestCommand_Run(t *testing.T) {
 				args: []string{"-c", "echo foo >&3; echo exit"},
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
-				},
-				additionalConsoles: []string{
-					tempDir + "/out1",
 				},
 			},
 			expectedStdout: []string{"foo\n"},
@@ -392,9 +206,6 @@ func TestCommand_Run(t *testing.T) {
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
 				},
-				additionalConsoles: []string{
-					tempDir + "/out1",
-				},
 			},
 			expectedStdout: []string{"foo\n"},
 			assertErr: func(t require.TestingT, err error, args ...any) {
@@ -405,14 +216,11 @@ func TestCommand_Run(t *testing.T) {
 			},
 		},
 		{
-			name: "start error with consoles",
+			name: "start error",
 			cmd: Command{
 				name: "nonexistingprogramthatdoesnotexistanywhere",
 				stdoutParser: stdoutParser{
 					ExitCodeParser: exitCodeScanner,
-				},
-				additionalConsoles: []string{
-					tempDir + "/out1",
 				},
 			},
 			assertErr: func(t require.TestingT, err error, args ...any) {

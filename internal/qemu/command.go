@@ -12,7 +12,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/aibor/virtrun/internal/pipe"
+	"github.com/aibor/virtrun/internal/transport"
 )
 
 // Console 0 is stderr. Console 1 is stdout.
@@ -21,7 +21,7 @@ const reservedPipes = 2
 // AdditionalConsolePath returns guest's path to the additional console with the
 // given index.
 func AdditionalConsolePath(idx int) string {
-	return pipe.Path(idx + reservedPipes)
+	return transport.PipePath(idx + reservedPipes)
 }
 
 // Command is single-use QEMU command.

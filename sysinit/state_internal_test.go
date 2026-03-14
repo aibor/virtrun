@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/aibor/virtrun/internal/exitcode"
+	"github.com/aibor/virtrun/internal/transport"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,12 +57,12 @@ func TestState_ExitCode(t *testing.T) {
 		{
 			name:        "zero",
 			fn:          func(s *State) { s.SetExitCode(0) },
-			expectedOut: exitcode.Sprint(0) + "\n",
+			expectedOut: transport.FormatExitCode(0) + "\n",
 		},
 		{
 			name:        "non zero",
 			fn:          func(s *State) { s.SetExitCode(269) },
-			expectedOut: exitcode.Sprint(269) + "\n",
+			expectedOut: transport.FormatExitCode(269) + "\n",
 		},
 	}
 

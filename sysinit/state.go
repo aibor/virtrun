@@ -9,7 +9,7 @@ import (
 	"io"
 	"slices"
 
-	"github.com/aibor/virtrun/internal/exitcode"
+	"github.com/aibor/virtrun/internal/transport"
 )
 
 // CleanupFunc defines a function that runs on cleanup after all [Func] ran.
@@ -49,7 +49,7 @@ func (s *State) doCleanup(errHandler func(error)) {
 
 func (s *State) printExitCode(writer io.Writer) {
 	if s.exitCode != nil {
-		_, _ = fmt.Fprintln(writer, exitcode.Sprint(*s.exitCode))
+		_, _ = fmt.Fprintln(writer, transport.FormatExitCode(*s.exitCode))
 	}
 }
 

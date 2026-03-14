@@ -7,8 +7,8 @@ package qemu_test
 import (
 	"testing"
 
-	"github.com/aibor/virtrun/internal/pipe"
 	"github.com/aibor/virtrun/internal/qemu"
+	"github.com/aibor/virtrun/internal/transport"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -51,7 +51,7 @@ func TestRewriteGoTestFlags(t *testing.T) {
 				InitArgs: []string{
 					"-test.paniconexit0",
 					"-test.gocoverdir=/tmp",
-					"-test.coverprofile=" + pipe.Path(2),
+					"-test.coverprofile=" + transport.PipePath(2),
 				},
 				AdditionalConsoles: []string{
 					"cover.out",
@@ -74,11 +74,11 @@ func TestRewriteGoTestFlags(t *testing.T) {
 			expected: qemu.CommandSpec{
 				InitArgs: []string{
 					"-test.paniconexit0",
-					"-test.blockprofile=" + pipe.Path(2),
-					"-test.cpuprofile=" + pipe.Path(3),
-					"-test.memprofile=" + pipe.Path(4),
-					"-test.mutexprofile=" + pipe.Path(5),
-					"-test.trace=" + pipe.Path(6),
+					"-test.blockprofile=" + transport.PipePath(2),
+					"-test.cpuprofile=" + transport.PipePath(3),
+					"-test.memprofile=" + transport.PipePath(4),
+					"-test.mutexprofile=" + transport.PipePath(5),
+					"-test.trace=" + transport.PipePath(6),
 					"-test.outputdir=/tmp",
 				},
 				AdditionalConsoles: []string{
@@ -106,11 +106,11 @@ func TestRewriteGoTestFlags(t *testing.T) {
 			expected: qemu.CommandSpec{
 				InitArgs: []string{
 					"-test.paniconexit0",
-					"-test.blockprofile=" + pipe.Path(2),
-					"-test.cpuprofile=" + pipe.Path(3),
-					"-test.memprofile=" + pipe.Path(4),
-					"-test.mutexprofile=" + pipe.Path(5),
-					"-test.trace=" + pipe.Path(6),
+					"-test.blockprofile=" + transport.PipePath(2),
+					"-test.cpuprofile=" + transport.PipePath(3),
+					"-test.memprofile=" + transport.PipePath(4),
+					"-test.mutexprofile=" + transport.PipePath(5),
+					"-test.trace=" + transport.PipePath(6),
 					"-test.outputdir=/tmp",
 				},
 				AdditionalConsoles: []string{

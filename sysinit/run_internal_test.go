@@ -10,7 +10,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/aibor/virtrun/internal/exitcode"
+	"github.com/aibor/virtrun/internal/transport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,7 +42,7 @@ func TestRun(t *testing.T) {
 					},
 				},
 				expectedErr: nil,
-				expectedOut: exitcode.Sprint(42) + "\n",
+				expectedOut: transport.FormatExitCode(42) + "\n",
 			},
 			{
 				name: "with error",

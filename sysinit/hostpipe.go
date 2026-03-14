@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aibor/virtrun/internal/pipe"
+	"github.com/aibor/virtrun/internal/transport"
 )
 
 // hostPipeStdout is the host pipe port connected to the user's stdout.
@@ -31,7 +31,11 @@ func WithHostPipes() Func {
 // stdout. It replaces the original [os.Stdout].
 func WithStdoutHostPipe() Func {
 	return func(state *State) error {
-		stdout, err := os.OpenFile(pipe.Path(hostPipeStdout), os.O_WRONLY, 0)
+		stdout, err := os.OpenFile(
+			transport.PipePath(hostPipeStdout),
+			os.O_WRONLY,
+			0,
+		)
 		if err != nil {
 			return err
 		}
@@ -75,7 +79,7 @@ func SetupHostPipes(state *State) error {
 			return fmt.Errorf("configure %s: %w", console.path, err)
 		}
 
-		err = os.Symlink(console.path, pipe.Path(console.port))
+		err = os.Symlink(console.path, transport.PipePath(console.port))
 		if err != nil {
 			_ = fclose(handle)
 			return fmt.Errorf("symlink pipe: %w", err)

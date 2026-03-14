@@ -14,10 +14,10 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/aibor/virtrun/internal/exitcode"
 	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
+	"github.com/aibor/virtrun/internal/transport"
 )
 
 const localConfigFile = ".virtrun-args"
@@ -109,7 +109,7 @@ func newQemuCommand(
 		qemuSpec.RewriteGoTestFlagsPath()
 	}
 
-	cmd, err := qemu.NewCommand(qemuSpec, exitcode.Parse)
+	cmd, err := qemu.NewCommand(qemuSpec, transport.ParseExitCode)
 	if err != nil {
 		return nil, fmt.Errorf("new qemu command: %w", err)
 	}

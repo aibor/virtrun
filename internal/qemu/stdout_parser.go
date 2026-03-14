@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-
-	"github.com/aibor/virtrun/internal/pipe"
 )
 
 var (
@@ -39,8 +37,6 @@ type stdoutParser struct {
 	exitCode      int
 	err           error
 }
-
-var _ pipe.CopyFunc = (*stdoutParser)(nil).Copy
 
 // Copy reads from the given reader which is expected to be output from a
 // guest's standard output.

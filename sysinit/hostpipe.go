@@ -68,6 +68,11 @@ func SetupHostPipes(state *State) error {
 	}
 
 	for _, console := range consoles {
+		// Skip stdio which is supposed to work as a real console.
+		if console.port == 0 {
+			continue
+		}
+
 		handle, err := fopen(console.path, O_WRONLY|O_NOCTTY|O_NDELAY, 0)
 		if err != nil {
 			return err

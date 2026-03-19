@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 
 	"github.com/aibor/virtrun/internal/transport"
@@ -46,7 +47,7 @@ func NewCommand(spec CommandSpec, exitParser ExitCodeParser) (*Command, error) {
 
 	cmd := &Command{
 		name: spec.Executable,
-		args: cmdArgs,
+		args: slices.Concat(cmdArgs, spec.ExtraArgs),
 		stdoutParser: stdoutParser{
 			ExitCodeParser: exitParser,
 			Verbose:        spec.Verbose,

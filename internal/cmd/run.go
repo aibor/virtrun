@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime/debug"
+	"strings"
 
 	"github.com/aibor/virtrun/internal/initramfs"
 	"github.com/aibor/virtrun/internal/pidone"
@@ -93,6 +94,7 @@ func newQemuCommand(
 		SMP:           flags.NumCPU,
 		Memory:        flags.Memory,
 		TransportType: flags.TransportType,
+		ExtraArgs:     strings.Fields(flags.QemuArgs),
 		InitArgs:      flags.InitArgs,
 		NoKVM:         flags.NoKVM,
 		Verbose:       flags.GuestVerbose,

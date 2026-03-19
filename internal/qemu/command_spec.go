@@ -59,7 +59,7 @@ type CommandSpec struct {
 	// ExtraArgs are  extra arguments that are passed to the QEMU command.
 	// They must not interfere with the essential arguments set by the command
 	// itself or an error will be returned on [Command.Run].
-	ExtraArgs []Argument
+	ExtraArgs []string
 
 	// Additional files attached to consoles besides the default one used for
 	// stdout. They will be present in the guest system as "/dev/ttySx" or
@@ -278,8 +278,6 @@ func (s *CommandSpec) arguments() []Argument {
 		// Do not load any user config files.
 		UniqueArg("no-user-config"),
 	)
-
-	args = append(args, s.ExtraArgs...)
 
 	kernelCmdline := strings.Join(s.kernelCmdlineArgs(), " ")
 	args = append(args, RepeatableArg("append", kernelCmdline))

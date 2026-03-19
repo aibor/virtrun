@@ -98,6 +98,9 @@ func newFlagSet(name string, flags *flags) *flagSet {
 		"kernel module to add to guest. Flag may be used more than once. "+
 			"Empty value clears the list.")
 
+	flagSet.StringVar(&flags.QemuArgs, "qemuArgs", flags.QemuArgs,
+		"additional raw QEMU args ")
+
 	flagSet.BoolVar(&flags.Debug, "debug", flags.Debug,
 		"enable debug output")
 
@@ -152,6 +155,7 @@ type flags struct {
 	DataFilePaths  []string
 	ModulePaths    []string
 	InitArgs       []string
+	QemuArgs       string
 	Standalone     bool
 	KeepInitramfs  bool
 	NoKVM          bool

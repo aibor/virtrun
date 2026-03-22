@@ -5,8 +5,10 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // LimitedUintValue is a uint64 with lower and upper limits.
@@ -41,4 +43,41 @@ func (u *LimitedUintValue) Set(s string) error {
 	*u.Value = value
 
 	return nil
+}
+
+// PortPair is a pair of ports. if the ports have the same value it is
+// represented as a single uint16. Otherwise it is separated by a colon.
+type PortPair [2]uint16
+
+func (p *PortPair) String() string {
+	if p[0] == p[1] {
+		return strconv.Itoa(int(p[1]))
+	}
+
+	return fmt.Sprintf("%d:%d", p[0], p[1])
+}
+
+// Set sets [PortPair] to the given value, if valid.
+func (p *PortPair) Set(input string) error {
+	var errs [2]error
+
+	parts := strings.SplitN(input, ":", len(p))
+
+	switch len(parts) {
+	case 1:
+		p[1], errs[0] = parseUint16(parts[0])
+		p[0] = p[1]
+	case len(p):
+		p[0], errs[0] = parseUint16(parts[0])
+		p[1], errs[1] = parseUint16(parts[1])
+	default:
+		return fmt.Errorf("%w: too many parts", ErrValueOutOfRange)
+	}
+
+	return errors.Join(errs[:]...)
+}
+
+func parseUint16(s string) (uint16, error) {
+	i, err := strconv.ParseUint(s, 10, 16)
+	return uint16(i), err
 }

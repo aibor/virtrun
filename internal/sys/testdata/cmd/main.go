@@ -9,7 +9,7 @@ package main
 //go:generate $CC ../src/func2.c -shared -fPIC -nostdlib -o ../lib/libfunc2.so
 //go:generate $CC ../src/func3.c -shared -fPIC -nostdlib -L../lib -Wl,-rpath,${DOLLAR}ORIGIN/../lib -lfunc1 -o ../lib/libfunc3.so
 
-//go:generate go build -trimpath -buildvcs=false -o ../bin/main .
+//go:generate go build -trimpath -buildvcs=false -o ../bin/main main.go
 
 // #cgo CFLAGS: -I${SRCDIR}/../src
 // #cgo LDFLAGS: -L${SRCDIR}/../lib -Wl,-rpath,$ORIGIN/../lib -lfunc2 -lfunc3

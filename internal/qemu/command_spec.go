@@ -233,7 +233,7 @@ func (s *CommandSpec) arguments() []Argument {
 	}
 
 	if !s.NoKVM {
-		args = append(args, UniqueArg("enable-kvm", ""))
+		args = append(args, UniqueArg("enable-kvm"))
 	}
 
 	sharedDevices := map[TransportType]string{

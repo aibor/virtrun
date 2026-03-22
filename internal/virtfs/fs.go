@@ -151,11 +151,11 @@ func (fsys *FS) MkdirAll(name string) error {
 	return fsys.Mkdir(name)
 }
 
-// Add creates a new regular file with the given name.
+// Copy creates a new regular file with the given name.
 //
 // File content is read from the file returned by the given [FileOpenFunc]. It
 // returns a [PathError] in case of errors.
-func (fsys *FS) Add(name string, openFn FileOpenFunc) error {
+func (fsys *FS) Copy(name string, openFn FileOpenFunc) error {
 	if openFn == nil {
 		return &PathError{
 			Op:   "add",

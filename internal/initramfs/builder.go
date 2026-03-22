@@ -18,7 +18,7 @@ type entry interface {
 }
 
 type builder interface {
-	Add(name string, openFn fileOpenFunc) error
+	Copy(name string, openFn fileOpenFunc) error
 	Symlink(oldname, newname string) error
 	MkdirAll(name string) error
 }
@@ -39,7 +39,7 @@ type file struct {
 }
 
 func (v file) addTo(builder builder) error {
-	return builder.Add(v.Path, v.OpenFn)
+	return builder.Copy(v.Path, v.Data)
 }
 
 type copyFile struct {
@@ -49,7 +49,7 @@ type copyFile struct {
 }
 
 func (f copyFile) addTo(builder builder) error {
-	return builder.Add(f.Dest, func() (fs.File, error) {
+	return builder.Copy(f.Dest, func() (fs.File, error) {
 		return f.Fsys.Open(f.Source)
 	})
 }

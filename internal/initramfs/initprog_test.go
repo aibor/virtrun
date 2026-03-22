@@ -5,8 +5,8 @@
 package initramfs_test
 
 import (
+	"bytes"
 	"debug/elf"
-	"io"
 	"testing"
 
 	"github.com/aibor/virtrun/internal/initramfs"
@@ -46,17 +46,14 @@ func TestInits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.arch), func(t *testing.T) {
-			file, err := initramfs.InitProgFor(tt.arch)
+			data, err := initramfs.InitProgFor(tt.arch)
 			require.ErrorIs(t, err, tt.expectedErr)
 
 			if tt.expectedErr != nil {
 				return
 			}
 
-			readerAt, ok := file.(io.ReaderAt)
-			require.True(t, ok, "file must implement io.ReaderAt")
-
-			actual, err := elf.NewFile(readerAt)
+			actual, err := elf.NewFile(bytes.NewReader(data))
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.expected, actual.Machine)

@@ -13,6 +13,7 @@ package main
 //go:generate myenv GOARCH=amd64 go build -buildvcs=false -trimpath -ldflags "-s -w" -o ../bin/amd64 .
 //go:generate myenv GOARCH=arm64 go build -buildvcs=false -trimpath -ldflags "-s -w" -o ../bin/arm64 .
 //go:generate myenv GOARCH=riscv64 go build -buildvcs=false -trimpath -ldflags "-s -w" -o ../bin/riscv64 .
+//go:generate gzip --force --fast ../bin/amd64 ../bin/arm64 ../bin/riscv64
 
 import (
 	"errors"

@@ -44,7 +44,7 @@ type Spec struct {
 	// Init provides the init program. If not set, the [Initramfs.Executable] is
 	// used as init program itself and expected to handle system setup and clean
 	// shutdown.
-	Init fs.File
+	Init []byte
 }
 
 func (i Spec) executables() []string {
@@ -100,9 +100,7 @@ func fsEntries(cfg Spec, libs sys.LibCollection) []entry {
 
 		entries = append(entries, file{
 			Path: initPath,
-			OpenFn: func() (fs.File, error) {
-				return cfg.Init, nil
-			},
+			Data: cfg.Init,
 		})
 	}
 

@@ -21,11 +21,7 @@ func TestNew(t *testing.T) {
 		"other/file2":      {Data: []byte("file 2")},
 		"modules/a.ko.zst": {Data: []byte("module a")},
 		"modules/b.ko.zst": {Data: []byte("module b")},
-		"init":             {Data: []byte("init")},
 	}
-
-	init, err := testFS.Open("init")
-	require.NoError(t, err)
 
 	spec := initramfs.Spec{
 		Executable: "binary",
@@ -38,7 +34,7 @@ func TestNew(t *testing.T) {
 			"modules/a.ko.zst",
 		},
 		Fsys: testFS,
-		Init: init,
+		Init: []byte("initprog"),
 	}
 
 	t.Setenv("TMPDIR", t.TempDir())

@@ -19,6 +19,7 @@ type entry interface {
 
 type builder interface {
 	Copy(name string, openFn fileOpenFunc) error
+	Write(name string, data []byte) error
 	Symlink(oldname, newname string) error
 	MkdirAll(name string) error
 }
@@ -34,12 +35,12 @@ func (d directory) addTo(builder builder) error {
 var _ entry = file{}
 
 type file struct {
-	Path   string
-	OpenFn fileOpenFunc
+	Path string
+	Data []byte
 }
 
 func (v file) addTo(builder builder) error {
-	return builder.Copy(v.Path, v.Data)
+	return builder.Write(v.Path, v.Data)
 }
 
 type copyFile struct {

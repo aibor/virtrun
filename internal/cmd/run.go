@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"log"
 	"log/slog"
 	"os"
@@ -51,7 +50,7 @@ func newInitramfs(
 	flags *flags,
 	arch sys.Arch,
 ) (*initramfs.FS, error) {
-	var initProg fs.File
+	var initProg []byte
 
 	// In standalone mode, the main file is supposed to work as a complete
 	// init matching our requirements.

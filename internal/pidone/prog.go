@@ -5,31 +5,56 @@
 package pidone
 
 import (
-	"embed"
-	"io/fs"
-	"path/filepath"
+	"bytes"
+	"compress/gzip"
+	_ "embed"
+	"fmt"
+	"io"
 
 	"github.com/aibor/virtrun/internal/sys"
 )
 
-// Embed pre-compiled init programs explicitly to trigger build time errors.
-//
-//go:embed bin/amd64
-//go:embed bin/arm64
-//go:embed bin/riscv64
-var initsFS embed.FS
+//go:embed bin/amd64.gz
+var amd64Compressed []byte
+
+//go:embed bin/arm64.gz
+var arm64Compressed []byte
+
+//go:embed bin/riscv64.gz
+var riscv64Compressed []byte
 
 // For returns the pre-built init executable for the given architecture.
 //
 // The init binary is supposed to set up the system and execute the file
 // "/main".
-func For(arch sys.Arch) (fs.File, error) {
-	name := filepath.Join("bin", arch.String())
+func For(arch sys.Arch) ([]byte, error) {
+	var compressed []byte
 
-	file, err := initsFS.Open(name)
-	if err != nil {
+	switch arch {
+	case sys.AMD64:
+		compressed = amd64Compressed
+	case sys.ARM64:
+		compressed = arm64Compressed
+	case sys.RISCV64:
+		compressed = riscv64Compressed
+	default:
 		return nil, sys.ErrArchNotSupported
 	}
 
-	return file, nil
+	reader, err := gzip.NewReader(bytes.NewReader(compressed))
+	if err != nil {
+		return nil, fmt.Errorf("new decompressor: %w", err)
+	}
+
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("decompress: %w", err)
+	}
+
+	err = reader.Close()
+	if err != nil {
+		return nil, fmt.Errorf("close decompressor: %w", err)
+	}
+
+	return data, nil
 }

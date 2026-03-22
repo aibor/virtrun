@@ -5,12 +5,12 @@
 package virtfs
 
 import (
+	"bytes"
 	"io"
 	"io/fs"
 	"maps"
 	"path/filepath"
 	"slices"
-	"strings"
 	"time"
 )
 
@@ -152,16 +152,14 @@ func (f regularFile) open(info dirEntry) (fs.File, error) {
 	return openFile, nil
 }
 
-var _ file = (*symbolicLink)(nil)
+type memFile []byte
 
-type symbolicLink string
-
-func (symbolicLink) mode() fs.FileMode {
-	return defaultFileMode | fs.ModeSymlink
+func (memFile) mode() fs.FileMode {
+	return defaultFileMode
 }
 
-func (l symbolicLink) open(info dirEntry) (fs.File, error) {
-	reader := strings.NewReader(string(l))
+func (m memFile) open(info dirEntry) (fs.File, error) {
+	reader := bytes.NewReader(m)
 
 	openFile := &openFile{
 		info: fileInfo{
@@ -172,6 +170,18 @@ func (l symbolicLink) open(info dirEntry) (fs.File, error) {
 	}
 
 	return openFile, nil
+}
+
+var _ file = (*symbolicLink)(nil)
+
+type symbolicLink string
+
+func (symbolicLink) mode() fs.FileMode {
+	return defaultFileMode | fs.ModeSymlink
+}
+
+func (l symbolicLink) open(info dirEntry) (fs.File, error) {
+	return memFile(l).open(info)
 }
 
 var _ file = (*directory)(nil)

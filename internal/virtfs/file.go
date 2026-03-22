@@ -116,15 +116,15 @@ func (f *openFile) ReadDir(count int) ([]fs.DirEntry, error) {
 	return f.entries[start:end], nil
 }
 
-var _ file = (*regularFile)(nil)
+var _ file = (*copyFile)(nil)
 
-type regularFile FileOpenFunc
+type copyFile FileOpenFunc
 
-func (regularFile) mode() fs.FileMode {
+func (copyFile) mode() fs.FileMode {
 	return defaultFileMode
 }
 
-func (f regularFile) open(info dirEntry) (fs.File, error) {
+func (f copyFile) open(info dirEntry) (fs.File, error) {
 	file, err := f()
 	if err != nil {
 		return nil, err

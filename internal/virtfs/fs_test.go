@@ -35,7 +35,7 @@ func TestFiles_TestFS(t *testing.T) {
 		err = fsys.MkdirAll("dir/a/b/c")
 		require.NoError(t, err)
 
-		err = fsys.Add("dir/file", func() (fs.File, error) {
+		err = fsys.Copy("dir/file", func() (fs.File, error) {
 			return sourceFS.Open("file")
 		})
 		require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestFiles_TestFS(t *testing.T) {
 	})
 }
 
-func TestFS_Add(t *testing.T) {
+func TestFS_Copy(t *testing.T) {
 	testFS := fstest.MapFS{
 		"test": &fstest.MapFile{
 			Data: []byte("content"),
@@ -83,7 +83,7 @@ func TestFS_Add(t *testing.T) {
 			name: "exists as file",
 			path: "test",
 			prepare: func(fsys *virtfs.FS) error {
-				return fsys.Add("test", func() (fs.File, error) {
+				return fsys.Copy("test", func() (fs.File, error) {
 					return testFS.Open("test")
 				})
 			},
@@ -101,7 +101,7 @@ func TestFS_Add(t *testing.T) {
 			name: "parent not a dir",
 			path: "dir/test",
 			prepare: func(fsys *virtfs.FS) error {
-				return fsys.Add("dir", func() (fs.File, error) {
+				return fsys.Copy("dir", func() (fs.File, error) {
 					return nil, assert.AnError
 				})
 			},
@@ -123,7 +123,7 @@ func TestFS_Add(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			err := fsys.Add(tt.path, func() (fs.File, error) {
+			err := fsys.Copy(tt.path, func() (fs.File, error) {
 				return testFS.Open("test")
 			})
 			require.ErrorIs(t, err, tt.expectedErr)
@@ -176,7 +176,7 @@ func TestFS_Mkdir(t *testing.T) {
 			name: "parent not a dir",
 			path: "dir/sub",
 			prepare: func(fsys *virtfs.FS) error {
-				return fsys.Add("dir", func() (fs.File, error) {
+				return fsys.Copy("dir", func() (fs.File, error) {
 					return nil, assert.AnError
 				})
 			},
@@ -233,7 +233,7 @@ func TestFS_MkdirAll(t *testing.T) {
 			name: "exists as other",
 			path: "dir",
 			prepare: func(fsys *virtfs.FS) error {
-				return fsys.Add("dir", func() (fs.File, error) {
+				return fsys.Copy("dir", func() (fs.File, error) {
 					return nil, assert.AnError
 				})
 			},
@@ -243,7 +243,7 @@ func TestFS_MkdirAll(t *testing.T) {
 			name: "parent not a dir",
 			path: "dir/sub/subsub",
 			prepare: func(fsys *virtfs.FS) error {
-				return fsys.Add("dir", func() (fs.File, error) {
+				return fsys.Copy("dir", func() (fs.File, error) {
 					return nil, assert.AnError
 				})
 			},
@@ -323,7 +323,7 @@ func TestFS_Symlink(t *testing.T) {
 			name: "parent not a dir",
 			path: "dir/link",
 			prepare: func(fsys *virtfs.FS) error {
-				return fsys.Add("dir", func() (fs.File, error) {
+				return fsys.Copy("dir", func() (fs.File, error) {
 					return nil, assert.AnError
 				})
 			},

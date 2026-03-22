@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/netip"
 	"os"
 	"runtime/debug"
 
@@ -23,6 +24,9 @@ import (
 const localConfigFile = ".virtrun-args"
 
 const archivePrefix = "virtrun-initramfs"
+
+//nolint:gochecknoglobals
+var fwdGuestCIDR = netip.MustParsePrefix("169.254.0.15/24")
 
 // IO provides input and output details for the command.
 type IO struct {
@@ -45,6 +49,19 @@ func newFlags(args []string, cfg IO) (*flags, error) {
 	return flags, nil
 }
 
+func newInitConf(flags *flags) pidone.Config {
+	cfg := pidone.Config{
+		// Always bring loopback interface up.
+		Interfaces: map[string]netip.Prefix{"lo": {}},
+	}
+
+	if flags.ForwardPort != [2]uint16{} {
+		cfg.Interfaces["eth0"] = fwdGuestCIDR
+	}
+
+	return cfg
+}
+
 func newInitramfs(
 	ctx context.Context,
 	flags *flags,
@@ -63,12 +80,18 @@ func newInitramfs(
 		}
 	}
 
+	initConf, err := newInitConf(flags).Encode()
+	if err != nil {
+		return nil, fmt.Errorf("get init config: %w", err)
+	}
+
 	initramfsSpec := initramfs.Spec{
 		Executable: flags.ExecutablePath,
 		Files:      flags.DataFilePaths,
 		Modules:    flags.ModulePaths,
 		Fsys:       os.DirFS("/"),
 		Init:       initProg,
+		Config:     initConf,
 	}
 
 	initramFS, err := initramfs.New(ctx, initramfsSpec)
@@ -107,6 +130,12 @@ func newQemuCommand(
 	// so the output can be passed from guest to kernel via consoles.
 	if !flags.NoGoTestFlags {
 		qemuSpec.RewriteGoTestFlagsPath()
+	}
+
+	// Add port forwarding if requested. Requires the guest kernel to support
+	// virtio-net devices.
+	if flags.ForwardPort != [2]uint16{} {
+		qemuSpec.AddHostForward(fwdGuestCIDR, flags.ForwardPort)
 	}
 
 	cmd, err := qemu.NewCommand(qemuSpec, transport.ParseExitCode)

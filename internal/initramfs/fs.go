@@ -20,6 +20,7 @@ const (
 	libsDir    = "lib"
 	modulesDir = "lib/modules"
 	initPath   = "init"
+	configPath = "config"
 	mainPath   = "main"
 )
 
@@ -45,6 +46,9 @@ type Spec struct {
 	// used as init program itself and expected to handle system setup and clean
 	// shutdown.
 	Init []byte
+
+	// Config provides config data for the init program.
+	Config []byte
 }
 
 func (i Spec) executables() []string {
@@ -103,6 +107,11 @@ func fsEntries(cfg Spec, libs sys.LibCollection) []entry {
 			Data: cfg.Init,
 		})
 	}
+
+	entries = append(entries, file{
+		Path: configPath,
+		Data: cfg.Config,
+	})
 
 	entries = append(entries, copyFile{
 		Source: deroot(cfg.Executable),

@@ -64,6 +64,7 @@ func TestNew(t *testing.T) {
 
 	expected := []entry{
 		{"", fs.ModeDir},
+		{"config", 0},
 		{"data", fs.ModeDir},
 		{"data/file1", 0},
 		{"data/file2", 0},

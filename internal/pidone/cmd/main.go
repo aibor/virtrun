@@ -33,12 +33,15 @@ func run(mainFunc func() (int, error)) {
 	// written to by virtrun.
 	env := sysinit.EnvVars{"PATH": "/data"}
 
+	var config sysinit.Config
+
 	sysinit.Run(
+		sysinit.WithConfigFile("/config", &config),
 		sysinit.WithMountPoints(sysinit.SystemMountPoints()),
 		sysinit.WithModules("/lib/modules/*"),
-		sysinit.WithInterfaceUp("lo"),
 		sysinit.WithSymlinks(sysinit.DevSymlinks()),
 		sysinit.WithEnv(env),
+		sysinit.WithConfiguredInterfaces(&config.Interfaces),
 		sysinit.WithHostPipes(),
 		sysinit.WithStdoutHostPipe(),
 		func(state *sysinit.State) error {

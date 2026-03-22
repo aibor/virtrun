@@ -23,10 +23,6 @@ func TestFiles_TestFS(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
-		sourceFS := fstest.MapFS{
-			"file": &fstest.MapFile{},
-		}
-
 		fsys := virtfs.New()
 
 		err := fsys.Mkdir("dir")
@@ -35,9 +31,7 @@ func TestFiles_TestFS(t *testing.T) {
 		err = fsys.MkdirAll("dir/a/b/c")
 		require.NoError(t, err)
 
-		err = fsys.Copy("dir/file", func() (fs.File, error) {
-			return sourceFS.Open("file")
-		})
+		err = fsys.Write("dir/file", []byte("data"))
 		require.NoError(t, err)
 
 		err = fsys.Symlink("dir/file", "dir/link")
@@ -126,6 +120,79 @@ func TestFS_Copy(t *testing.T) {
 			err := fsys.Copy(tt.path, func() (fs.File, error) {
 				return testFS.Open("test")
 			})
+			require.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
+
+func TestFS_Write(t *testing.T) {
+	tests := []struct {
+		name        string
+		path        string
+		prepare     func(fsys *virtfs.FS) error
+		expectedErr error
+	}{
+		{
+			name: "new",
+			path: "test",
+		},
+		{
+			name: "new in dir",
+			path: "dir/test",
+			prepare: func(fsys *virtfs.FS) error {
+				return fsys.Mkdir("dir")
+			},
+		},
+		{
+			name: "parent valid symlink",
+			path: "dir/test",
+			prepare: func(fsys *virtfs.FS) error {
+				return fsys.Symlink("/", "dir")
+			},
+		},
+		{
+			name: "exists as file",
+			path: "test",
+			prepare: func(fsys *virtfs.FS) error {
+				return fsys.Write("test", []byte("existing"))
+			},
+			expectedErr: virtfs.ErrFileExist,
+		},
+		{
+			name: "exists as other",
+			path: "test",
+			prepare: func(fsys *virtfs.FS) error {
+				return fsys.Mkdir("test")
+			},
+			expectedErr: virtfs.ErrFileExist,
+		},
+		{
+			name: "parent not a dir",
+			path: "dir/test",
+			prepare: func(fsys *virtfs.FS) error {
+				return fsys.Copy("dir", func() (fs.File, error) {
+					return nil, assert.AnError
+				})
+			},
+			expectedErr: virtfs.ErrFileNotDir,
+		},
+		{
+			name:        "missing parent",
+			path:        "dir/test",
+			expectedErr: virtfs.ErrFileNotExist,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsys := virtfs.New()
+
+			if tt.prepare != nil {
+				err := tt.prepare(fsys)
+				require.NoError(t, err)
+			}
+
+			err := fsys.Write(tt.path, []byte("data"))
 			require.ErrorIs(t, err, tt.expectedErr)
 		})
 	}

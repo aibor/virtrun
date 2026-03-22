@@ -176,6 +176,24 @@ func (fsys *FS) Copy(name string, openFn FileOpenFunc) error {
 	return nil
 }
 
+// Write creates a new regular file with the given name and data.
+//
+// It returns a [PathError] in case of errors.
+func (fsys *FS) Write(name string, data []byte) error {
+	file := memFile(data)
+
+	err := fsys.add(name, file)
+	if err != nil {
+		return &PathError{
+			Op:   "add",
+			Path: name,
+			Err:  err,
+		}
+	}
+
+	return nil
+}
+
 // Symlink adds a new symbolic link that links to oldname at newname.
 //
 // It returns a [PathError] in case of errors.

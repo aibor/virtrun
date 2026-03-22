@@ -15,6 +15,9 @@ var (
 	ErrNotPidOne = errors.New("process does not have ID 1")
 	// ErrPanic is returned if a [Func] panicked.
 	ErrPanic = errors.New("function panicked")
+	// ErrInvalidIfaceName is returned if a network interface name does not
+	// match the kernels requirements.
+	ErrInvalidIfaceName = errors.New("invalid interface name")
 )
 
 // OptionalMountError is a collection of errors that occurred for mount points

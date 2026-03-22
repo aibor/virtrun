@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+// SPDX-FileCopyrightText: 2026 Tobias Böhm <code@aibor.de>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package initramfs
+package pidone
 
 import (
 	"bytes"
@@ -14,21 +14,22 @@ import (
 	"github.com/aibor/virtrun/internal/sys"
 )
 
-//go:embed init/bin/amd64.gz
+//go:embed bin/amd64.gz
 var amd64Compressed []byte
 
-//go:embed init/bin/arm64.gz
+//go:embed bin/arm64.gz
 var arm64Compressed []byte
 
-//go:embed init/bin/riscv64.gz
+//go:embed bin/riscv64.gz
 var riscv64Compressed []byte
 
-// InitProgFor returns the pre-built init executable for the given architecture.
+// For returns the pre-built init executable for the given architecture.
 //
 // The init binary is supposed to set up the system and execute the file
 // "/main".
-func InitProgFor(arch sys.Arch) ([]byte, error) {
+func For(arch sys.Arch) ([]byte, error) {
 	var compressed []byte
+
 	switch arch {
 	case sys.AMD64:
 		compressed = amd64Compressed

@@ -92,27 +92,6 @@ func reboot() error {
 	return nil
 }
 
-func setInterfaceUp(name string) error {
-	sock, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
-	if err != nil {
-		return fmt.Errorf("control socket: %w", err)
-	}
-
-	ifReq, err := unix.NewIfreq(name)
-	if err != nil {
-		return fmt.Errorf("interface request: %w", err)
-	}
-
-	ifReq.SetUint16(unix.IFF_UP)
-
-	err = unix.IoctlIfreq(sock, unix.SIOCSIFFLAGS, ifReq)
-	if err != nil {
-		return fmt.Errorf("ioctl: %w", err)
-	}
-
-	return nil
-}
-
 func sysctl(key, value string) error {
 	const mode = 0o600
 

@@ -17,6 +17,9 @@ var (
 	ErrPanic = errors.New("function panicked")
 	// ErrInvalidConfig is returned in case of errors parsing the configuration.
 	ErrInvalidConfig = errors.New("invalid config string")
+	// ErrInvalidIfaceName is returned if a network interface name does not
+	// match the kernels requirements.
+	ErrInvalidIfaceName = errors.New("invalid interface name")
 )
 
 // OptionalMountError is a collection of errors that occurred for mount points

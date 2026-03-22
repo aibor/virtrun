@@ -6,7 +6,13 @@ package sysinit
 
 // SetInterfaceUp brings the interface with the given name up.
 func SetInterfaceUp(name string) error {
-	return setInterfaceUp(name)
+	iface, err := newIfaceRequestHandle(name)
+	if err != nil {
+		return err
+	}
+	defer iface.Close()
+
+	return iface.updateFlags(ifaceRequestFlagsSetUp)
 }
 
 // WithInterfaceUp returns a [Func] that wraps [SetInterfaceUp] and can be

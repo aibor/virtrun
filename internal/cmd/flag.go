@@ -98,6 +98,10 @@ func newFlagSet(name string, flags *flags) *flagSet {
 		"kernel module to add to guest. Flag may be used more than once. "+
 			"Empty value clears the list.")
 
+	flagSet.PortPair(&flags.ForwardPort, "forwardPort",
+		"forward port from host to guest ([<hostPort>:]<guestPort>)."+
+			"Requires the guest to support virtio-net (builtin or module)")
+
 	flagSet.BoolVar(&flags.Debug, "debug", flags.Debug,
 		"enable debug output")
 
@@ -129,6 +133,10 @@ func (f *flagSet) FilePathList(value *[]string, name string, usage string) {
 	f.Var((*FilePathList)(value), name, usage)
 }
 
+func (f *flagSet) PortPair(value *[2]uint16, name string, usage string) {
+	f.Var((*PortPair)(value), name, usage)
+}
+
 // fail fails like flag does. It prints the error first and then usage.
 func (f *flagSet) fail(msg string, err error) error {
 	err = &ParseArgsError{msg: msg, err: err}
@@ -152,6 +160,7 @@ type flags struct {
 	DataFilePaths  []string
 	ModulePaths    []string
 	InitArgs       []string
+	ForwardPort    [2]uint16
 	Standalone     bool
 	KeepInitramfs  bool
 	NoKVM          bool

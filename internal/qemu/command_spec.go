@@ -6,6 +6,7 @@ package qemu
 
 import (
 	"fmt"
+	"net/netip"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -173,6 +174,21 @@ func (s *CommandSpec) RewriteGoTestFlagsPath() {
 
 		s.InitArgs[idx] = strings.Join(splits, "=")
 	}
+}
+
+// AddHostForward adds a virtio network interface with the given network
+// address with a port forwarding from the given host to guest port.
+func (s *CommandSpec) AddHostForward(prefix netip.Prefix, ports [2]uint16) {
+	s.ExtraArgs = append(s.ExtraArgs,
+		RepeatableArg("device", "virtio-net-pci,netdev=fwd"),
+		RepeatableArg("netdev", "user,id=fwd,restrict=on,ipv6=off",
+			fmt.Sprintf("net=%s,hostfwd=tcp:127.0.0.1:%d-%s:%d",
+				prefix.Masked(),
+				ports[0],
+				prefix.Addr(),
+				ports[1]),
+		),
+	)
 }
 
 // Validate checks for known incompatibilities.

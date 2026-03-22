@@ -4,6 +4,6 @@
 
 //go:build testdata
 
-//go:generate go generate -v ./testdata/cmd
+//go:generate go generate -tags archbin -v ./testdata/cmd
 
 package sys_test

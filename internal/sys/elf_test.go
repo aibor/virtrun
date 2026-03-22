@@ -44,7 +44,7 @@ func TestReadArch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fileName := "../initramfs/init/bin/" + tt.name
+			fileName := "testdata/bin/" + tt.name
 			actual, err := sys.ReadELFArch(fileName)
 			tt.assertErr(t, err)
 			assert.Equal(t, tt.expected, actual)

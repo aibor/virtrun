@@ -1,15 +1,15 @@
-// SPDX-FileCopyrightText: 2024 Tobias Böhm <code@aibor.de>
+// SPDX-FileCopyrightText: 2026 Tobias Böhm <code@aibor.de>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package initramfs_test
+package pidone_test
 
 import (
 	"debug/elf"
 	"io"
 	"testing"
 
-	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/aibor/virtrun/internal/pidone"
 	"github.com/aibor/virtrun/internal/sys"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,7 +46,7 @@ func TestInits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.arch), func(t *testing.T) {
-			file, err := initramfs.InitProgFor(tt.arch)
+			file, err := pidone.For(tt.arch)
 			require.ErrorIs(t, err, tt.expectedErr)
 
 			if tt.expectedErr != nil {

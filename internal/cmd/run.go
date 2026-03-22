@@ -15,6 +15,7 @@ import (
 	"runtime/debug"
 
 	"github.com/aibor/virtrun/internal/initramfs"
+	"github.com/aibor/virtrun/internal/pidone"
 	"github.com/aibor/virtrun/internal/qemu"
 	"github.com/aibor/virtrun/internal/sys"
 	"github.com/aibor/virtrun/internal/transport"
@@ -57,7 +58,7 @@ func newInitramfs(
 	if !flags.Standalone {
 		var err error
 
-		initProg, err = initramfs.InitProgFor(arch)
+		initProg, err = pidone.For(arch)
 		if err != nil {
 			return nil, fmt.Errorf("get init program: %w", err)
 		}

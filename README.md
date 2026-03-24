@@ -353,3 +353,7 @@ flags.
 [go-report-card-badge]: https://goreportcard.com/badge/github.com/aibor/virtrun
 [actions-test]:         https://github.com/aibor/virtrun/actions/workflows/test.yaml
 [actions-test-badge]:   https://github.com/aibor/virtrun/actions/workflows/test.yaml/badge.svg?branch=main
+
+## Links
+
+[![Hypercommit](https://img.shields.io/badge/Hypercommit-DB2475)](https://hypercommit.com/virtrun)

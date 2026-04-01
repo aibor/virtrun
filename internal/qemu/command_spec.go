@@ -310,7 +310,7 @@ func (s *CommandSpec) kernelCmdlineArgs() []string {
 
 	if len(s.InitArgs) > 0 {
 		cmdline = append(cmdline, "--")
-		cmdline = append(cmdline, s.InitArgs...)
+		cmdline = appendQuoted(cmdline, s.InitArgs...)
 	}
 
 	return cmdline
@@ -344,6 +344,16 @@ func (s *CommandSpec) appendConsoleArgs(
 	chardevArg := RepeatableArg("chardev", chardevOpts...)
 
 	return append(args, chardevArg, devArg)
+}
+
+// appendQuoted appends unquoted strings to the args as ASCII-only quoted
+// strings.
+func appendQuoted(args []string, unquoted ...string) []string {
+	for _, arg := range unquoted {
+		args = append(args, strconv.QuoteToASCII(arg))
+	}
+
+	return args
 }
 
 func fdPath(fd int) string {

@@ -72,7 +72,7 @@ func TestCommandSpec_Arguments(t *testing.T) {
 					"third",
 				},
 			},
-			expect: " -- first second third",
+			expect: " -- \"first\" \"second\" \"third\"",
 			assert: ArgumentValueAssertionFunc("append", assert.Contains),
 		},
 		{

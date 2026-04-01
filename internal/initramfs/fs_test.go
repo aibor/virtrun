@@ -67,6 +67,8 @@ func TestNew(t *testing.T) {
 		{"data", fs.ModeDir},
 		{"data/file1", 0},
 		{"data/file2", 0},
+		{"etc", fs.ModeDir},
+		{"etc/hosts", 0},
 		{"init", 0},
 		{"lib", fs.ModeDir},
 		{"lib/modules", fs.ModeDir},

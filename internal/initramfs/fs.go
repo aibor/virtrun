@@ -17,10 +17,20 @@ import (
 
 const (
 	dataDir    = "data"
+	confDir    = "etc"
 	libsDir    = "lib"
 	modulesDir = "lib/modules"
-	initPath   = "init"
-	mainPath   = "main"
+
+	initPath  = "init"
+	hostsPath = "etc/hosts"
+	mainPath  = "main"
+
+	hostsFile = `
+127.0.0.1       localhost
+::1             localhost ip6-localhost ip6-loopback
+ff02::1         ip6-allnodes
+ff02::2         ip6-allrouters
+`
 )
 
 // Spec specifies the input for initramfs archive creation.
@@ -88,10 +98,15 @@ func New(ctx context.Context, cfg Spec) (*FS, error) {
 func fsEntries(cfg Spec, libs sys.LibCollection) []entry {
 	entries := []entry{
 		directory(dataDir),
+		directory(confDir),
 		directory(libsDir),
 		directory(modulesDir),
 		directory("run"),
 		directory("tmp"),
+		file{
+			Path: hostsPath,
+			Data: []byte(hostsFile),
+		},
 	}
 
 	executablePath := initPath

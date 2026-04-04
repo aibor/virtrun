@@ -86,7 +86,7 @@ func New(ctx context.Context, cfg Spec) (*FS, error) {
 
 	entries := fsEntries(cfg, libs)
 	for _, entry := range entries {
-		err := entry.addTo(fsys)
+		err := entry(fsys)
 		if err != nil {
 			return nil, fmt.Errorf("add to fs: %w", err)
 		}
@@ -95,59 +95,41 @@ func New(ctx context.Context, cfg Spec) (*FS, error) {
 	return fsys, nil
 }
 
-func fsEntries(cfg Spec, libs sys.LibCollection) []entry {
-	entries := []entry{
-		directory(dataDir),
-		directory(confDir),
-		directory(libsDir),
-		directory(modulesDir),
-		directory("run"),
-		directory("tmp"),
-		file{
-			Path: hostsPath,
-			Data: []byte(hostsFile),
-		},
-	}
-
-	executablePath := initPath
-	if cfg.Init != nil {
-		executablePath = mainPath
-
-		entries = append(entries, file{
-			Path: initPath,
-			Data: cfg.Init,
+func fsEntries(cfg Spec, libs sys.LibCollection) []virtfs.EntryFunc {
+	copyFile := func(name, src string) virtfs.EntryFunc {
+		return virtfs.Copy(name, func() (fs.File, error) {
+			return cfg.Fsys.Open(deroot(src))
 		})
 	}
 
-	entries = append(entries, copyFile{
-		Source: deroot(cfg.Executable),
-		Dest:   executablePath,
-		Fsys:   cfg.Fsys,
-	})
+	entries := []virtfs.EntryFunc{
+		virtfs.MkdirAll(dataDir),
+		virtfs.MkdirAll(confDir),
+		virtfs.MkdirAll(libsDir),
+		virtfs.MkdirAll(modulesDir),
+		virtfs.MkdirAll("run"),
+		virtfs.MkdirAll("tmp"),
+		virtfs.Write(hostsPath, []byte(hostsFile)),
+		copyFile(mainPath, cfg.Executable),
+	}
+
+	if cfg.Init != nil {
+		entries = append(entries, virtfs.Write(initPath, cfg.Init))
+	} else {
+		entries = append(entries, virtfs.Symlink(mainPath, initPath))
+	}
 
 	for _, path := range cfg.Files {
-		entries = append(entries, copyFile{
-			Source: deroot(path),
-			Dest:   replaceDir(dataDir, path),
-			Fsys:   cfg.Fsys,
-		})
+		entries = append(entries, copyFile(replaceDir(dataDir, path), path))
 	}
 
 	for idx, path := range cfg.Modules {
 		name := fmt.Sprintf("%04d-%s", idx, filepath.Base(path))
-		entries = append(entries, copyFile{
-			Source: deroot(path),
-			Dest:   replaceDir(modulesDir, name),
-			Fsys:   cfg.Fsys,
-		})
+		entries = append(entries, copyFile(replaceDir(modulesDir, name), path))
 	}
 
 	for path := range libs.Libs() {
-		entries = append(entries, copyFile{
-			Source: deroot(path),
-			Dest:   replaceDir(libsDir, path),
-			Fsys:   cfg.Fsys,
-		})
+		entries = append(entries, copyFile(replaceDir(libsDir, path), path))
 	}
 
 	for path := range libs.SearchPaths() {
@@ -157,12 +139,8 @@ func fsEntries(cfg Spec, libs sys.LibCollection) []entry {
 		}
 
 		entries = append(entries,
-			directory(filepath.Dir(path)),
-			symlink{
-				Target:   root(libsDir),
-				Path:     path,
-				MayExist: true,
-			},
+			virtfs.MkdirAll(filepath.Dir(path)),
+			virtfs.MayExist(virtfs.Symlink(root(libsDir), path)),
 		)
 	}
 

@@ -37,7 +37,6 @@ func TestNew(t *testing.T) {
 		Init: []byte("initprog"),
 	}
 
-	t.Setenv("TMPDIR", t.TempDir())
 	actualFS, err := initramfs.New(t.Context(), spec)
 	require.NoError(t, err)
 

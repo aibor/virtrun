@@ -33,7 +33,10 @@ func run(mainFunc func() (int, error)) {
 	// written to by virtrun.
 	env := sysinit.EnvVars{"PATH": "/data"}
 
+	var config sysinit.Config
+
 	sysinit.Run(
+		sysinit.WithConfigFile("/etc/config.bin", &config),
 		sysinit.WithMountPoints(sysinit.SystemMountPoints()),
 		sysinit.WithModules("/lib/modules/*"),
 		sysinit.WithInterfaceUp("lo"),

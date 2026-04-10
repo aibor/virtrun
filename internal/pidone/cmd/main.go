@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/aibor/virtrun/internal/transport"
 	"github.com/aibor/virtrun/sysinit"
 )
 
@@ -33,7 +34,10 @@ func run(mainFunc func() (int, error)) {
 	// written to by virtrun.
 	env := sysinit.EnvVars{"PATH": "/data"}
 
+	var config transport.Config
+
 	sysinit.Run(
+		withConfigFile("/etc/config.bin", &config),
 		sysinit.WithMountPoints(sysinit.SystemMountPoints()),
 		sysinit.WithModules("/lib/modules/*"),
 		sysinit.WithInterfaceUp("lo"),
@@ -52,6 +56,12 @@ func run(mainFunc func() (int, error)) {
 			return nil
 		},
 	)
+}
+
+func withConfigFile(path string, cfg *transport.Config) sysinit.Func {
+	return func(_ *sysinit.State) error {
+		return cfg.DecodeFrom(path)
+	}
 }
 
 func main() {

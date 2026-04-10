@@ -15,6 +15,8 @@ var (
 	ErrNotPidOne = errors.New("process does not have ID 1")
 	// ErrPanic is returned if a [Func] panicked.
 	ErrPanic = errors.New("function panicked")
+	// ErrInvalidConfig is returned in case of errors parsing the configuration.
+	ErrInvalidConfig = errors.New("invalid config string")
 )
 
 // OptionalMountError is a collection of errors that occurred for mount points

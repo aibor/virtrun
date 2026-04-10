@@ -21,9 +21,10 @@ const (
 	libsDir    = "lib"
 	modulesDir = "lib/modules"
 
-	initPath  = "init"
-	hostsPath = "etc/hosts"
-	mainPath  = "main"
+	initPath   = "init"
+	configPath = "etc/config.bin"
+	hostsPath  = "etc/hosts"
+	mainPath   = "main"
 
 	hostsFile = `
 127.0.0.1       localhost
@@ -55,6 +56,9 @@ type Spec struct {
 	// used as init program itself and expected to handle system setup and clean
 	// shutdown.
 	Init []byte
+
+	// Config provides config data for the init program.
+	Config []byte
 }
 
 func (i Spec) executables() []string {
@@ -110,6 +114,7 @@ func fsEntries(cfg Spec, libs sys.LibCollection) []virtfs.EntryFunc {
 		virtfs.MkdirAll("run"),
 		virtfs.MkdirAll("tmp"),
 		virtfs.Write(hostsPath, []byte(hostsFile)),
+		virtfs.Write(configPath, cfg.Config),
 		copyFile(mainPath, cfg.Executable),
 	}
 

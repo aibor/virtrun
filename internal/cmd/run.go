@@ -45,6 +45,15 @@ func newFlags(args []string, cfg IO) (*flags, error) {
 	return flags, nil
 }
 
+func newInitConf(flags *flags) pidone.Config {
+	cfg := pidone.Config{
+		// Always bring loopback interface up.
+		Interfaces: map[string]netip.Prefix{"lo": {}},
+	}
+
+	return cfg
+}
+
 func newInitramfs(
 	ctx context.Context,
 	flags *flags,
@@ -63,12 +72,18 @@ func newInitramfs(
 		}
 	}
 
+	initConf, err := newInitConf(flags).Encode()
+	if err != nil {
+		return nil, fmt.Errorf("get init config: %w", err)
+	}
+
 	initramfsSpec := initramfs.Spec{
 		Executable: flags.ExecutablePath,
 		Files:      flags.DataFilePaths,
 		Modules:    flags.ModulePaths,
 		Fsys:       os.DirFS("/"),
 		Init:       initProg,
+		Config:     initConf,
 	}
 
 	initramFS, err := initramfs.New(ctx, initramfsSpec)

@@ -40,9 +40,9 @@ func run(mainFunc func() (int, error)) {
 		withConfigFile("/etc/config.bin", &config),
 		sysinit.WithMountPoints(sysinit.SystemMountPoints()),
 		sysinit.WithModules("/lib/modules/*"),
-		sysinit.WithInterfaceUp("lo"),
 		sysinit.WithSymlinks(sysinit.DevSymlinks()),
 		sysinit.WithEnv(env),
+		sysinit.WithConfiguredInterfaces(&config.Interfaces),
 		sysinit.WithHostPipes(),
 		sysinit.WithStdoutHostPipe(),
 		func(state *sysinit.State) error {

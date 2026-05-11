@@ -194,10 +194,6 @@ func (s *CommandSpec) Validate() error {
 				"microvm supports only one isa serial port, used for stdio",
 			}
 		}
-	case machineTypeVirt:
-		if s.TransportType == TransportTypeISA {
-			return &ArgumentError{"virt requires virtio-mmio"}
-		}
 	case machineTypeQ35, machineTypePC:
 		if s.TransportType == TransportTypeMMIO {
 			return &ArgumentError{
@@ -289,8 +285,9 @@ func (s *CommandSpec) arguments() []Argument {
 
 // kernelCmdlineArgs reruns the kernel cmdline arguments.
 func (s *CommandSpec) kernelCmdlineArgs() []string {
+	consoleDevPrefix := consoleDevicePrefix(s.TransportType, s.Machine)
 	cmdline := []string{
-		"console=" + s.TransportType.ConsoleDeviceName(0),
+		fmt.Sprintf("console=%s%d", consoleDevPrefix, 0),
 		"panic=-1",
 		"mitigations=off",
 		"initcall_blacklist=ahci_pci_driver_init",
@@ -358,4 +355,18 @@ func appendQuoted(args []string, unquoted ...string) []string {
 
 func fdPath(fd int) string {
 	return fmt.Sprintf("/dev/fd/%d", fd)
+}
+
+func consoleDevicePrefix(
+	transportType TransportType,
+	machineType string,
+) string {
+	switch {
+	case transportType != TransportTypeISA:
+		return "hvc"
+	case machineType == machineTypeVirt:
+		return "ttyAMA"
+	default:
+		return "ttyS"
+	}
 }

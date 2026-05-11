@@ -148,3 +148,49 @@ func TestCommandSpec_Arguments(t *testing.T) {
 		})
 	}
 }
+
+func TestConsoleDeviceName(t *testing.T) {
+	tests := []struct {
+		transport TransportType
+		machine   string
+		want      string
+	}{
+		{
+			transport: TransportTypeISA,
+			machine:   machineTypeQ35,
+			want:      "ttyS",
+		},
+		{
+			transport: TransportTypeISA,
+			machine:   machineTypeVirt,
+			want:      "ttyAMA",
+		},
+		{
+			transport: TransportTypePCI,
+			machine:   machineTypeQ35,
+			want:      "hvc",
+		},
+		{
+			transport: TransportTypePCI,
+			machine:   machineTypeVirt,
+			want:      "hvc",
+		},
+		{
+			transport: TransportTypeMMIO,
+			machine:   machineTypeQ35,
+			want:      "hvc",
+		},
+		{
+			transport: TransportTypeMMIO,
+			machine:   machineTypeVirt,
+			want:      "hvc",
+		},
+	}
+	for _, tt := range tests {
+		name := string(tt.transport) + "_" + tt.machine
+		t.Run(name, func(t *testing.T) {
+			got := consoleDevicePrefix(tt.transport, tt.machine)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

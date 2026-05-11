@@ -12,35 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCommmandConsoleDeviceName(t *testing.T) {
-	tests := []struct {
-		id        uint
-		transport qemu.TransportType
-		expect    string
-	}{
-		{
-			id:        5,
-			transport: qemu.TransportTypeISA,
-			expect:    "ttyS5",
-		},
-		{
-			id:        3,
-			transport: qemu.TransportTypePCI,
-			expect:    "hvc3",
-		},
-		{
-			id:        1,
-			transport: qemu.TransportTypeMMIO,
-			expect:    "hvc1",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.expect, func(t *testing.T) {
-			assert.Equal(t, tt.expect, tt.transport.ConsoleDeviceName(tt.id))
-		})
-	}
-}
-
 func TestTransportType_String(t *testing.T) {
 	tests := []struct {
 		input    qemu.TransportType

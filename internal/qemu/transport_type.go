@@ -5,7 +5,6 @@
 package qemu
 
 import (
-	"fmt"
 	"slices"
 )
 
@@ -50,16 +49,6 @@ func (t *TransportType) Set(s string) error {
 	*t = ttype
 
 	return nil
-}
-
-// ConsoleDeviceName returns the name of the console device in the guest.
-func (t *TransportType) ConsoleDeviceName(num uint) string {
-	f := "hvc%d"
-	if *t == TransportTypeISA {
-		f = "ttyS%d"
-	}
-
-	return fmt.Sprintf(f, num)
 }
 
 func (t *TransportType) isKnown() bool {

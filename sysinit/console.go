@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	activeConsoleFile     = "/sys/devices/virtual/tty/console/active"
-	serialConsoleInfoFile = "/proc/tty/driver/serial"
+	activeConsoleFile = "/sys/devices/virtual/tty/console/active"
+	infoFileDir       = "/proc/tty/driver/"
 )
 
 type console struct {
@@ -40,7 +40,9 @@ func connectedConsoles() ([]console, error) {
 	case strings.HasPrefix(primaryConsole, "hvc"):
 		return virtConsolesConnected()
 	case strings.HasPrefix(primaryConsole, "ttyS"):
-		return serialConsolesConnected()
+		return connectedTTYConsoles("ttyS", "serial")
+	case strings.HasPrefix(primaryConsole, "ttyAMA"):
+		return connectedTTYConsoles("ttyAMA", "ttyAMA")
 	}
 
 	return nil, fmt.Errorf("%w: %s", ErrConsoleNotSupported, primaryConsole)
@@ -85,25 +87,44 @@ func virtConsolesConnected() ([]console, error) {
 	return consoles, nil
 }
 
-// serialConsolesConnected returns a slice of serial consoles (/dev/ttyS*) that
-// are connected on the host using the default serial driver info file.
-func serialConsolesConnected() ([]console, error) {
-	serialInfo, err := os.ReadFile(serialConsoleInfoFile)
+// connectedTTYConsoles returns a slice of consoles that are connected on the
+// host.
+func connectedTTYConsoles(typ string, driver string) ([]console, error) {
+	ports, err := connectedTTYs(driver)
 	if err != nil {
-		return nil, fmt.Errorf("read info: %w", err)
+		return nil, err
 	}
 
-	consoles := serialConsolesConnectedFromBytes(serialInfo)
+	consoles := []console{}
+	for _, port := range ports {
+		consoles = append(consoles, console{
+			path: consolePath(typ, port),
+			port: port,
+		})
+	}
 
 	return consoles, nil
 }
 
-// serialConsolesConnectedFromBytes returns a slice of serial consoles
-// (/dev/ttyS*) that are connected on the host from the given reader.
-//
-// The reader is expected to have the default serial info file format.
-func serialConsolesConnectedFromBytes(serialInfo []byte) []console {
-	consoles := []console{}
+// connectedTTYs returns a slice of tty port numbers that are connected on the
+// host with the given driver.
+func connectedTTYs(driver string) ([]int, error) {
+	serialInfo, err := os.ReadFile(infoFileDir + driver)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return []int{}, nil
+		}
+
+		return nil, fmt.Errorf("read info: %w", err)
+	}
+
+	consoles := connectedTTYsFromInfo(serialInfo)
+
+	return consoles, nil
+}
+
+func connectedTTYsFromInfo(serialInfo []byte) []int {
+	ports := []int{}
 
 	for line := range bytes.Lines(serialInfo) {
 		if !bytes.Contains(line, []byte("uart")) ||
@@ -126,13 +147,10 @@ func serialConsolesConnectedFromBytes(serialInfo []byte) []console {
 			continue
 		}
 
-		consoles = append(consoles, console{
-			path: consolePath("ttyS", port),
-			port: port,
-		})
+		ports = append(ports, port)
 	}
 
-	return consoles
+	return ports
 }
 
 func consolePath(typ string, id int) string {

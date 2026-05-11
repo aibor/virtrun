@@ -11,15 +11,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSerialConsolesConnectedFromBytes(t *testing.T) {
+func TestConnectedTTYsFromInfo(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    []string
-		expected []console
+		expected []int
 	}{
 		{
 			name:     "empty",
-			expected: []console{},
+			expected: []int{},
 		},
 		{
 			name: "single console",
@@ -31,9 +31,7 @@ func TestSerialConsolesConnectedFromBytes(t *testing.T) {
 				"3: uart:unknown port:000002E8 irq:3\n",
 				"4: uart:unknown port:00000000 irq:0\n",
 			},
-			expected: []console{
-				{port: 0, path: "/dev/ttyS0"},
-			},
+			expected: []int{0},
 		},
 		{
 			name: "multiple consoles",
@@ -45,18 +43,14 @@ func TestSerialConsolesConnectedFromBytes(t *testing.T) {
 				"3: uart:unknown port:000002E8 irq:3\n",
 				"4: uart:unknown port:00000000 irq:0\n",
 			},
-			expected: []console{
-				{port: 0, path: "/dev/ttyS0"},
-				{port: 1, path: "/dev/ttyS1"},
-				{port: 2, path: "/dev/ttyS2"},
-			},
+			expected: []int{0, 1, 2},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			input := []byte(strings.Join(tt.input, ""))
-			actual := serialConsolesConnectedFromBytes(input)
+			actual := connectedTTYsFromInfo(input)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}

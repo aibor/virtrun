@@ -8,8 +8,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"strconv"
+	"strings"
+	"syscall"
 )
 
 const serialConsoleInfoFile = "/proc/tty/driver/serial"
@@ -26,13 +29,17 @@ type console struct {
 // serial consoles (/dev/ttyS*) are used.
 func connectedConsoles() ([]console, error) {
 	// If virtio consoles are present, use these.
-	consoles := virtConsolesConnected()
+	consoles, err := virtConsolesConnected()
+	if err != nil {
+		return nil, fmt.Errorf("virtconsole: %w", err)
+	}
+
 	if len(consoles) > 0 {
 		return consoles, nil
 	}
 
 	// Otherwise fall back to serial consoles.
-	consoles, err := serialConsolesConnected()
+	consoles, err = serialConsolesConnected()
 	if err != nil {
 		return nil, fmt.Errorf("serial: %w", err)
 	}
@@ -42,27 +49,33 @@ func connectedConsoles() ([]console, error) {
 
 // virtConsolesConnected returns a slice of virtio consoles (/dev/hvc*) that are
 // connected on the host.
-func virtConsolesConnected() []console {
+func virtConsolesConnected() ([]console, error) {
 	consoles := []console{}
 
-	//nolint:lll
-	// https://github.com/torvalds/linux/blob/dd9c17322a6cc56d57b5d2b0b84393ab76a55c80/drivers/tty/hvc/hvc_console.h#L33
-	for port := range 8 {
-		path := consolePath("hvc", port)
+	files, err := fs.Glob(os.DirFS("/dev/"), "hvc*")
+	if err != nil {
+		return nil, fmt.Errorf("read hvc entries: %w", err)
+	}
+
+	for _, file := range files {
+		path := "/dev/" + file
 
 		hvc, err := os.Open(path)
 		if err != nil {
-			// If the file is not present and there are no consoles yet,
-			// there are no virtio consoles present at all.
-			if errors.Is(err, os.ErrNotExist) && len(consoles) == 0 {
-				return nil
+			// virtio consoles that are not connected on the host return ENODEV.
+			if errors.Is(err, syscall.ENODEV) {
+				continue
 			}
 
-			// virtio consoles that are not connected on the host return ENODEV.
-			continue
+			return nil, fmt.Errorf("check: %w", err)
 		}
 
 		_ = hvc.Close()
+
+		port, err := strconv.Atoi(strings.TrimPrefix(file, "hvc"))
+		if err != nil {
+			return nil, fmt.Errorf("parse port: %w", err)
+		}
 
 		consoles = append(consoles, console{
 			path: path,
@@ -70,7 +83,7 @@ func virtConsolesConnected() []console {
 		})
 	}
 
-	return consoles
+	return consoles, nil
 }
 
 // serialConsolesConnected returns a slice of serial consoles (/dev/ttyS*) that

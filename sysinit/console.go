@@ -15,7 +15,10 @@ import (
 	"syscall"
 )
 
-const serialConsoleInfoFile = "/proc/tty/driver/serial"
+const (
+	activeConsoleFile     = "/sys/devices/virtual/tty/console/active"
+	serialConsoleInfoFile = "/proc/tty/driver/serial"
+)
 
 type console struct {
 	path string
@@ -28,23 +31,19 @@ type console struct {
 // If virto consoles are present (/dev/hvc*) then only those are used. Otherwise
 // serial consoles (/dev/ttyS*) are used.
 func connectedConsoles() ([]console, error) {
-	// If virtio consoles are present, use these.
-	consoles, err := virtConsolesConnected()
+	primaryConsole, err := primaryConsole()
 	if err != nil {
-		return nil, fmt.Errorf("virtconsole: %w", err)
+		return nil, err
 	}
 
-	if len(consoles) > 0 {
-		return consoles, nil
+	switch {
+	case strings.HasPrefix(primaryConsole, "hvc"):
+		return virtConsolesConnected()
+	case strings.HasPrefix(primaryConsole, "ttyS"):
+		return serialConsolesConnected()
 	}
 
-	// Otherwise fall back to serial consoles.
-	consoles, err = serialConsolesConnected()
-	if err != nil {
-		return nil, fmt.Errorf("serial: %w", err)
-	}
-
-	return consoles, nil
+	return nil, fmt.Errorf("%w: %s", ErrConsoleNotSupported, primaryConsole)
 }
 
 // virtConsolesConnected returns a slice of virtio consoles (/dev/hvc*) that are
@@ -138,4 +137,13 @@ func serialConsolesConnectedFromBytes(serialInfo []byte) []console {
 
 func consolePath(typ string, id int) string {
 	return "/dev/" + typ + strconv.Itoa(id)
+}
+
+func primaryConsole() (string, error) {
+	active, err := os.ReadFile(activeConsoleFile)
+	if err != nil {
+		return "", fmt.Errorf("read active console: %w", err)
+	}
+
+	return string(bytes.Fields(active)[0]), nil
 }

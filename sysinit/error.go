@@ -15,6 +15,9 @@ var (
 	ErrNotPidOne = errors.New("process does not have ID 1")
 	// ErrPanic is returned if a [Func] panicked.
 	ErrPanic = errors.New("function panicked")
+	// ErrConsoleNotSupported is returned if a console used an unsupported
+	// driver.
+	ErrConsoleNotSupported = errors.New("console driver not supported")
 )
 
 // OptionalMountError is a collection of errors that occurred for mount points

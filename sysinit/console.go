@@ -38,7 +38,7 @@ func connectedConsoles() ([]console, error) {
 
 	switch {
 	case strings.HasPrefix(primaryConsole, "hvc"):
-		return virtConsolesConnected()
+		return connectedVirtConsoles()
 	case strings.HasPrefix(primaryConsole, "ttyS"):
 		return connectedTTYConsoles("ttyS", "serial")
 	case strings.HasPrefix(primaryConsole, "ttyAMA"):
@@ -48,9 +48,9 @@ func connectedConsoles() ([]console, error) {
 	return nil, fmt.Errorf("%w: %s", ErrConsoleNotSupported, primaryConsole)
 }
 
-// virtConsolesConnected returns a slice of virtio consoles (/dev/hvc*) that are
+// connectedVirtConsoles returns a slice of virtio consoles (/dev/hvc*) that are
 // connected on the host.
-func virtConsolesConnected() ([]console, error) {
+func connectedVirtConsoles() ([]console, error) {
 	consoles := []console{}
 
 	files, err := fs.Glob(os.DirFS("/dev/"), "hvc*")

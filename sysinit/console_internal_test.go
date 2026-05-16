@@ -9,15 +9,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSerialConsolesConnectedFromBytes(t *testing.T) {
 	tests := []struct {
-		name        string
-		input       []string
-		expected    []console
-		expectedErr error
+		name     string
+		input    []string
+		expected []console
 	}{
 		{
 			name:     "empty",
@@ -58,8 +56,7 @@ func TestSerialConsolesConnectedFromBytes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			input := []byte(strings.Join(tt.input, ""))
-			actual, err := serialConsolesConnectedFromBytes(input)
-			require.ErrorIs(t, err, tt.expectedErr)
+			actual := serialConsolesConnectedFromBytes(input)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}

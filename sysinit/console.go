@@ -81,14 +81,16 @@ func serialConsolesConnected() ([]console, error) {
 		return nil, fmt.Errorf("read info: %w", err)
 	}
 
-	return serialConsolesConnectedFromBytes(serialInfo)
+	consoles := serialConsolesConnectedFromBytes(serialInfo)
+
+	return consoles, nil
 }
 
 // serialConsolesConnectedFromBytes returns a slice of serial consoles
 // (/dev/ttyS*) that are connected on the host from the given reader.
 //
 // The reader is expected to have the default serial info file format.
-func serialConsolesConnectedFromBytes(serialInfo []byte) ([]console, error) {
+func serialConsolesConnectedFromBytes(serialInfo []byte) []console {
 	consoles := []console{}
 
 	for line := range bytes.Lines(serialInfo) {
@@ -118,7 +120,7 @@ func serialConsolesConnectedFromBytes(serialInfo []byte) ([]console, error) {
 		})
 	}
 
-	return consoles, nil
+	return consoles
 }
 
 func consolePath(typ string, id int) string {

@@ -7,6 +7,7 @@ package sysinit
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/aibor/virtrun/internal/transport"
 )
@@ -73,6 +74,15 @@ func SetupHostPipes(state *State) error {
 			continue
 		}
 
+		err = os.Symlink(console.path, transport.PipePath(console.port))
+		if err != nil {
+			return fmt.Errorf("symlink pipe: %w", err)
+		}
+
+		if strings.HasPrefix(console.path, "/dev/vport") {
+			return nil
+		}
+
 		handle, err := fopen(console.path, O_WRONLY|O_NOCTTY|O_NDELAY, 0)
 		if err != nil {
 			return err
@@ -82,12 +92,6 @@ func SetupHostPipes(state *State) error {
 		if err != nil {
 			_ = fclose(handle)
 			return fmt.Errorf("configure %s: %w", console.path, err)
-		}
-
-		err = os.Symlink(console.path, transport.PipePath(console.port))
-		if err != nil {
-			_ = fclose(handle)
-			return fmt.Errorf("symlink pipe: %w", err)
 		}
 
 		state.Cleanup(func() error {

@@ -85,15 +85,14 @@ func TestCommandSpec_Arguments(t *testing.T) {
 				TransportType: TransportTypeMMIO,
 			},
 			expect: []Argument{
-				RepeatableArg("device", "virtio-serial-device,max_ports=8"),
-				RepeatableArg("chardev", "stdio,id=stdio"),
-				RepeatableArg("device", "virtconsole,chardev=stdio"),
+				RepeatableArg("device", "virtio-serial-device,max_ports=4"),
+				RepeatableArg("serial", "stdio"),
 				RepeatableArg("chardev", "file,id=con0,path=/dev/fd/3"),
-				RepeatableArg("device", "virtconsole,chardev=con0"),
+				RepeatableArg("device", "virtserialport,chardev=con0"),
 				RepeatableArg("chardev", "file,id=con1,path=/output/file1"),
-				RepeatableArg("device", "virtconsole,chardev=con1"),
+				RepeatableArg("device", "virtserialport,chardev=con1"),
 				RepeatableArg("chardev", "file,id=con2,path=/output/file2"),
-				RepeatableArg("device", "virtconsole,chardev=con2"),
+				RepeatableArg("device", "virtserialport,chardev=con2"),
 			},
 			assert: assert.Subset,
 		},
@@ -107,15 +106,14 @@ func TestCommandSpec_Arguments(t *testing.T) {
 				TransportType: TransportTypePCI,
 			},
 			expect: []Argument{
-				RepeatableArg("device", "virtio-serial-pci,max_ports=8"),
-				RepeatableArg("chardev", "stdio,id=stdio"),
-				RepeatableArg("device", "virtconsole,chardev=stdio"),
+				RepeatableArg("device", "virtio-serial-pci,max_ports=4"),
+				RepeatableArg("serial", "stdio"),
 				RepeatableArg("chardev", "file,id=con0,path=/dev/fd/3"),
-				RepeatableArg("device", "virtconsole,chardev=con0"),
+				RepeatableArg("device", "virtserialport,chardev=con0"),
 				RepeatableArg("chardev", "file,id=con1,path=/output/file1"),
-				RepeatableArg("device", "virtconsole,chardev=con1"),
+				RepeatableArg("device", "virtserialport,chardev=con1"),
 				RepeatableArg("chardev", "file,id=con2,path=/output/file2"),
-				RepeatableArg("device", "virtconsole,chardev=con2"),
+				RepeatableArg("device", "virtserialport,chardev=con2"),
 			},
 			assert: assert.Subset,
 		},
@@ -129,8 +127,8 @@ func TestCommandSpec_Arguments(t *testing.T) {
 				TransportType: TransportTypeISA,
 			},
 			expect: []Argument{
-				RepeatableArg("chardev", "stdio,id=stdio"),
-				RepeatableArg("serial", "chardev:stdio"),
+				RepeatableArg("device", "virtio-serial-pci,max_ports=4"),
+				RepeatableArg("serial", "stdio"),
 				RepeatableArg("chardev", "file,id=con0,path=/dev/fd/3"),
 				RepeatableArg("serial", "chardev:con0"),
 				RepeatableArg("chardev", "file,id=con1,path=/output/file1"),
@@ -151,45 +149,22 @@ func TestCommandSpec_Arguments(t *testing.T) {
 
 func TestConsoleDeviceName(t *testing.T) {
 	tests := []struct {
-		transport TransportType
-		machine   string
-		want      string
+		machine string
+		want    string
 	}{
 		{
-			transport: TransportTypeISA,
-			machine:   machineTypeQ35,
-			want:      "ttyS",
+			machine: machineTypeQ35,
+			want:    "ttyS",
 		},
 		{
-			transport: TransportTypeISA,
-			machine:   machineTypeVirt,
-			want:      "ttyAMA",
-		},
-		{
-			transport: TransportTypePCI,
-			machine:   machineTypeQ35,
-			want:      "hvc",
-		},
-		{
-			transport: TransportTypePCI,
-			machine:   machineTypeVirt,
-			want:      "hvc",
-		},
-		{
-			transport: TransportTypeMMIO,
-			machine:   machineTypeQ35,
-			want:      "hvc",
-		},
-		{
-			transport: TransportTypeMMIO,
-			machine:   machineTypeVirt,
-			want:      "hvc",
+			machine: machineTypeVirt,
+			want:    "ttyAMA",
 		},
 	}
 	for _, tt := range tests {
-		name := string(tt.transport) + "_" + tt.machine
+		name := tt.machine
 		t.Run(name, func(t *testing.T) {
-			got := consoleDevicePrefix(tt.transport, tt.machine)
+			got := consoleDevicePrefix(tt.machine)
 			assert.Equal(t, tt.want, got)
 		})
 	}

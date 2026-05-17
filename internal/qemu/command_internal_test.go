@@ -73,8 +73,8 @@ func TestNewCommand(t *testing.T) {
 				args: []string{
 					"-kernel",
 					"-initrd",
-					"-chardev", "stdio,id=stdio",
-					"-serial", "chardev:stdio",
+					"-device", "virtio-serial-pci,max_ports=3",
+					"-serial", "stdio",
 					"-chardev", "file,id=con0,path=/dev/fd/3",
 					"-serial", "chardev:con0",
 					"-chardev", "file,id=con1,path=one",

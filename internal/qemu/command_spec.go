@@ -232,19 +232,17 @@ func (s *CommandSpec) arguments() []Argument {
 		args = append(args, UniqueArg("enable-kvm"))
 	}
 
-	sharedDevices := map[TransportType]string{
-		TransportTypePCI:  "virtio-serial-pci,max_ports=8",
-		TransportTypeMMIO: "virtio-serial-device,max_ports=8",
-	}
-	if value, exists := sharedDevices[s.TransportType]; exists {
-		args = append(args, RepeatableArg("device", value))
+	serialDev := "virtio-serial-pci"
+	if s.TransportType == TransportTypeMMIO {
+		serialDev = "virtio-serial-device"
 	}
 
-	// Add stderr console.
-	args = s.appendConsoleArgs(args, consoleArg{
-		id:      "stdio",
-		backend: "stdio",
-	})
+	ports := reservedPipes + len(s.AdditionalConsoles)
+
+	args = append(args,
+		RepeatableArg("device", serialDev, fmt.Sprintf("max_ports=%d", ports)),
+		RepeatableArg("serial", "stdio"),
+	)
 
 	// Add stdout console. This is provided by the [exec.Cmd.ExtraFiles].
 	args = s.appendConsoleArgs(args, consoleArg{
@@ -285,7 +283,7 @@ func (s *CommandSpec) arguments() []Argument {
 
 // kernelCmdlineArgs reruns the kernel cmdline arguments.
 func (s *CommandSpec) kernelCmdlineArgs() []string {
-	consoleDevPrefix := consoleDevicePrefix(s.TransportType, s.Machine)
+	consoleDevPrefix := consoleDevicePrefix(s.Machine)
 	cmdline := []string{
 		fmt.Sprintf("console=%s%d", consoleDevPrefix, 0),
 		"panic=-1",
@@ -329,7 +327,7 @@ func (s *CommandSpec) appendConsoleArgs(
 	case TransportTypeISA:
 		devArg = RepeatableArg("serial", "chardev:"+console.id)
 	case TransportTypePCI, TransportTypeMMIO:
-		devArg = RepeatableArg("device", "virtconsole,chardev="+console.id)
+		devArg = RepeatableArg("device", "virtserialport,chardev="+console.id)
 	default: // Ignore invalid transport types.
 		return args
 	}
@@ -357,16 +355,10 @@ func fdPath(fd int) string {
 	return fmt.Sprintf("/dev/fd/%d", fd)
 }
 
-func consoleDevicePrefix(
-	transportType TransportType,
-	machineType string,
-) string {
-	switch {
-	case transportType != TransportTypeISA:
-		return "hvc"
-	case machineType == machineTypeVirt:
+func consoleDevicePrefix(machineType string) string {
+	if machineType == machineTypeVirt {
 		return "ttyAMA"
-	default:
-		return "ttyS"
 	}
+
+	return "ttyS"
 }

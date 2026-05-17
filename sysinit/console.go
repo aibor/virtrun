@@ -12,7 +12,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 const (
@@ -28,17 +27,24 @@ type console struct {
 // connectedConsoles returns a slice of consoles that are detected as
 // connected on the host.
 //
-// If virto consoles are present (/dev/hvc*) then only those are used. Otherwise
-// serial consoles (/dev/ttyS*) are used.
+// If virto consoles are present (/dev/vport*) then only those are used.
+// Otherwise serial consoles (/dev/tty(S|AMA)*) are used.
 func connectedConsoles() ([]console, error) {
+	consoles, err := connectedVirtConsoles()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(consoles) > 0 {
+		return consoles, nil
+	}
+
 	primaryConsole, err := primaryConsole()
 	if err != nil {
 		return nil, err
 	}
 
 	switch {
-	case strings.HasPrefix(primaryConsole, "hvc"):
-		return connectedVirtConsoles()
 	case strings.HasPrefix(primaryConsole, "ttyS"):
 		return connectedTTYConsoles("ttyS", "serial")
 	case strings.HasPrefix(primaryConsole, "ttyAMA"):
@@ -48,38 +54,24 @@ func connectedConsoles() ([]console, error) {
 	return nil, fmt.Errorf("%w: %s", ErrConsoleNotSupported, primaryConsole)
 }
 
-// connectedVirtConsoles returns a slice of virtio consoles (/dev/hvc*) that are
-// connected on the host.
+// connectedVirtConsoles returns a slice of virtio consoles (/dev/vport*) if
+// present.
 func connectedVirtConsoles() ([]console, error) {
 	consoles := []console{}
 
-	files, err := fs.Glob(os.DirFS("/dev/"), "hvc*")
+	files, err := fs.Glob(os.DirFS("/dev/"), "vport*")
 	if err != nil {
 		return nil, fmt.Errorf("read hvc entries: %w", err)
 	}
 
 	for _, file := range files {
-		path := "/dev/" + file
-
-		hvc, err := os.Open(path)
-		if err != nil {
-			// virtio consoles that are not connected on the host return ENODEV.
-			if errors.Is(err, syscall.ENODEV) {
-				continue
-			}
-
-			return nil, fmt.Errorf("check: %w", err)
-		}
-
-		_ = hvc.Close()
-
-		port, err := strconv.Atoi(strings.TrimPrefix(file, "hvc"))
+		port, err := strconv.Atoi(file[7:])
 		if err != nil {
 			return nil, fmt.Errorf("parse port: %w", err)
 		}
 
 		consoles = append(consoles, console{
-			path: path,
+			path: "/dev/" + file,
 			port: port,
 		})
 	}

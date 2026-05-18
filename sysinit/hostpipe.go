@@ -80,7 +80,7 @@ func SetupHostPipes(state *State) error {
 		}
 
 		if strings.HasPrefix(console.path, "/dev/vport") {
-			return nil
+			continue
 		}
 
 		handle, err := fopen(console.path, O_WRONLY|O_NOCTTY|O_NDELAY, 0)

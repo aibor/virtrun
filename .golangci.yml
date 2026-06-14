@@ -13,6 +13,8 @@ linters:
   settings:
     exhaustive:
       default-signifies-exhaustive: true
+    goconst:
+      ignore-tests: true
     funlen:
       # Do not care for lines, but statements.
       lines: -1

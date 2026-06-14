@@ -95,7 +95,7 @@ func loadModule(module *os.File, params string) error {
 	typ := parseModuleType(module.Name())
 
 	// Try finit_module(2) first, as it is the more comfortable syscall. If it
-	// is not available try again with init_module(2).
+	// is not available, try again with init_module(2).
 	err := finitModule(module.Fd(), params, finitFlagsFor(typ))
 	if !errors.Is(err, errors.ErrUnsupported) {
 		return err

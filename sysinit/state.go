@@ -23,7 +23,7 @@ type State struct {
 
 // Cleanup register a cleanup.
 //
-// Cleanup function run in the reverse order they are added. Errors are logged
+// Cleanup functions run in the reverse order they are added. Errors are logged
 // to the default logger.
 func (s *State) Cleanup(fn CleanupFunc) {
 	s.cleanupFns = append(s.cleanupFns, fn)
@@ -31,7 +31,7 @@ func (s *State) Cleanup(fn CleanupFunc) {
 
 // SetExitCode sets the exit code to be written on successful run.
 //
-// If none is set or any errors occurred no exit code is written.
+// If none is set or any errors occurred, no exit code is written.
 func (s *State) SetExitCode(exitCode int) {
 	s.exitCode = &exitCode
 }

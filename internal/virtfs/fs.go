@@ -16,7 +16,7 @@ const (
 	symlinkDepth    = 10
 )
 
-// FileOpenFunc returns an open [fs.File] or an error if opening fails.
+// FileOpenFunc returns an open [fs.File] or an error if opening the file fails.
 type FileOpenFunc func() (fs.File, error)
 
 var (
@@ -25,11 +25,11 @@ var (
 )
 
 // FS represents a simple [fs.FS] that supports directories, regular files and
-// symbolic links
+// symbolic links.
 //
 // Regular files that should be copied from another source can be added with
-// [FS.Add].It supports adding symbolic links with [FS.Symlink]. Use [FS.Mkdir]
-// or [FS.MkdirAll] to create any required directories beforehand.
+// [FS.Copy]. It supports adding symbolic links with [FS.Symlink]. Use
+// [FS.Mkdir] or [FS.MkdirAll] to create any required directories beforehand.
 type FS struct {
 	root directory
 }
@@ -43,8 +43,8 @@ func New() *FS {
 
 // Open opens the named file.
 //
-// It returns a [PathError] in case of errors. It does not follow symbolic
-// links and returns symbolic links directly.
+// It returns a [PathError] on errors. It does not follow symbolic links and
+// returns them directly.
 func (fsys *FS) Open(name string) (fs.File, error) {
 	file, err := fsys.open(name, find)
 	if err != nil {
@@ -60,8 +60,8 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 
 // ReadLink returns the target of the symbolic link with the given name.
 //
-// It returns a [PathError] in case of errors. It returns ErrFileInvalid in
-// case the file is not a symbolic link.
+// It returns a [PathError] on errors. It returns ErrFileInvalid if the file is
+// not a symbolic link.
 func (fsys *FS) ReadLink(name string) (string, error) {
 	target, err := fsys.readlink(name)
 	if err != nil {
@@ -77,8 +77,8 @@ func (fsys *FS) ReadLink(name string) (string, error) {
 
 // Lstat returns information about the file with the given name.
 //
-// It returns a [PathError] in case of errors. It does not follow symbolic
-// links and returns symbolic links directly.
+// It returns a [PathError] on errors. It does not follow symbolic links and
+// returns them directly.
 func (fsys *FS) Lstat(name string) (fs.FileInfo, error) {
 	info, err := fsys.lstat(name)
 	if err != nil {
@@ -94,7 +94,7 @@ func (fsys *FS) Lstat(name string) (fs.FileInfo, error) {
 
 // Mkdir creates a new directory with the given name.
 //
-// It returns [PathError] in case of errors.
+// It returns a [PathError] on errors.
 func (fsys *FS) Mkdir(name string) error {
 	parentName, dirName := filepath.Split(clean(name))
 
@@ -122,8 +122,8 @@ func (fsys *FS) Mkdir(name string) error {
 // MkdirAll creates a directory with the given name along with all necessary
 // parents.
 //
-// It returns a [PathError] in case of errors. If the directory exists already,
-// it does nothing and returns nil.
+// It returns a [PathError] on errors. If the directory exists already, it does
+// nothing and returns nil.
 func (fsys *FS) MkdirAll(name string) error {
 	cleaned := clean(name)
 
@@ -153,8 +153,8 @@ func (fsys *FS) MkdirAll(name string) error {
 
 // Copy creates a new regular file with the given name.
 //
-// File content is read from the file returned by the given [FileOpenFunc]. It
-// returns a [PathError] in case of errors.
+// It creates a new regular file with content read from the file returned by the
+// given [FileOpenFunc]. It returns a [PathError] on errors.
 func (fsys *FS) Copy(name string, openFn FileOpenFunc) error {
 	if openFn == nil {
 		return &PathError{
@@ -178,7 +178,7 @@ func (fsys *FS) Copy(name string, openFn FileOpenFunc) error {
 
 // Write creates a new regular file with the given name and data.
 //
-// It returns a [PathError] in case of errors.
+// It returns a [PathError] on errors.
 func (fsys *FS) Write(name string, data []byte) error {
 	file := memFile(data)
 
@@ -196,7 +196,7 @@ func (fsys *FS) Write(name string, data []byte) error {
 
 // Symlink adds a new symbolic link that links to oldname at newname.
 //
-// It returns a [PathError] in case of errors.
+// It returns a [PathError] on errors.
 func (fsys *FS) Symlink(oldname, newname string) error {
 	file := symbolicLink(oldname)
 

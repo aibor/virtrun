@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	// ErrNotPidOne is returned if the process is expected to be run as PID 1
+	// ErrNotPidOne is returned when the process is expected to be run as PID 1
 	// but is not.
 	ErrNotPidOne = errors.New("process does not have ID 1")
-	// ErrPanic is returned if a [Func] panicked.
+	// ErrPanic is returned when a [Func] panicked.
 	ErrPanic = errors.New("function panicked")
-	// ErrConsoleNotSupported is returned if a console used an unsupported
+	// ErrConsoleNotSupported is returned when a console used an unsupported
 	// driver.
 	ErrConsoleNotSupported = errors.New("console driver not supported")
 )

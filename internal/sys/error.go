@@ -10,28 +10,28 @@ import (
 )
 
 var (
-	// ErrNotELFFile is returned if the file does not have an ELF magic number.
+	// ErrNotELFFile is returned when the file does not have an ELF magic
+	// number.
 	ErrNotELFFile = errors.New("is not an ELF file")
 
-	// ErrOSABINotSupported is returned if the OS ABI of an ELF file is not
+	// ErrOSABINotSupported is returned when the OS ABI of an ELF file is not
 	// supported.
 	ErrOSABINotSupported = errors.New("OSABI not supported")
 
-	// ErrMachineNotSupported is returned if the machine type of an ELF file
+	// ErrMachineNotSupported is returned when the machine type of an ELF file
 	// is not supported.
 	ErrMachineNotSupported = errors.New("machine type not supported")
 
-	// ErrEmptyPath is returned if an empty path is given.
+	// ErrEmptyPath is returned when an empty path is given.
 	ErrEmptyPath = errors.New("path must not be empty")
 
-	// ErrArchNotSupported is returned if the requested architecture is not
+	// ErrArchNotSupported is returned when the requested architecture is not
 	// supported for the requested operation.
 	ErrArchNotSupported = errors.New("architecture not supported")
 )
 
-// LDDExecError wraps errors that result when executing the "ldd" command.
-// Along with the error the output received on stdout is added to the error
-// message.
+// LDDExecError wraps errors that result when executing the "ldd" command. Along
+// with the error, the output received on stderr is added to the error message.
 type LDDExecError struct {
 	Err    error
 	Stderr string

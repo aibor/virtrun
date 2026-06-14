@@ -129,7 +129,7 @@ func (f *flagSet) FilePathList(value *[]string, name string, usage string) {
 	f.Var((*FilePathList)(value), name, usage)
 }
 
-// fail fails like flag does. It prints the error first and then usage.
+// fail prints the error first and then usage, similar to flag.
 func (f *flagSet) fail(msg string, err error) error {
 	err = &ParseArgsError{msg: msg, err: err}
 	fmt.Fprintln(f.Output(), err.Error())

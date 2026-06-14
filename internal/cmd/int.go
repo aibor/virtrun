@@ -23,7 +23,7 @@ func (u *LimitedUintValue) String() string {
 	return strconv.FormatUint(*u.Value, 10)
 }
 
-// Set sets [LimitedUintValue] to the given value, if valid.
+// Set sets the [LimitedUintValue] to the given value if it's valid.
 func (u *LimitedUintValue) Set(s string) error {
 	value, err := strconv.ParseUint(s, 10, 0)
 	if err != nil {

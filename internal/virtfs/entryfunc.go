@@ -7,7 +7,8 @@ package virtfs
 import "errors"
 
 // EntryFunc is a function that creates an entry to the given [FS]. It can be
-// used to define a full fs without the need to handle the errors immediately.
+// used to define a full filesystem without needing to handle errors
+// immediately.
 type EntryFunc func(vfs *FS) error
 
 // MkdirAll creates an [EntryFunc] for [FS.MkdirAll].
@@ -39,7 +40,7 @@ func Symlink(target, name string) EntryFunc {
 }
 
 // MayExist creates an [EntryFunc] that wraps any other [EntryFunc] and allows
-// that the file creation fails with [ErrFileExist].
+// the file creation to fail with [ErrFileExist].
 func MayExist(entry EntryFunc) EntryFunc {
 	return func(vfs *FS) error {
 		err := entry(vfs)

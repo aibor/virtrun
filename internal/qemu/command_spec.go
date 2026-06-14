@@ -56,9 +56,9 @@ type CommandSpec struct {
 	// microvm machine type. ARM type virt does not support ISA type at all.
 	TransportType TransportType
 
-	// ExtraArgs are  extra arguments that are passed to the QEMU command.
+	// ExtraArgs are additional arguments passed to the QEMU command.
 	// They must not interfere with the essential arguments set by the command
-	// itself or an error will be returned on [Command.Run].
+	// itself, or an error will be returned on [Command.Run].
 	ExtraArgs []Argument
 
 	// Additional files attached to consoles besides the default one used for

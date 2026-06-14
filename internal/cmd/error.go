@@ -14,14 +14,14 @@ var (
 	// ErrHelp aliases [flag.ErrHelp].
 	ErrHelp = flag.ErrHelp
 
-	// ErrReadBuildInfo is returned if the go build info can not be read.
+	// ErrReadBuildInfo is returned when the Go build info cannot be read.
 	ErrReadBuildInfo = errors.New("can't read build info")
 
-	// ErrNotRegularFile is returned if a file should be read but is not a
-	// regular file.
+	// ErrNotRegularFile is returned when attempting to read a file that is not
+	// a regular file.
 	ErrNotRegularFile = errors.New("not a regular file")
 
-	// ErrValueOutOfRange is returned if a given value is outside of the
+	// ErrValueOutOfRange is returned when a given value is outside the
 	// supported range.
 	ErrValueOutOfRange = errors.New("value is outside of range")
 )

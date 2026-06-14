@@ -16,18 +16,18 @@ var (
 	oomRE   = regexp.MustCompile(`^\[[0-9. ]+\] Out of memory: `)
 )
 
-// ExitCodeParser parses the given string and returns the exit code found in
-// the input or an error if the input does not contain the expected string or
+// ExitCodeParser parses the given string and returns the exit code found in the
+// input or an error if the input does not contain the expected string or
 // parsing fails otherwise.
 type ExitCodeParser func(line []byte) (int, bool)
 
 // stdoutParser provides a parser that parses stdout from the guest.
 //
-// It detects kernel panics, OOM messages and most importantly it detects the
-// exit code communicated by the guest via stdout. The processor stops when
-// the src is closed. After use, the result can be retrieved by calling
-// [Parser.Err]. It returns a [CommandError] with Guest flag set if either
-// an error is detected or the guest communicated a non zero exit code.
+// It detects kernel panics, OOM messages, and most importantly the exit code
+// communicated by the guest via stdout. The processor stops when the src is
+// closed. After use, the result can be retrieved by calling [Parser.Err]. It
+// returns a [CommandError] with the Guest flag set if either an error is
+// detected or the guest communicated a non-zero exit code.
 type stdoutParser struct {
 	ExitCodeParser
 

@@ -9,26 +9,26 @@ import (
 )
 
 var (
-	// ErrGuestNoExitCodeFound is returned if no exit code matching the
-	// [Command.ExitCodeFmt] is printed by the guest and no other error is
-	// found.
+	// ErrGuestNoExitCodeFound is returned when no exit code matching
+	// the expected format is printed by the guest and no other error is found.
 	ErrGuestNoExitCodeFound = errors.New("no exit code found")
 
-	// ErrGuestPanic is returned if a kernel panic occurred in the guest
+	// ErrGuestPanic is returned when a kernel panic occurred in the guest
 	// system.
 	ErrGuestPanic = errors.New("system panicked")
 
-	// ErrGuestOom is returned if the guest system ran out of memory.
+	// ErrGuestOom is returned when the guest system ran out of memory.
 	ErrGuestOom = errors.New("system ran out of memory")
 
-	// ErrGuestNonZeroExitCode is returned if the guest did not return exit
+	// ErrGuestNonZeroExitCode is returned when the guest did not return exit
 	// code 0.
 	ErrGuestNonZeroExitCode = errors.New("exit code not 0")
 
-	// ErrTransportTypeInvalid is returned if a transport type is invalid.
+	// ErrTransportTypeInvalid is returned when a transport type is invalid.
 	ErrTransportTypeInvalid = errors.New("unknown transport type")
 
-	// ErrArgumentCollision is returned if two [Argument]s are considered equal.
+	// ErrArgumentCollision is returned when two [Argument]s are considered
+	// equal.
 	ErrArgumentCollision = errors.New("colliding args")
 )
 

@@ -8,7 +8,7 @@ import "fmt"
 
 // Poweroff shuts down the system.
 //
-// It does not return, unless in case of error. It should be called deferred at
+// It does not return unless there is an error. It should be called deferred at
 // the start of the main init function.
 func Poweroff() error {
 	// Use restart instead of poweroff for shutting down the system since it

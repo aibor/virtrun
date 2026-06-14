@@ -110,7 +110,7 @@ type MountOptions struct {
 	FSType FSType
 
 	// Source is the source device to mount. Can be empty for all the special
-	// file system types [FSType]s. If empty it is set to the string of the
+	// file system types [FSType]s. If empty, it is set to the string of the
 	// type.
 	Source string
 
@@ -126,8 +126,8 @@ type MountPoints map[string]MountOptions
 
 // Mount mounts the system file system of [FSType] at the given path.
 //
-// If path does not exist, it is created. An error is returned if this or the
-// mount syscall fails.
+// If the path does not exist, it is created. An error is returned if this or
+// the mount syscall fails.
 func Mount(path string, opts MountOptions) error {
 	err := os.MkdirAll(path, defaultDirMode)
 	if err != nil {

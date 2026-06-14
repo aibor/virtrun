@@ -11,6 +11,6 @@
 // supposed to be sent on a separate [pipe.Pipe] (e.g. /dev/virtrun1 for stdout,
 // /dev/virtrun2 for optional file.)
 //
-// The quest system is expected to communicate the exit code of it's main binary
+// The guest system is expected to communicate the exit code of its main binary
 // via a magic string on the default output.
 package qemu

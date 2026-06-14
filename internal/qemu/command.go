@@ -64,12 +64,11 @@ func (c *Command) String() string {
 
 // Run the [Command] with the given [context.Context].
 //
-// Output processors are setup and the command is executed. Returns without
+// Output processors are set up and the command is executed. Returns without
 // error only if the guest system correctly communicated exit code 0. In any
-// other case, an error is returned. If the QEMU command itself failed,
-// a [CommandError] with the guest flag unset is returned. If the guest
-// returned an error or failed a [CommandError] with guest flag set is
-// returned.
+// other case, an error is returned. If the QEMU command itself failed, a
+// [CommandError] with the guest flag unset is returned. If the guest returned
+// an error or failed, a [CommandError] with the guest flag set is returned.
 func (c *Command) Run(
 	ctx context.Context,
 	stdin *os.File,

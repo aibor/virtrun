@@ -83,7 +83,7 @@ func collectLibsFor(
 ) error {
 	// For each regular file, try to get linked shared objects.
 	// Ignore if it is not an ELF file or if it is statically linked (has no
-	// interpreter). Collect the absolute paths of the found shared objects
+	// interpreter). Collect the absolute paths of the found shared objects,
 	// deduplicated in a set.
 	paths, err := Ldd(ctx, name)
 	if err != nil {

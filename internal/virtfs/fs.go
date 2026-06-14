@@ -16,6 +16,15 @@ const (
 	symlinkDepth    = 10
 )
 
+const (
+	opAdd      = "add"
+	opLstat    = "lstat"
+	opMkdir    = "mkdir"
+	opOpen     = "open"
+	opReadlink = "readlink"
+	opSymlink  = "symlink"
+)
+
 // FileOpenFunc returns an open [fs.File] or an error if opening the file fails.
 type FileOpenFunc func() (fs.File, error)
 
@@ -49,7 +58,7 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 	file, err := fsys.open(name, find)
 	if err != nil {
 		return nil, &PathError{
-			Op:   "open",
+			Op:   opOpen,
 			Path: name,
 			Err:  err,
 		}
@@ -66,7 +75,7 @@ func (fsys *FS) ReadLink(name string) (string, error) {
 	target, err := fsys.readlink(name)
 	if err != nil {
 		return "", &PathError{
-			Op:   "readlink",
+			Op:   opReadlink,
 			Path: name,
 			Err:  err,
 		}
@@ -83,7 +92,7 @@ func (fsys *FS) Lstat(name string) (fs.FileInfo, error) {
 	info, err := fsys.lstat(name)
 	if err != nil {
 		return nil, &PathError{
-			Op:   "lstat",
+			Op:   opLstat,
 			Path: name,
 			Err:  err,
 		}
@@ -101,7 +110,7 @@ func (fsys *FS) Mkdir(name string) error {
 	parent, err := fsys.subDir(clean(parentName))
 	if err != nil {
 		return &PathError{
-			Op:   "mkdir",
+			Op:   opMkdir,
 			Path: name,
 			Err:  err,
 		}
@@ -110,7 +119,7 @@ func (fsys *FS) Mkdir(name string) error {
 	err = parent.add(dirName, &directory{})
 	if err != nil {
 		return &PathError{
-			Op:   "mkdir",
+			Op:   opMkdir,
 			Path: name,
 			Err:  err,
 		}
@@ -134,7 +143,7 @@ func (fsys *FS) MkdirAll(name string) error {
 		}
 
 		return &PathError{
-			Op:   "mkdir",
+			Op:   opMkdir,
 			Path: name,
 			Err:  ErrFileNotDir,
 		}
@@ -158,7 +167,7 @@ func (fsys *FS) MkdirAll(name string) error {
 func (fsys *FS) Copy(name string, openFn FileOpenFunc) error {
 	if openFn == nil {
 		return &PathError{
-			Op:   "add",
+			Op:   opAdd,
 			Path: name,
 			Err:  fmt.Errorf("%w: openFunc is nil", ErrInvalidArgument),
 		}
@@ -167,7 +176,7 @@ func (fsys *FS) Copy(name string, openFn FileOpenFunc) error {
 	err := fsys.add(name, copyFile(openFn))
 	if err != nil {
 		return &PathError{
-			Op:   "add",
+			Op:   opAdd,
 			Path: name,
 			Err:  err,
 		}
@@ -185,7 +194,7 @@ func (fsys *FS) Write(name string, data []byte) error {
 	err := fsys.add(name, file)
 	if err != nil {
 		return &PathError{
-			Op:   "add",
+			Op:   opAdd,
 			Path: name,
 			Err:  err,
 		}
@@ -203,7 +212,7 @@ func (fsys *FS) Symlink(oldname, newname string) error {
 	err := fsys.add(newname, file)
 	if err != nil {
 		return &PathError{
-			Op:   "symlink",
+			Op:   opSymlink,
 			Path: newname,
 			Err:  err,
 		}

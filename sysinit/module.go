@@ -82,6 +82,7 @@ func WithModules(pattern string) Func {
 // The file may be compressed. The caller is responsible to ensure the module
 // belongs to the running kernel and all dependencies are satisfied.
 func LoadModule(path string, params string) error {
+	//nolint:gosec // Module path is supposed to be specified by the user.
 	module, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)

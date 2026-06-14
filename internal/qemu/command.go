@@ -75,6 +75,7 @@ func (c *Command) Run(
 	stdout *os.File,
 	stderr *os.File,
 ) error {
+	//nolint:gosec // Input defined by NewCommand exclusively.
 	cmd := exec.CommandContext(ctx, c.name, c.args...)
 
 	// The default cancel function set by [exec.CommandContext] sends SIGKILL

@@ -101,6 +101,7 @@ func connectedTTYConsoles(typ string, driver string) ([]console, error) {
 // connectedTTYs returns a slice of tty port numbers that are connected on the
 // host with the given driver.
 func connectedTTYs(driver string) ([]int, error) {
+	//nolint:gosec // Driver passed internally with safe values.
 	serialInfo, err := os.ReadFile(infoFileDir + driver)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

@@ -44,6 +44,8 @@ func runLdd(ctx context.Context, path string, outW io.Writer) error {
 	ctx, stop := context.WithTimeout(ctx, lddTimeout)
 	defer stop()
 
+	//nolint:gosec // Path is supposed to be passed by user. ldd is supposed to
+	// be safe with any input file.
 	cmd := exec.CommandContext(ctx, "ldd", path)
 	cmd.Stdout = outW
 	cmd.Stderr = &stderrBuf

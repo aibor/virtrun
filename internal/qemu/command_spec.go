@@ -239,7 +239,8 @@ func (s *CommandSpec) arguments() []Argument {
 
 	ports := reservedPipes + len(s.AdditionalConsoles)
 
-	args = append(args,
+	args = append(
+		args,
 		RepeatableArg("device", serialDev, fmt.Sprintf("max_ports=%d", ports)),
 		RepeatableArg("serial", "stdio"),
 	)
@@ -260,7 +261,8 @@ func (s *CommandSpec) arguments() []Argument {
 		})
 	}
 
-	args = append(args,
+	args = append(
+		args,
 		// Disable video output.
 		UniqueArg("display", "none"),
 		// Disable QEMU monitor.

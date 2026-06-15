@@ -4,7 +4,7 @@
 
 # syntax=docker/dockerfile:1
 
-FROM alpine:3.23 AS kernel
+FROM alpine:3.24 AS kernel
 
 RUN apk add --no-cache tar
 
@@ -36,7 +36,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 		github.com/jstemmer/go-junit-report/v2 \
 		github.com/boumenot/gocover-cobertura
 
-FROM alpine:3.23
+FROM alpine:3.24
 
 LABEL org.opencontainers.image.source="https://github.com/aibor/virtrun"
 LABEL org.opencontainers.image.description="Virtrun test container image"

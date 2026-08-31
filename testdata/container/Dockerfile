@@ -24,7 +24,7 @@ EOF
 ARG ARCH=x86_64
 RUN sh /fetch.sh "$ARCH"
 
-FROM golang:1.26-alpine3.23 AS tools
+FROM golang:1.27-alpine3.23 AS tools
 
 WORKDIR /tools
 
